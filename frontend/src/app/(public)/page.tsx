@@ -1,6 +1,7 @@
 'use client';
 
-import { Typography, Space } from 'antd';
+import { Button, Space, Typography } from 'antd';
+import Link from 'next/link';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -19,12 +20,20 @@ export default function HomePage() {
         <Title level={1} style={{ marginBottom: 0 }}>
           FP Analyzer
         </Title>
-        <Text type="secondary">Phase 1 scaffold — coming soon</Text>
+        <Text type="secondary">Manufacturing OEE — coming soon</Text>
         <Paragraph type="secondary" style={{ marginTop: 24 }}>
-          This is the empty Next.js + Ant Design skeleton. Real pages and
-          functionality arrive in Phase 4. See <code>MIGRATION_NOTES.md</code>{' '}
-          for the full migration plan.
+          The dashboard, flow monitor, and admin pages roll out incrementally
+          during Phase 4. The login form is live now — sign in with the dev
+          credentials shown there.
         </Paragraph>
+        <Space>
+          <Link href="/login">
+            <Button type="primary">Sign in</Button>
+          </Link>
+          <Link href="/dashboard">
+            <Button>Go to dashboard</Button>
+          </Link>
+        </Space>
       </Space>
     </main>
   );

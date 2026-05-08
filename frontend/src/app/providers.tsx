@@ -1,8 +1,9 @@
 'use client';
 
 import { AntdRegistry } from '@ant-design/nextjs-registry';
-import { ConfigProvider, theme } from 'antd';
+import { App as AntApp, ConfigProvider, theme } from 'antd';
 import { ReactNode } from 'react';
+import { QueryProvider } from '../components/QueryProvider';
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
@@ -11,13 +12,15 @@ export function Providers({ children }: { children: ReactNode }) {
         theme={{
           algorithm: theme.defaultAlgorithm,
           token: {
-            // Brand colors from legacy public/assets/sass/ — refined in Phase 4.
             colorPrimary: '#954cfe',
             colorInfo: '#01b9d0',
           },
         }}
       >
-        {children}
+        {/* AntApp adds context for message/notification/modal hooks. */}
+        <AntApp>
+          <QueryProvider>{children}</QueryProvider>
+        </AntApp>
       </ConfigProvider>
     </AntdRegistry>
   );

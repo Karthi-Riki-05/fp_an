@@ -9,6 +9,21 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   app.useLogger(app.get(Logger));
   app.use(cookieParser(process.env.COOKIE_SECRET));
+
+  // CORS — frontend at :3030 calls backend at :4000 with credentials.
+  // Origins comma-separated in CORS_ORIGINS, default localhost:3030.
+  const origins = (process.env.CORS_ORIGINS ?? 'http://localhost:3030,http://localhost:3000')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  app.enableCors({
+    origin: origins,
+    credentials: true,
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-Id', 'X-Requested-With'],
+    exposedHeaders: ['Set-Cookie'],
+  });
+
   app.setGlobalPrefix('api/v1');
   app.useGlobalPipes(
     new ValidationPipe({
