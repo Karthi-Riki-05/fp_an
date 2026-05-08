@@ -3,21 +3,19 @@
  * Idempotent seed — safe to run on every startup.
  *
  * Seeds:
- *  - 26 permissions per MIGRATION_NOTES.md §4.5
- *  - 3 roles (Administrator / Company / User), R1 v3 mappings
- *  - role-permission grants
- *  - one Super Admin user from SEED_SUPERADMIN_EMAIL/PASSWORD env (skipped if unset)
+ *   - 26 permissions per MIGRATION_NOTES.md §4.5 (R1 v3)
+ *   - 3 roles (Administrator / Company / User) and the role-permission matrix
+ *   - One Super Admin user from SEED_SUPERADMIN_EMAIL/PASSWORD env (skipped if unset)
+ *   - One demo Tenant `demo` with its tenant_<id> schema cloned from
+ *     tenant_template (Phase 3 verification)
+ *   - One demo tenant user `user@demo.local` (User role, attached to demo)
  *
- * Phase 3 will add a demo Tenant + sample tenant-scoped data; for now the
- * seed only touches the public schema, so it works against a fresh DB
- * without needing per-tenant schemas to exist yet.
+ * All passwords are stored as bcryptjs hashes.
  */
 
 import { PrismaClient } from '@prisma/client';
-import { createHash, randomBytes, scrypt as _scrypt } from 'node:crypto';
-import { promisify } from 'node:util';
-
-const scrypt = promisify(_scrypt);
+import * as bcrypt from 'bcryptjs';
+import { createHash } from 'node:crypto';
 
 interface PermissionSeed {
   name: string;
@@ -29,7 +27,7 @@ interface RoleSeed {
   name: string;
   all: boolean;
   sort: number;
-  permissions: string[]; // permission names
+  permissions: string[];
 }
 
 const PERMISSIONS: PermissionSeed[] = [
@@ -103,26 +101,41 @@ const ROLES: RoleSeed[] = [
   { name: 'User',          all: false, sort: 3, permissions: USER_PERMISSIONS },
 ];
 
-/**
- * Light-weight password hash — bcrypt would be preferred but pulling it into
- * the seed-only path adds a native build dep we don't otherwise need at this
- * stage. Phase 3's auth module replaces this with the real bcrypt-based
- * argon2/bcrypt hash. The format is intentionally distinguishable from
- * legacy bcrypt hashes ($2y$...) so the auth layer can detect and re-hash.
- */
-async function hashPassword(plain: string): Promise<string> {
-  const salt = randomBytes(16).toString('hex');
-  const derived = (await scrypt(plain, salt, 64)) as Buffer;
-  return `scrypt$${salt}$${derived.toString('hex')}`;
+function ensure(value: string | undefined): string | undefined {
+  return value && value.trim().length > 0 ? value.trim() : undefined;
 }
 
-function ensure(name: string, value: string | undefined): string | undefined {
-  return value && value.trim().length > 0 ? value.trim() : undefined;
+async function provisionTenantSchema(prisma: PrismaClient, schemaName: string): Promise<number> {
+  if (!/^[a-z][a-z0-9_]{0,62}$/.test(schemaName)) {
+    throw new Error(`unsafe schema name: ${schemaName}`);
+  }
+  await prisma.$executeRawUnsafe(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
+  const tables = await prisma.$queryRawUnsafe<{ table_name: string }[]>(
+    `SELECT table_name FROM information_schema.tables
+     WHERE table_schema = 'tenant_template' AND table_type = 'BASE TABLE'
+     ORDER BY table_name`,
+  );
+  let cloned = 0;
+  for (const { table_name } of tables) {
+    const exists = await prisma.$queryRawUnsafe<{ count: bigint }[]>(
+      `SELECT count(*) AS count FROM information_schema.tables
+       WHERE table_schema = $1 AND table_name = $2`,
+      schemaName,
+      table_name,
+    );
+    if (exists[0]?.count && Number(exists[0].count) > 0) continue;
+    await prisma.$executeRawUnsafe(
+      `CREATE TABLE "${schemaName}"."${table_name}" (LIKE "tenant_template"."${table_name}" INCLUDING ALL)`,
+    );
+    cloned++;
+  }
+  return cloned;
 }
 
 async function main() {
   const prisma = new PrismaClient();
   try {
+    // -------- permissions --------
     console.log('[seed] permissions');
     for (const perm of PERMISSIONS) {
       await prisma.permission.upsert({
@@ -132,40 +145,41 @@ async function main() {
       });
     }
 
+    // -------- roles + role-permission matrix --------
     console.log('[seed] roles + role-permission grants');
     const permByName = new Map(
       (await prisma.permission.findMany()).map((p) => [p.name, p.id]),
     );
 
+    const roleByName = new Map<string, number>();
     for (const role of ROLES) {
       const dbRole = await prisma.role.upsert({
         where: { name: role.name },
         update: { all: role.all, sort: role.sort },
         create: { name: role.name, all: role.all, sort: role.sort },
       });
+      roleByName.set(role.name, dbRole.id);
 
-      // Reset role's permissions to the canonical seed list — idempotent.
       await prisma.rolePermission.deleteMany({ where: { roleId: dbRole.id } });
       const grants = role.permissions
-        .map((permName) => permByName.get(permName))
+        .map((p) => permByName.get(p))
         .filter((id): id is number => typeof id === 'number')
         .map((permissionId) => ({ roleId: dbRole.id, permissionId }));
-
       if (grants.length > 0) {
         await prisma.rolePermission.createMany({ data: grants, skipDuplicates: true });
       }
       console.log(`  ${role.name}: ${grants.length} permissions`);
     }
 
-    const seedEmail = ensure('SEED_SUPERADMIN_EMAIL', process.env.SEED_SUPERADMIN_EMAIL);
-    const seedPassword = ensure('SEED_SUPERADMIN_PASSWORD', process.env.SEED_SUPERADMIN_PASSWORD);
+    // -------- super admin --------
+    const seedEmail = ensure(process.env.SEED_SUPERADMIN_EMAIL);
+    const seedPassword = ensure(process.env.SEED_SUPERADMIN_PASSWORD);
     if (seedEmail && seedPassword) {
       console.log(`[seed] super-admin user (${seedEmail})`);
-      const passwordHash = await hashPassword(seedPassword);
+      const passwordHash = await bcrypt.hash(seedPassword, 12);
       const user = await prisma.user.upsert({
         where: { email: seedEmail },
         update: {
-          // Don't overwrite an existing password on every boot; only set if missing.
           name: 'Super Admin',
           firstName: 'Super',
           lastName: 'Admin',
@@ -182,19 +196,82 @@ async function main() {
           status: 1,
         },
       });
-      const adminRole = await prisma.role.findUnique({ where: { name: 'Administrator' } });
-      if (adminRole) {
+      const adminRoleId = roleByName.get('Administrator');
+      if (adminRoleId) {
         await prisma.userRole.upsert({
-          where: { userId_roleId: { userId: user.id, roleId: adminRole.id } },
+          where: { userId_roleId: { userId: user.id, roleId: adminRoleId } },
           update: {},
-          create: { userId: user.id, roleId: adminRole.id },
+          create: { userId: user.id, roleId: adminRoleId },
         });
       }
     } else {
       console.log('[seed] SEED_SUPERADMIN_EMAIL/PASSWORD not set — skipping super-admin');
     }
 
-    // Sanity output — fingerprint of seeded perms (helps spot drift).
+    // -------- demo tenant + demo user --------
+    console.log('[seed] demo tenant');
+    let demo = await prisma.tenant.findUnique({ where: { slug: 'demo' } });
+    if (!demo) {
+      demo = await prisma.tenant.create({
+        data: {
+          slug: 'demo',
+          name: 'Demo Tenant',
+          schemaName: 'tenant_demo_pending',
+          timezone: 'Europe/Stockholm',
+        },
+      });
+    }
+    const demoSchemaName = `tenant_${demo.id}`;
+    if (demo.schemaName !== demoSchemaName) {
+      demo = await prisma.tenant.update({
+        where: { id: demo.id },
+        data: { schemaName: demoSchemaName },
+      });
+    }
+    const cloned = await provisionTenantSchema(prisma, demoSchemaName);
+    console.log(`  schema ${demoSchemaName}: ${cloned} tables cloned`);
+
+    console.log('[seed] demo tenant user');
+    const demoUserEmail = 'user@demo.local';
+    const demoUserHash = await bcrypt.hash('demo-password', 12);
+    const demoUser = await prisma.user.upsert({
+      where: { email: demoUserEmail },
+      update: {
+        name: 'Demo User',
+        firstName: 'Demo',
+        lastName: 'User',
+        confirmed: true,
+        status: 1,
+      },
+      create: {
+        name: 'Demo User',
+        firstName: 'Demo',
+        lastName: 'User',
+        email: demoUserEmail,
+        password: demoUserHash,
+        confirmed: true,
+        status: 1,
+      },
+    });
+    const userRoleId = roleByName.get('User');
+    if (userRoleId) {
+      await prisma.userRole.upsert({
+        where: { userId_roleId: { userId: demoUser.id, roleId: userRoleId } },
+        update: {},
+        create: { userId: demoUser.id, roleId: userRoleId },
+      });
+    }
+    await prisma.tenantUser.upsert({
+      where: { tenantId_userId: { tenantId: demo.id, userId: demoUser.id } },
+      update: { status: true, roleId: userRoleId ?? null },
+      create: {
+        tenantId: demo.id,
+        userId: demoUser.id,
+        roleId: userRoleId ?? null,
+        status: true,
+      },
+    });
+
     const fingerprint = createHash('sha256')
       .update(PERMISSIONS.map((p) => p.name).sort().join(','))
       .digest('hex')

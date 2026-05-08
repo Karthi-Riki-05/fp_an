@@ -6,11 +6,18 @@ export interface TenantContext {
   timezone: string;
 }
 
-// Stub. Phase 3's TenantInterceptor populates request.tenant from the JWT;
-// this decorator extracts it for handler use. See MIGRATION_NOTES.md §17.
+/**
+ * Extracts the tenant context attached by TenantInterceptor.
+ * Throws if used on a route that doesn't pass through the interceptor.
+ */
 export const Tenant = createParamDecorator(
-  (_data: unknown, ctx: ExecutionContext): TenantContext | undefined => {
+  (_data: unknown, ctx: ExecutionContext): TenantContext => {
     const req = ctx.switchToHttp().getRequest();
+    if (!req.tenant) {
+      throw new Error(
+        'TenantContext is missing — annotate the route/controller with TenantInterceptor.',
+      );
+    }
     return req.tenant;
   },
 );

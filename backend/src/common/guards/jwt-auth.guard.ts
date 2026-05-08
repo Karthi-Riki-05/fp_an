@@ -1,11 +1,26 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import { ExecutionContext, Injectable } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { AuthGuard } from '@nestjs/passport';
+import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 
-// Stub. Phase 3 (auth module) replaces this with a Passport JWT strategy that
-// accepts EITHER a cookie (web) or Authorization: Bearer header (programmatic).
-// See MIGRATION_NOTES.md §5 (auth strategy duality).
+/**
+ * Cookie-or-bearer JWT auth. Tries the cookie strategy first, falls back to
+ * the Authorization: Bearer header. Routes annotated with @Public() bypass.
+ *
+ * Auth strategy duality per MIGRATION_NOTES.md §5 (A4).
+ */
 @Injectable()
-export class JwtAuthGuard implements CanActivate {
-  canActivate(_context: ExecutionContext): boolean {
-    return true;
+export class JwtAuthGuard extends AuthGuard(['jwt-cookie', 'jwt-bearer']) {
+  constructor(private readonly reflector: Reflector) {
+    super();
+  }
+
+  canActivate(context: ExecutionContext) {
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (isPublic) return true;
+    return super.canActivate(context);
   }
 }

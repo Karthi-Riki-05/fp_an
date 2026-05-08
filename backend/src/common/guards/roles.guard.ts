@@ -1,11 +1,25 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { AuthUser } from '../decorators/current-user.decorator';
+import { ROLES_KEY } from '../decorators/roles.decorator';
 
-// Stub. Phase 3 wires this to the Reflector + @Roles() decorator and
-// checks against the public.user_roles join via PrismaService.
-// See MIGRATION_NOTES.md §4.5 + §5.
 @Injectable()
 export class RolesGuard implements CanActivate {
-  canActivate(_context: ExecutionContext): boolean {
+  constructor(private readonly reflector: Reflector) {}
+
+  canActivate(context: ExecutionContext): boolean {
+    const required = this.reflector.getAllAndOverride<string[]>(ROLES_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (!required || required.length === 0) return true;
+
+    const user = context.switchToHttp().getRequest().user as AuthUser | undefined;
+    if (!user) throw new ForbiddenException('not-authenticated');
+    if (user.isAdmin) return true; // Administrator (all=true) shortcut
+
+    const ok = required.some((r) => user.roles.includes(r));
+    if (!ok) throw new ForbiddenException('role-required');
     return true;
   }
 }

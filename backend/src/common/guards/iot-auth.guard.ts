@@ -1,11 +1,11 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 
-// Stub. Phase 3 replaces this with a Passport JwtBearerStrategy that ALSO
-// validates the device_id claim against the machines table.
-// See MIGRATION_NOTES.md §5.
+/**
+ * IoT routes accept ONLY bearer-header tokens. Phase 3.x adds device_id
+ * claim verification against the machines table. For Phase 3 v1 the guard
+ * shares the web bearer strategy; the dedicated IoT JWT secret + device
+ * binding is wired in 3.2.
+ */
 @Injectable()
-export class IotAuthGuard implements CanActivate {
-  canActivate(_context: ExecutionContext): boolean {
-    return true;
-  }
-}
+export class IotAuthGuard extends AuthGuard('jwt-bearer') {}

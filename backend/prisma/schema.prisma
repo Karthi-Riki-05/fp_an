@@ -83,7 +83,7 @@ model User {
   unitOnly          Boolean   @default(false) @map("unit_only")
   legacyId          BigInt?   @unique @map("legacy_id")
   createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt         DateTime? @map("deleted_at") @db.Timestamptz
 
   socialLogins SocialLogin[]
@@ -106,7 +106,7 @@ model SocialLogin {
   avatar     String?  @db.VarChar(255)
   legacyId   BigInt?  @unique @map("legacy_id")
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -124,7 +124,7 @@ model Role {
   sort      Int      @default(0) @db.SmallInt
   legacyId  BigInt?  @unique @map("legacy_id")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   rolePermissions RolePermission[]
   userRoles       UserRole[]
@@ -140,7 +140,7 @@ model Permission {
   sort        Int      @default(0) @db.SmallInt
   legacyId    BigInt?  @unique @map("legacy_id")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   rolePermissions RolePermission[]
 
@@ -192,7 +192,7 @@ model HistoryType {
   name      String    @db.VarChar(255)
   legacyId  BigInt?   @unique @map("legacy_id")
   createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   history History[]
 
@@ -211,7 +211,7 @@ model History {
   assets    String?   @db.VarChar(255)
   legacyId  BigInt?   @unique @map("legacy_id")
   createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   type HistoryType @relation(fields: [typeId], references: [id], onDelete: Cascade)
   user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -232,7 +232,7 @@ model Cms {
   status    Boolean  @default(true)
   legacyId  BigInt?  @unique @map("legacy_id")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz
 
   images CmsImage[]
@@ -249,7 +249,7 @@ model CmsImage {
   alt       String?   @db.VarChar(255)
   legacyId  BigInt?   @unique @map("legacy_id")
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz
 
   cms Cms @relation(fields: [cmsId], references: [id], onDelete: Cascade)
@@ -269,7 +269,7 @@ model Slider {
   sortOrder Int      @default(0) @map("sort_order")
   legacyId  BigInt?  @unique @map("legacy_id")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   @@map("sliders")
   @@schema("public")
@@ -285,7 +285,7 @@ model Testimonial {
   sortOrder Int      @default(0) @map("sort_order")
   legacyId  BigInt?  @unique @map("legacy_id")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   @@map("testimonials")
   @@schema("public")
@@ -297,7 +297,7 @@ model SiteSetting {
   value     String?
   legacyId  BigInt?  @unique @map("legacy_id")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   @@map("site_settings")
   @@schema("public")
@@ -316,7 +316,7 @@ model Tenant {
   legacyDbName String?     @map("legacy_db_name") @db.VarChar(255)
   legacyId    BigInt?      @unique @map("legacy_id")
   createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt   DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   users TenantUser[]
 
@@ -334,7 +334,7 @@ model TenantUser {
   roleId    Int?     @map("role_id")
   status    Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -481,7 +481,7 @@ model Type {
   sortOrder    Int        @default(0) @map("sort_order")
   legacyId     BigInt?    @unique @map("legacy_id")
   createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt    DateTime?  @map("deleted_at") @db.Timestamptz
 
   parts        Part[]
@@ -508,7 +508,7 @@ model ScrapReason {
   sortOrder   Int       @default(0) @map("sort_order")
   legacyId    BigInt?   @unique @map("legacy_id")
   createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
 
   type Type @relation(fields: [typeId], references: [id])
@@ -531,7 +531,7 @@ model StopReason {
   sortOrder   Int       @default(0) @map("sort_order")
   legacyId    BigInt?   @unique @map("legacy_id")
   createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
 
   type Type @relation(fields: [typeId], references: [id])
@@ -554,7 +554,7 @@ model StopCategory {
   isActive    Boolean           @default(true) @map("is_active")
   legacyId    BigInt?           @unique @map("legacy_id")
   createdAt   DateTime?         @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime?         @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt   DateTime?         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt   DateTime?         @map("deleted_at") @db.Timestamptz
 
   @@index([deletedAt])
@@ -576,7 +576,7 @@ model Equipment {
   isActive    Boolean   @default(true) @map("is_active")
   legacyId    BigInt?   @unique @map("legacy_id")
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
 
   type     Type    @relation(fields: [typeId], references: [id])
@@ -620,7 +620,7 @@ model EquipmentProperty {
   orderSelection  OrderSelection @default(free_text) @map("order_selection")
   legacyId        BigInt?        @unique @map("legacy_id")
   createdAt       DateTime?      @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime?      @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt       DateTime?      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
 
@@ -637,7 +637,7 @@ model EquipmentOrder {
   status      Int       @default(1) @db.SmallInt
   legacyId    BigInt?   @unique @map("legacy_id")
   createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt   DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
 
   equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
@@ -656,7 +656,7 @@ model EquipmentPart {
   status      Int       @default(1) @db.SmallInt
   legacyId    BigInt?   @unique @map("legacy_id")
   createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
 
   equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
@@ -691,7 +691,7 @@ model EquipmentScrapReason {
   status        Int       @default(1) @db.SmallInt
   legacyId      BigInt?   @unique @map("legacy_id")
   createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt     DateTime? @map("deleted_at") @db.Timestamptz
 
   equipment Equipment    @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
@@ -711,7 +711,7 @@ model EquipmentStopReason {
   status        Int       @default(1) @db.SmallInt
   legacyId      BigInt?   @unique @map("legacy_id")
   createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt     DateTime? @map("deleted_at") @db.Timestamptz
 
   equipment Equipment   @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
@@ -734,7 +734,7 @@ model EquipmentAssign {
   status      AssignmentStatus @default(Active)
   legacyId    BigInt?          @unique @map("legacy_id")
   createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt   DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt   DateTime?        @map("deleted_at") @db.Timestamptz
 
   equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
@@ -757,7 +757,7 @@ model UserEquipment {
   status      Int      @default(1) @db.SmallInt
   legacyId    BigInt?  @unique @map("legacy_id")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt   DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
 
@@ -781,7 +781,7 @@ model Part {
   sortOrder     Int       @default(0) @map("sort_order")
   legacyId      BigInt?   @unique @map("legacy_id")
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt     DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt     DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt     DateTime? @map("deleted_at") @db.Timestamptz
 
   type Type @relation(fields: [typeId], references: [id])
@@ -822,7 +822,7 @@ model Order {
   sortOrder     Int       @default(0) @map("sort_order")
   legacyId      BigInt?   @unique @map("legacy_id")
   createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt     DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt     DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt     DateTime? @map("deleted_at") @db.Timestamptz
 
   type Type @relation(fields: [typeId], references: [id])
@@ -851,7 +851,7 @@ model FlowDesign {
   status      Int       @default(1) @db.SmallInt
   legacyId    BigInt?   @unique @map("legacy_id")
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
 
   attributes     FlowDesignAttribute[]
@@ -876,7 +876,7 @@ model FlowDesignAttribute {
   posRight     Int                     @default(0) @map("right")
   legacyId     BigInt?                 @unique @map("legacy_id")
   createdAt    DateTime                @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt    DateTime?               @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt    DateTime?               @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   flowDesign FlowDesign @relation(fields: [flowDesignId], references: [id], onDelete: Cascade)
 
@@ -910,7 +910,7 @@ model ProductionData {
   workShiftName   String?   @map("work_shift_name") @db.VarChar(50)
   legacyId        BigInt?   @unique @map("legacy_id")
   createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt       DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz
 
   flow      FlowDesign @relation(fields: [flowId], references: [id])
@@ -948,7 +948,7 @@ model ScrapData {
   workShiftName   String?   @map("work_shift_name") @db.VarChar(50)
   legacyId        BigInt?   @unique @map("legacy_id")
   createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt       DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz
 
   flow      FlowDesign  @relation(fields: [flowId], references: [id])
@@ -998,7 +998,7 @@ model StopData {
   stopDataKind      StopDataKind? @default(reg) @map("stop_data_type")
   legacyId          BigInt?      @unique @map("legacy_id")
   createdAt         DateTime?    @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt         DateTime?    @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt         DateTime?    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt         DateTime?    @map("deleted_at") @db.Timestamptz
 
   flow      FlowDesign  @relation(fields: [flowId], references: [id])
@@ -1037,7 +1037,7 @@ model WarningData {
   createdByName     String    @default("") @map("created_by_name") @db.VarChar(255)
   legacyId          BigInt?   @unique @map("legacy_id")
   createdAt         DateTime? @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt         DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt         DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   equipment Equipment @relation(fields: [equipmentId], references: [id])
 
@@ -1076,7 +1076,7 @@ model Machine {
   parentId                 Int?                 @map("parent_id")
   legacyId                 BigInt?              @unique @map("legacy_id")
   createdAt                DateTime             @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt                DateTime             @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt                DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   equipment    Equipment            @relation(fields: [equipmentId], references: [id])
 
@@ -1174,7 +1174,7 @@ model MachineDocument {
   isLocked    Boolean   @default(false) @map("is_locked")
   legacyId    BigInt?   @unique @map("legacy_id")
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
 
   equipment Equipment              @relation(fields: [equipmentId], references: [id])
@@ -1212,7 +1212,7 @@ model MachineDocumentFile {
   lockedByName      String        @default("") @map("locked_by_name") @db.VarChar(255)
   legacyId          BigInt?       @unique @map("legacy_id")
   createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt         DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt         DateTime?     @map("deleted_at") @db.Timestamptz
 
   document MachineDocument @relation(fields: [machineDocId], references: [id], onDelete: Cascade)
@@ -1235,7 +1235,7 @@ model MachineProgramme {
   status      Int       @default(1) @db.SmallInt
   legacyId    BigInt?   @unique @map("legacy_id")
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   files          MachineProgrammeFile[]
   tenantMachines TenantMachine[]
@@ -1255,7 +1255,7 @@ model MachineProgrammeFile {
   uploadedByName   String   @default("") @map("uploaded_by_name") @db.VarChar(255)
   legacyId      BigInt?  @unique @map("legacy_id")
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   programme MachineProgramme @relation(fields: [programmeId], references: [id], onDelete: Cascade)
 
@@ -1272,7 +1272,7 @@ model TenantMachine {
   programmeId Int      @map("programme_id")
   legacyId    BigInt?  @unique @map("legacy_id")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   programme MachineProgramme @relation(fields: [programmeId], references: [id], onDelete: Cascade)
 
@@ -1290,7 +1290,7 @@ model Workstation {
   status    Int      @default(1) @db.SmallInt
   legacyId  BigInt?  @unique @map("legacy_id")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   @@index([machineId])
   @@map("workstations")
@@ -1307,7 +1307,7 @@ model Folder {
   status      Int       @default(1) @db.SmallInt
   legacyId    BigInt?   @unique @map("legacy_id")
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt   DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
 
   equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
@@ -1334,7 +1334,7 @@ model UserFileLock {
   isLocked            Boolean      @default(false) @map("is_locked")
   legacyId            BigInt?      @unique @map("legacy_id")
   createdAt           DateTime     @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt           DateTime?    @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt           DateTime?    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   document     MachineDocument     @relation(fields: [machineDocId],     references: [id], onDelete: Cascade)
   documentFile MachineDocumentFile @relation(fields: [machineDocFileId], references: [id], onDelete: Cascade)
@@ -1360,7 +1360,7 @@ model WorkShift {
   status          Int       @default(1) @db.SmallInt
   legacyId        BigInt?   @unique @map("legacy_id")
   createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz
 
   productionData ProductionData[]
@@ -1379,7 +1379,7 @@ model ShiftSchedule {
   description String?   @db.VarChar(512)
   legacyId    BigInt?   @unique @map("legacy_id")
   createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt   DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
 
   data            ShiftScheduleData[]
@@ -1404,7 +1404,7 @@ model ShiftScheduleData {
   breakData       String?   @map("break_data")
   legacyId        BigInt?   @unique @map("legacy_id")
   createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt       DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   schedule ShiftSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
 
@@ -1428,7 +1428,7 @@ model Board {
   createdByName   String    @default("") @map("created_by_name") @db.VarChar(255)
   legacyId        BigInt?   @unique @map("legacy_id")
   createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt       DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   widgets BoardWidget[]
 
@@ -1449,7 +1449,7 @@ model BoardWidget {
   createdByName   String    @default("") @map("created_by_name") @db.VarChar(255)
   legacyId        BigInt?   @unique @map("legacy_id")
   createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt       DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz
 
   board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
@@ -1469,7 +1469,7 @@ model SalaryGroup {
   info       String    @default("") @db.VarChar(512)
   legacyId   BigInt?   @unique @map("legacy_id")
   createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt  DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt  DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt  DateTime? @map("deleted_at") @db.Timestamptz
 
   @@index([deletedAt])
@@ -1488,7 +1488,7 @@ model Feedback {
   createdByName   String    @default("") @map("created_by_name") @db.VarChar(255)
   legacyId        BigInt?   @unique @map("legacy_id")
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz
 
   @@index([createdByUserId])
@@ -1505,7 +1505,7 @@ model Symbol {
   sortOrder Int      @default(0) @map("sort_order")
   legacyId  BigInt?  @unique @map("legacy_id")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   @@map("symbols")
   @@schema("tenant_template")
