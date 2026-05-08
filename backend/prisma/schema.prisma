@@ -1,0 +1,37 @@
+// FP Analyzer — Prisma schema scaffold (Phase 1).
+//
+// Models are intentionally absent here. Phase 2 generates the full schema
+// from /new_fp/legacy-schema.json + the model mapping in MIGRATION_NOTES.md
+// §4.3, with the schema-per-tenant strategy from §11.2 (multiSchema preview)
+// and the soft-delete strategy from §4.4 (no global middleware).
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["public", "tenant_template"]
+}
+
+// Phase 2 inserts:
+//   - Public-schema models: User, Role, Permission, RolePermission, UserRole,
+//     SocialLogin, Cms, CmsImage, Slider, Testimonial, SiteSetting, History,
+//     HistoryType, Tenant (with `timezone` column per §17), TenantUser.
+//   - Tenant_template-schema models: Equipment, EquipmentType, EquipmentProperty,
+//     EquipmentOrder, EquipmentPart, EquipmentShiftSchedule, EquipmentScrapReason,
+//     EquipmentStopReason, UserEquipment, Machine (legacy tbl_machines),
+//     MachineData (partitioned by start_time, monthly — see §4.6),
+//     MachinePrevStart, MachineStatus, MachineUserSetting, MachineDocument,
+//     MachineDocumentFile, MachineProgramme, MachineProgrammeFile,
+//     MachineAssignment, ProductionData, ScrapData, StopData, WarningData,
+//     Order, Part, FlowDesign, FlowDesignAttribute, WorkShift, ShiftSchedule,
+//     ShiftScheduleDataEntry, Workstation, Folder, UserFileLock, Type,
+//     ScrapReason, StopReason, StopCategory, Board, BoardWidget, SalaryGroup,
+//     Feedback, Symbol, TenantMachine.
+//
+// Snapshot fields per §11.5 / §13.20: every tenant table that records "who
+// did this" gets a *_user_id BIGINT NULL + *_email TEXT + *_name TEXT triple,
+// captured at create time and immutable thereafter (§11.5 R3 paragraph).
