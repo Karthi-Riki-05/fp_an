@@ -1,0 +1,935 @@
+{
+  "meta": {
+    "doc_version": "1.0",
+    "frozen_at": "2026-05-08",
+    "purpose": "Source-of-truth MySQL schema reference for FP Analyzer migration. Phase 2 generates Prisma schema from this; Phase 6 asserts live MySQL still matches before migrating data.",
+    "data_sources": [
+      {
+        "schema": "master",
+        "source_file": "/fpanalyzer/public/API/common_db.sql",
+        "dump_date": "2017-04-27",
+        "dump_db_name": "wdp_123",
+        "tool": "phpMyAdmin 4.5.4.1",
+        "completeness": "STALE — represents the 2017 master DB seed template. Several platform tables (cms, cms_images, sliders, testimonials, site_settings) that exist in the live production master DB are NOT in this dump. See discrepancies.master_missing_tables."
+      },
+      {
+        "schema": "tenant_template",
+        "source_file": "/fpanalyzer/public/API/demoChildDb.sql",
+        "dump_date": "2025-05-19",
+        "dump_db_name": "fbanalyser_demo_child",
+        "tool": "phpMyAdmin 5.2.1 / MariaDB 10.4.28",
+        "completeness": "CURRENT for tables present, but the live tenant DB has additional tables not in this template. See discrepancies.tenant_missing_tables."
+      }
+    ],
+    "live_connection_attempts": {
+      "aws_rds": "Not attempted — RDS endpoint fpanalyzer-instance-1.cqnzsmaqwblb.eu-north-1.rds.amazonaws.com:3306 is not expected to be reachable from this workstation without VPN/IP-allowlist.",
+      "local_xampp": "Failed — /Applications/XAMPP/xamppfiles/var/mysql/mysql.sock not present (XAMPP MySQL not running)."
+    },
+    "verification_required_before_phase_6": [
+      "Operator must run `mysqldump --no-data --routines --triggers fpanalyzer_se_prodmaster` against live RDS and diff against this file's master.tables.",
+      "Operator must `mysqldump --no-data` against ONE representative live tenant DB and diff against this file's tenant_template.tables.",
+      "Any drift fails the migration script in §11.4."
+    ],
+    "type_notation": "Types are MySQL DDL strings verbatim (e.g. \"int(11) UNSIGNED\", \"varchar(255)\", \"timestamp\", \"enum('Y','N')\", \"text\", \"mediumtext\", \"datetime\", \"date\", \"time\", \"decimal(10,0)\", \"bit(1)\", \"tinyint(1)\")."
+  },
+  "schemas": {
+    "master": {
+      "tables": {
+        "users": {
+          "purpose": "Platform users + (legacy) per-user company DB credentials.",
+          "columns": [
+            {"name": "id", "type": "int(10) UNSIGNED", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "company_id", "type": "int(11)", "nullable": false, "default": "0", "note": "0 = platform-level user; >0 references a company. In v2 → tenant_users join."},
+            {"name": "name", "type": "varchar(255)", "nullable": false, "default": null},
+            {"name": "first_name", "type": "varchar(255)", "nullable": false, "default": null},
+            {"name": "last_name", "type": "varchar(255)", "nullable": false, "default": null},
+            {"name": "email", "type": "varchar(255)", "nullable": false, "default": null},
+            {"name": "password", "type": "varchar(255)", "nullable": true, "default": null, "note": "bcrypt hash"},
+            {"name": "image", "type": "varchar(255)", "nullable": false, "default": null},
+            {"name": "status", "type": "tinyint(3) UNSIGNED", "nullable": false, "default": "1"},
+            {"name": "confirmation_code", "type": "varchar(255)", "nullable": false, "default": null},
+            {"name": "confirmed", "type": "tinyint(1)", "nullable": false, "default": "0"},
+            {"name": "remember_token", "type": "varchar(100)", "nullable": true, "default": null},
+            {"name": "db_name", "type": "varchar(255)", "nullable": false, "default": null, "note": "Per-tenant MySQL DB name. DROPPED in v2 — replaced by tenants.schema_name."},
+            {"name": "db_username", "type": "varchar(255)", "nullable": false, "default": null, "note": "Per-tenant DB user — security smell. DROPPED in v2."},
+            {"name": "db_password", "type": "varchar(255)", "nullable": false, "default": null, "note": "Per-tenant DB password — security smell. DROPPED in v2."},
+            {"name": "created_at", "type": "timestamp", "nullable": false, "default": "CURRENT_TIMESTAMP"},
+            {"name": "updated_at", "type": "timestamp", "nullable": false, "default": "0000-00-00 00:00:00"},
+            {"name": "deleted_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "session_timeout", "type": "int(11)", "nullable": false, "default": "5", "note": "Per-user session timeout in minutes. Confirmed via demoChildDb.sql users table dump (2025-05). DROPPED in v2 — replaced by JWT TTL."},
+            {"name": "equipment_tree_pos", "type": "varchar(1024)", "nullable": false, "default": "''", "note": "JSON-ish UI state."},
+            {"name": "analyzer_settings", "type": "varchar(1024)", "nullable": false, "default": "''", "note": "JSON-ish UI state."},
+            {"name": "table_settings", "type": "text", "nullable": true, "default": null, "note": "JSON object of per-user DataTable column visibility/order. Migrate to public.user_preferences (Json)."},
+            {"name": "fcm_token", "type": "varchar(255)", "nullable": true, "default": null},
+            {"name": "fcm_device", "type": "enum('android','ios')", "nullable": false, "default": "android"},
+            {"name": "unit_only", "type": "enum('1','0')", "nullable": false, "default": "0", "note": "If true, user can only see Units page (factory operator simplified UI)."}
+          ],
+          "primary_key": ["id"],
+          "indexes": [
+            {"name": "users_email_unique", "type": "UNIQUE", "columns": ["email"]}
+          ],
+          "foreign_keys": [],
+          "soft_deletes": true
+        },
+        "password_resets": {
+          "columns": [
+            {"name": "email", "type": "varchar(255)", "nullable": false, "default": null},
+            {"name": "token", "type": "varchar(255)", "nullable": false, "default": null},
+            {"name": "created_at", "type": "timestamp", "nullable": true, "default": null}
+          ],
+          "primary_key": [],
+          "indexes": [
+            {"name": "password_resets_email_index", "type": "INDEX", "columns": ["email"]},
+            {"name": "password_resets_token_index", "type": "INDEX", "columns": ["token"]}
+          ],
+          "foreign_keys": []
+        },
+        "social_logins": {
+          "columns": [
+            {"name": "id", "type": "int(10) UNSIGNED", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "user_id", "type": "int(10) UNSIGNED", "nullable": false, "default": null},
+            {"name": "provider", "type": "varchar(32)", "nullable": false, "default": null, "note": "facebook|google|github|linkedin|twitter|bitbucket"},
+            {"name": "provider_id", "type": "varchar(255)", "nullable": false, "default": null},
+            {"name": "token", "type": "varchar(255)", "nullable": true, "default": null},
+            {"name": "avatar", "type": "varchar(255)", "nullable": true, "default": null},
+            {"name": "created_at", "type": "timestamp", "nullable": false, "default": "CURRENT_TIMESTAMP"},
+            {"name": "updated_at", "type": "timestamp", "nullable": false, "default": "0000-00-00 00:00:00"}
+          ],
+          "primary_key": ["id"],
+          "indexes": [{"name": "social_logins_user_id_foreign", "type": "INDEX", "columns": ["user_id"]}],
+          "foreign_keys": [{"name": "social_logins_user_id_foreign", "columns": ["user_id"], "references": {"table": "users", "columns": ["id"]}, "on_delete": "CASCADE"}]
+        },
+        "roles": {
+          "columns": [
+            {"name": "id", "type": "int(10) UNSIGNED", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "name", "type": "varchar(255)", "nullable": false, "default": null},
+            {"name": "all", "type": "tinyint(1)", "nullable": false, "default": "0", "note": "If 1, role has all permissions (super-admin shortcut)."},
+            {"name": "sort", "type": "smallint(5) UNSIGNED", "nullable": false, "default": "0"},
+            {"name": "created_at", "type": "timestamp", "nullable": false, "default": "CURRENT_TIMESTAMP"},
+            {"name": "updated_at", "type": "timestamp", "nullable": false, "default": "0000-00-00 00:00:00"}
+          ],
+          "primary_key": ["id"],
+          "indexes": [{"name": "roles_name_unique", "type": "UNIQUE", "columns": ["name"]}],
+          "foreign_keys": [],
+          "seed_data": [
+            {"id": 1, "name": "Administrator", "all": 1, "sort": 1},
+            {"id": 2, "name": "Company", "all": 0, "sort": 2},
+            {"id": 3, "name": "User", "all": 0, "sort": 3}
+          ]
+        },
+        "permissions": {
+          "columns": [
+            {"name": "id", "type": "int(10) UNSIGNED", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "name", "type": "varchar(255)", "nullable": false, "default": null},
+            {"name": "display_name", "type": "varchar(255)", "nullable": false, "default": null},
+            {"name": "sort", "type": "smallint(5) UNSIGNED", "nullable": false, "default": "0"},
+            {"name": "created_at", "type": "timestamp", "nullable": false, "default": "CURRENT_TIMESTAMP"},
+            {"name": "updated_at", "type": "timestamp", "nullable": false, "default": "0000-00-00 00:00:00"}
+          ],
+          "primary_key": ["id"],
+          "indexes": [{"name": "permissions_name_unique", "type": "UNIQUE", "columns": ["name"]}],
+          "foreign_keys": [],
+          "seed_data": [
+            {"id": 1, "name": "view-backend", "display_name": "View Backend", "sort": 1},
+            {"id": 2, "name": "manage-users", "display_name": "Manage Users", "sort": 2},
+            {"id": 3, "name": "manage-roles", "display_name": "Manage Roles", "sort": 3}
+          ]
+        },
+        "permission_role": {
+          "columns": [
+            {"name": "id", "type": "int(10) UNSIGNED", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "permission_id", "type": "int(10) UNSIGNED", "nullable": false, "default": null},
+            {"name": "role_id", "type": "int(10) UNSIGNED", "nullable": false, "default": null}
+          ],
+          "primary_key": ["id"],
+          "foreign_keys": [
+            {"columns": ["permission_id"], "references": {"table": "permissions", "columns": ["id"]}, "on_delete": "CASCADE"},
+            {"columns": ["role_id"], "references": {"table": "roles", "columns": ["id"]}, "on_delete": "CASCADE"}
+          ]
+        },
+        "assigned_roles": {
+          "purpose": "User↔Role join table. Note: Laravel access scaffold name; not the more common `role_user`.",
+          "columns": [
+            {"name": "id", "type": "int(10) UNSIGNED", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "user_id", "type": "int(10) UNSIGNED", "nullable": false, "default": null},
+            {"name": "role_id", "type": "int(10) UNSIGNED", "nullable": false, "default": null}
+          ],
+          "primary_key": ["id"],
+          "foreign_keys": [
+            {"columns": ["user_id"], "references": {"table": "users", "columns": ["id"]}, "on_delete": "CASCADE"},
+            {"columns": ["role_id"], "references": {"table": "roles", "columns": ["id"]}, "on_delete": "CASCADE"}
+          ]
+        },
+        "history": {
+          "purpose": "Audit log.",
+          "columns": [
+            {"name": "id", "type": "int(10) UNSIGNED", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "type_id", "type": "int(10) UNSIGNED", "nullable": false, "default": null},
+            {"name": "user_id", "type": "int(10) UNSIGNED", "nullable": false, "default": null},
+            {"name": "entity_id", "type": "int(10) UNSIGNED", "nullable": true, "default": null},
+            {"name": "icon", "type": "varchar(255)", "nullable": true, "default": null},
+            {"name": "class", "type": "varchar(255)", "nullable": true, "default": null},
+            {"name": "text", "type": "varchar(255)", "nullable": false, "default": null},
+            {"name": "assets", "type": "varchar(255)", "nullable": true, "default": null},
+            {"name": "created_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "updated_at", "type": "timestamp", "nullable": true, "default": null}
+          ],
+          "primary_key": ["id"],
+          "foreign_keys": [
+            {"columns": ["type_id"], "references": {"table": "history_types", "columns": ["id"]}, "on_delete": "CASCADE"},
+            {"columns": ["user_id"], "references": {"table": "users", "columns": ["id"]}, "on_delete": "CASCADE"}
+          ]
+        },
+        "history_types": {
+          "columns": [
+            {"name": "id", "type": "int(10) UNSIGNED", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "name", "type": "varchar(255)", "nullable": false, "default": null},
+            {"name": "created_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "updated_at", "type": "timestamp", "nullable": true, "default": null}
+          ],
+          "primary_key": ["id"],
+          "seed_data": [
+            {"id": 1, "name": "User"},
+            {"id": 2, "name": "Role"}
+          ]
+        },
+        "migrations": {
+          "purpose": "Laravel migrations tracker. NOT migrated to v2 (Prisma uses its own _prisma_migrations table).",
+          "columns": [
+            {"name": "migration", "type": "varchar(255)", "nullable": false, "default": null},
+            {"name": "batch", "type": "int(11)", "nullable": false, "default": null}
+          ],
+          "primary_key": [],
+          "drop_in_v2": true
+        }
+      }
+    },
+    "tenant_template": {
+      "tables": {
+        "equipments": {
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "company_id", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "sort_order", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "parent_id", "type": "int(11)", "nullable": false, "default": "0", "note": "Self-referencing tree."},
+            {"name": "type_id", "type": "int(11)", "nullable": false, "default": "0", "fk_to": "types.id"},
+            {"name": "name", "type": "varchar(255)", "nullable": true, "default": null},
+            {"name": "description", "type": "text", "nullable": true, "default": null},
+            {"name": "icon", "type": "varchar(255)", "nullable": false, "default": "noimage.jpg"},
+            {"name": "is_active", "type": "enum('Y','N')", "nullable": false, "default": "Y"},
+            {"name": "deleted_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "created_at", "type": "timestamp", "nullable": false, "default": "current_timestamp()"},
+            {"name": "updated_at", "type": "timestamp", "nullable": false, "default": "current_timestamp()"}
+          ],
+          "primary_key": ["id"],
+          "indexes": [{"name": "id", "type": "INDEX", "columns": ["id"]}],
+          "soft_deletes": true,
+          "v2_indexes_to_add": ["parent_id", "type_id", "is_active", "(parent_id, sort_order)"]
+        },
+        "equipment_assign": {
+          "purpose": "User-equipment assignment.",
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "equipment_id", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "user_id", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "status", "type": "enum('Active','Inactive')", "nullable": false, "default": "Active"},
+            {"name": "created_at", "type": "timestamp", "nullable": false, "default": "0000-00-00 00:00:00"},
+            {"name": "updated_at", "type": "timestamp", "nullable": false, "default": "current_timestamp()"},
+            {"name": "deleted_at", "type": "timestamp", "nullable": true, "default": null}
+          ],
+          "primary_key": ["id"],
+          "indexes": [{"name": "equipment_id", "type": "INDEX", "columns": ["equipment_id"]}],
+          "foreign_keys": [{"name": "equipment_assign_ibfk_1", "columns": ["equipment_id"], "references": {"table": "equipments", "columns": ["id"]}}],
+          "soft_deletes": true,
+          "v2_note": "user_id snapshot — capture user email/name at write time per A5."
+        },
+        "equipment_orders": {
+          "purpose": "Equipment ↔ order_type allow-list.",
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "equipment_id", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "order_type_id", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "status", "type": "int(2)", "nullable": false, "default": "1"},
+            {"name": "created_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "updated_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "deleted_at", "type": "timestamp", "nullable": true, "default": null}
+          ],
+          "primary_key": ["id"],
+          "soft_deletes": true
+        },
+        "equipment_parts": {
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "equipment_id", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "part_type_id", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "status", "type": "int(2)", "nullable": false, "default": "1"},
+            {"name": "created_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "updated_at", "type": "timestamp", "nullable": true, "default": "current_timestamp()"},
+            {"name": "deleted_at", "type": "datetime", "nullable": true, "default": null}
+          ],
+          "primary_key": ["id"],
+          "soft_deletes": true
+        },
+        "equipment_properties": {
+          "purpose": "Equipment configuration — cost, cycle time, salary group, etc.",
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "equip_id", "type": "int(11)", "nullable": false, "default": null, "note": "FK to equipments.id (column name uses equip_id, not equipment_id)."},
+            {"name": "type_id", "type": "int(11)", "nullable": false, "default": null},
+            {"name": "cycle_time", "type": "varchar(512)", "nullable": false, "default": "''"},
+            {"name": "cost_per_hour", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "currency", "type": "varchar(10)", "nullable": false, "default": "''"},
+            {"name": "operator", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "salary_group_id", "type": "int(11)", "nullable": false, "default": null},
+            {"name": "value_added_type", "type": "enum('currency','percentage')", "nullable": false, "default": "currency"},
+            {"name": "value_added_val", "type": "varchar(10)", "nullable": false, "default": null},
+            {"name": "order_selection", "type": "enum('free_text','list')", "nullable": false, "default": "free_text"},
+            {"name": "updated_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "created_at", "type": "timestamp", "nullable": true, "default": null}
+          ],
+          "primary_key": ["id"],
+          "indexes": [{"name": "equip_id", "type": "INDEX", "columns": ["equip_id"]}]
+        },
+        "equipment_scrap_reasons": {
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "equipment_id", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "reason_type_id", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "status", "type": "int(2)", "nullable": false, "default": "1"},
+            {"name": "created_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "updated_at", "type": "timestamp", "nullable": true, "default": "current_timestamp()"},
+            {"name": "deleted_at", "type": "datetime", "nullable": true, "default": null}
+          ],
+          "primary_key": ["id"],
+          "soft_deletes": true
+        },
+        "equipment_shift_schedule": {
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "equipment_id", "type": "int(11)", "nullable": false, "default": null},
+            {"name": "schedule_id", "type": "int(11)", "nullable": false, "default": null},
+            {"name": "also_assign_import", "type": "bit(1)", "nullable": false, "default": "b'0'"}
+          ],
+          "primary_key": ["id"]
+        },
+        "equipment_stop_reasons": {
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "equipment_id", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "reason_type_id", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "status", "type": "int(2)", "nullable": false, "default": "1"},
+            {"name": "created_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "updated_at", "type": "timestamp", "nullable": true, "default": "current_timestamp()"},
+            {"name": "deleted_at", "type": "datetime", "nullable": true, "default": null}
+          ],
+          "primary_key": ["id"],
+          "soft_deletes": true
+        },
+        "user_equipments": {
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "user_id", "type": "int(11)", "nullable": false, "default": null, "v2_note": "Cross-schema reference; snapshot per A5."},
+            {"name": "equipment_id", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "icon", "type": "varchar(255)", "nullable": false, "default": "noimage.jpg"},
+            {"name": "created_at", "type": "datetime", "nullable": false, "default": null},
+            {"name": "updated_at", "type": "datetime", "nullable": true, "default": null},
+            {"name": "status", "type": "int(2)", "nullable": false, "default": "1"}
+          ],
+          "primary_key": ["id"]
+        },
+        "tbl_machines": {
+          "purpose": "IoT machine units.",
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "equip_id", "type": "int(11)", "nullable": false, "default": "0", "note": "FK to equipments.id (column name equip_id, not equipment_id)."},
+            {"name": "pin_no", "type": "tinyint(4)", "nullable": false, "default": null},
+            {"name": "installation_date", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "running_status", "type": "enum('on','off')", "nullable": false, "default": null},
+            {"name": "wifi_id", "type": "varchar(50)", "nullable": true, "default": null},
+            {"name": "bluetooth_id", "type": "varchar(50)", "nullable": true, "default": null},
+            {"name": "has_unregister_data", "type": "enum('no','yes')", "nullable": false, "default": "no"},
+            {"name": "filter_time", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "filter_time_on", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "unit_name", "type": "varchar(50)", "nullable": false, "default": null},
+            {"name": "unit_connected", "type": "enum('yes','no')", "nullable": false, "default": "yes"},
+            {"name": "updated_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "last_online", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "signal_type", "type": "enum('on','off','warning')", "nullable": false, "default": "on"},
+            {"name": "log_warning", "type": "tinyint(1)", "nullable": false, "default": "0"},
+            {"name": "custom_notification_text", "type": "varchar(100)", "nullable": true, "default": null},
+            {"name": "notification_default", "type": "tinyint(1)", "nullable": false, "default": "1"},
+            {"name": "is_auto_registered", "type": "enum('no','yes')", "nullable": false, "default": "no"},
+            {"name": "auto_registered_data", "type": "text", "nullable": true, "default": null},
+            {"name": "counter_details", "type": "text", "nullable": true, "default": null},
+            {"name": "parent_id", "type": "int(11)", "nullable": true, "default": null}
+          ],
+          "primary_key": ["id"],
+          "indexes": [{"name": "equipment_id", "type": "INDEX", "columns": ["equip_id"]}]
+        },
+        "tbl_machine_data": {
+          "purpose": "IoT machine telemetry — highest-volume table. Partition in v2 (see MIGRATION_NOTES §4.6).",
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "machine_id", "type": "int(11)", "nullable": false, "default": null},
+            {"name": "start_time", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "end_time", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "is_registered", "type": "enum('no','yes','pre')", "nullable": false, "default": "no"},
+            {"name": "is_valid_data", "type": "enum('yes','no')", "nullable": false, "default": "yes"},
+            {"name": "production_time", "type": "varchar(10)", "nullable": true, "default": null}
+          ],
+          "primary_key": ["id"],
+          "indexes": [{"name": "machine_id", "type": "INDEX", "columns": ["machine_id"]}],
+          "v2_partition_key": "start_time (timestamptz, monthly)"
+        },
+        "tbl_machine_previous_starts": {
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "machine_id", "type": "int(11)", "nullable": false, "default": null},
+            {"name": "prev_start_time", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "prev_stop_time", "type": "timestamp", "nullable": true, "default": null}
+          ],
+          "primary_key": ["id"]
+        },
+        "tbl_machine_status": {
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "machine_id", "type": "int(11)", "nullable": false, "default": null},
+            {"name": "status", "type": "enum('on','off')", "nullable": false, "default": null},
+            {"name": "time", "type": "varchar(30)", "nullable": true, "default": null}
+          ],
+          "primary_key": ["id"],
+          "indexes": [
+            {"name": "time", "type": "INDEX", "columns": ["time"]},
+            {"name": "machinid", "type": "INDEX", "columns": ["machine_id"]}
+          ]
+        },
+        "tbl_machine_user_settings": {
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "user_id", "type": "int(11)", "nullable": false, "default": null, "v2_note": "Cross-schema; snapshot per A5."},
+            {"name": "machine_id", "type": "int(11)", "nullable": false, "default": null},
+            {"name": "is_voice_msg", "type": "tinyint(4)", "nullable": false, "default": "0"},
+            {"name": "is_vibrate", "type": "tinyint(4)", "nullable": false, "default": "0"},
+            {"name": "is_sound", "type": "tinyint(4)", "nullable": false, "default": "1"},
+            {"name": "sound_file_name", "type": "varchar(100)", "nullable": true, "default": null}
+          ],
+          "primary_key": ["id"],
+          "indexes": [
+            {"name": "user_id", "type": "INDEX", "columns": ["user_id"]},
+            {"name": "machine_id", "type": "INDEX", "columns": ["machine_id"]}
+          ]
+        },
+        "machines": {
+          "purpose": "File-manager row representing a machine's documentation. RENAMED in v2 to machine_documents.",
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "equipment_id", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "folder_id", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "name", "type": "varchar(255)", "nullable": true, "default": null},
+            {"name": "is_main", "type": "enum('Y','N')", "nullable": false, "default": "N"},
+            {"name": "is_locked", "type": "enum('Y','N')", "nullable": false, "default": "N"},
+            {"name": "created_at", "type": "timestamp", "nullable": false, "default": "0000-00-00 00:00:00"},
+            {"name": "updated_at", "type": "timestamp", "nullable": false, "default": "current_timestamp()"},
+            {"name": "deleted_at", "type": "timestamp", "nullable": true, "default": null}
+          ],
+          "primary_key": ["id"],
+          "soft_deletes": true,
+          "v2_table_name": "machine_documents"
+        },
+        "machine_files": {
+          "purpose": "File versions on a machine_documents row. RENAMED in v2 to machine_document_files.",
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "user_id", "type": "int(11)", "nullable": false, "default": "0", "v2_note": "Snapshot user per A5."},
+            {"name": "machine_id", "type": "int(11)", "nullable": false, "default": "0", "note": "FK to machines.id (becomes machine_documents.id in v2)."},
+            {"name": "filename", "type": "varchar(255)", "nullable": true, "default": "noimage.png"},
+            {"name": "filetype", "type": "enum('Image','Excel','PDF','Video')", "nullable": true, "default": "Image"},
+            {"name": "is_main", "type": "enum('Y','N')", "nullable": false, "default": "N"},
+            {"name": "is_locked", "type": "enum('Y','N')", "nullable": false, "default": "N"},
+            {"name": "uploaded_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "downloaded_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "is_active", "type": "enum('Y','N')", "nullable": false, "default": "Y"},
+            {"name": "notes", "type": "text", "nullable": false, "default": null},
+            {"name": "created_at", "type": "timestamp", "nullable": false, "default": "0000-00-00 00:00:00"},
+            {"name": "updated_at", "type": "timestamp", "nullable": false, "default": "current_timestamp()"},
+            {"name": "deleted_at", "type": "timestamp", "nullable": true, "default": null}
+          ],
+          "primary_key": ["id"],
+          "soft_deletes": true,
+          "v2_table_name": "machine_document_files"
+        },
+        "production_data": {
+          "purpose": "Manual production entries.",
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "flow_id", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "flow_object_key", "type": "int(11)", "nullable": false, "default": "0", "note": "FK to equipments.id (legacy column name; the FlowDesignAttribute equipment ref)."},
+            {"name": "part_id", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "work_shift_id", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "work_hours", "type": "varchar(10)", "nullable": true, "default": null},
+            {"name": "part_qty", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "planned_qty", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "order_no", "type": "varchar(255)", "nullable": true, "default": "''", "note": "Denormalized order number snapshot."},
+            {"name": "date", "type": "date", "nullable": true, "default": null},
+            {"name": "created_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "updated_at", "type": "timestamp", "nullable": true, "default": "current_timestamp()"},
+            {"name": "deleted_at", "type": "datetime", "nullable": true, "default": null},
+            {"name": "status", "type": "int(2)", "nullable": false, "default": "1"},
+            {"name": "comment", "type": "varchar(255)", "nullable": false, "default": "''"},
+            {"name": "created_by", "type": "int(11)", "nullable": false, "default": "0", "v2_note": "Snapshot user per A5."},
+            {"name": "work_shift_name", "type": "varchar(50)", "nullable": true, "default": null, "note": "Denormalized shift name (legacy already does this — A5 is consistent)."}
+          ],
+          "primary_key": ["id"],
+          "indexes": [{"name": "work_shift_name", "type": "INDEX", "columns": ["work_shift_name"]}],
+          "soft_deletes": true,
+          "v2_indexes_to_add": ["flow_id", "flow_object_key", "part_id", "work_shift_id", "created_by", "(flow_id, work_shift_id, date)"]
+        },
+        "scrap_data": {
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "flow_id", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "flow_object_key", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "part_id", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "work_shift_id", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "order_no", "type": "varchar(255)", "nullable": true, "default": "''"},
+            {"name": "quantity", "type": "int(11)", "nullable": true, "default": null},
+            {"name": "reason", "type": "int(11)", "nullable": false, "default": "0", "note": "FK to scrap_reasons.id."},
+            {"name": "date", "type": "date", "nullable": true, "default": null},
+            {"name": "created_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "updated_at", "type": "timestamp", "nullable": true, "default": "current_timestamp()"},
+            {"name": "deleted_at", "type": "datetime", "nullable": true, "default": null},
+            {"name": "status", "type": "int(2)", "nullable": false, "default": "1"},
+            {"name": "comment", "type": "varchar(255)", "nullable": false, "default": "''"},
+            {"name": "created_by", "type": "int(11)", "nullable": false, "default": "0", "v2_note": "Snapshot user per A5."},
+            {"name": "scrap_type_id", "type": "int(11)", "nullable": false, "default": "0", "note": "FK to types.id."},
+            {"name": "picture", "type": "varchar(255)", "nullable": true, "default": null},
+            {"name": "work_shift_name", "type": "varchar(50)", "nullable": true, "default": null}
+          ],
+          "primary_key": ["id"],
+          "indexes": [{"name": "work_shift_name", "type": "INDEX", "columns": ["work_shift_name"]}],
+          "soft_deletes": true
+        },
+        "stop_data": {
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "flow_id", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "flow_object_key", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "part_id", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "work_shift_id", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "order_no", "type": "varchar(255)", "nullable": true, "default": "''"},
+            {"name": "date", "type": "date", "nullable": true, "default": null},
+            {"name": "reason", "type": "int(11)", "nullable": true, "default": "0"},
+            {"name": "hours", "type": "int(4)", "nullable": false, "default": "0"},
+            {"name": "minutes", "type": "int(4)", "nullable": false, "default": "0"},
+            {"name": "time", "type": "varchar(20)", "nullable": true, "default": null},
+            {"name": "quantity", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "sum_of_time", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "stop_timestamp", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "restart_timestamp", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "created_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "updated_at", "type": "timestamp", "nullable": true, "default": "current_timestamp()"},
+            {"name": "deleted_at", "type": "datetime", "nullable": true, "default": null},
+            {"name": "status", "type": "int(2)", "nullable": false, "default": "1"},
+            {"name": "comment", "type": "varchar(255)", "nullable": false, "default": "''"},
+            {"name": "created_by", "type": "int(11)", "nullable": false, "default": "0", "v2_note": "Snapshot user per A5."},
+            {"name": "stop_type_id", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "picture", "type": "varchar(255)", "nullable": true, "default": null},
+            {"name": "work_shift_name", "type": "varchar(50)", "nullable": true, "default": null},
+            {"name": "machine_stop_id", "type": "int(11)", "nullable": false, "default": "0", "note": "FK to tbl_machine_data.id — links manual stop to machine event."},
+            {"name": "stop_data_type", "type": "enum('reg','pre')", "nullable": true, "default": "reg"}
+          ],
+          "primary_key": ["id"],
+          "indexes": [{"name": "work_shift_name", "type": "INDEX", "columns": ["work_shift_name"]}],
+          "soft_deletes": true
+        },
+        "tbl_warning_data": {
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "equip_id", "type": "int(11)", "nullable": false, "default": null},
+            {"name": "machine_id", "type": "int(11)", "nullable": false, "default": null},
+            {"name": "notification_text", "type": "varchar(512)", "nullable": false, "default": null},
+            {"name": "from_time", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "to_time", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "duration", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "created_by", "type": "int(11)", "nullable": false, "default": "0", "v2_note": "Snapshot user per A5."},
+            {"name": "created_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "updated_at", "type": "timestamp", "nullable": true, "default": null}
+          ],
+          "primary_key": ["id"],
+          "indexes": [
+            {"name": "equip_id", "type": "INDEX", "columns": ["equip_id"]},
+            {"name": "machine_id", "type": "INDEX", "columns": ["machine_id"]}
+          ]
+        },
+        "tbl_orders": {
+          "purpose": "Production orders. CONFIRMED columns from B2 inspection.",
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "status", "type": "tinyint(2)", "nullable": false, "default": "1"},
+            {"name": "type_id", "type": "int(11)", "nullable": false, "default": null, "fk_to": "types.id"},
+            {"name": "order_nr", "type": "varchar(50)", "nullable": false, "default": null, "note": "Unique within tenant — enforced in OrderController validation."},
+            {"name": "description", "type": "varchar(255)", "nullable": false, "default": null},
+            {"name": "flow_id", "type": "int(11)", "nullable": false, "default": null, "fk_to": "flow_designs.id"},
+            {"name": "equip_id", "type": "int(11)", "nullable": false, "default": null, "fk_to": "equipments.id"},
+            {"name": "part_id", "type": "int(11)", "nullable": false, "default": null, "fk_to": "parts.id"},
+            {"name": "start_date", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "end_date", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "planned_qty", "type": "int(11)", "nullable": false, "default": null},
+            {"name": "ok_qty", "type": "int(11)", "nullable": false, "default": null},
+            {"name": "scrap_qty", "type": "int(11)", "nullable": false, "default": null},
+            {"name": "planned_hrs", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "worked_hrs", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "remaining_qty", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "remaining_hrs", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "sort_order", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "created_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "updated_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "deleted_at", "type": "timestamp", "nullable": true, "default": null}
+          ],
+          "primary_key": ["id"],
+          "soft_deletes": true,
+          "v2_indexes_to_add": ["type_id", "flow_id", "equip_id", "part_id", "(start_date, end_date)", "order_nr (UNIQUE)"]
+        },
+        "parts": {
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "name", "type": "varchar(255)", "nullable": false, "default": null},
+            {"name": "part_no", "type": "varchar(255)", "nullable": false, "default": "0"},
+            {"name": "description", "type": "text", "nullable": true, "default": null},
+            {"name": "status", "type": "int(2)", "nullable": false, "default": "1"},
+            {"name": "type_id", "type": "int(11)", "nullable": false, "default": "0", "fk_to": "types.id"},
+            {"name": "purchase_price", "type": "decimal(10,0)", "nullable": false, "default": "0"},
+            {"name": "sales_price", "type": "decimal(10,0)", "nullable": false, "default": "0"},
+            {"name": "sort_order", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "created_at", "type": "datetime", "nullable": false, "default": null},
+            {"name": "updated_at", "type": "datetime", "nullable": true, "default": null},
+            {"name": "deleted_at", "type": "datetime", "nullable": true, "default": null}
+          ],
+          "primary_key": ["id"],
+          "soft_deletes": true,
+          "v2_indexes_to_add": ["type_id", "(part_no, name) — pg_trgm GIN for autocomplete"]
+        },
+        "flow_designs": {
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "name", "type": "varchar(250)", "nullable": false, "default": null},
+            {"name": "flow_data", "type": "mediumtext", "nullable": false, "default": null, "note": "GoJS diagram JSON."},
+            {"name": "status", "type": "int(2)", "nullable": false, "default": "1"},
+            {"name": "created_at", "type": "datetime", "nullable": false, "default": null},
+            {"name": "updated_at", "type": "datetime", "nullable": false, "default": null},
+            {"name": "deleted_at", "type": "datetime", "nullable": false, "default": null, "note": "Legacy uses NOT NULL with default 0000-00-00 — odd. v2: nullable timestamptz."}
+          ],
+          "primary_key": ["id"],
+          "soft_deletes": true
+        },
+        "flow_design_attributes": {
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "flow_design_id", "type": "int(11)", "nullable": false, "default": null, "fk_to": "flow_designs.id"},
+            {"name": "relation_id", "type": "int(11)", "nullable": false, "default": null, "note": "Polymorphic id; type column tells you what it points at."},
+            {"name": "type", "type": "enum('Object','File','Folder','Equipment')", "nullable": true, "default": null},
+            {"name": "left", "type": "int(11)", "nullable": false, "default": "0", "note": "Diagram x position."},
+            {"name": "right", "type": "int(11)", "nullable": false, "default": "0", "note": "Diagram y position. (Naming is odd; left/right don't actually mean coordinates as named.)"},
+            {"name": "created_at", "type": "datetime", "nullable": false, "default": null},
+            {"name": "updated_at", "type": "datetime", "nullable": true, "default": null}
+          ],
+          "primary_key": ["id"]
+        },
+        "folders": {
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "equipment_id", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "name", "type": "varchar(255)", "nullable": false, "default": null},
+            {"name": "folder_type", "type": "int(11)", "nullable": false, "default": null, "note": "FK to types.id."},
+            {"name": "created_at", "type": "datetime", "nullable": false, "default": null},
+            {"name": "updated_at", "type": "datetime", "nullable": true, "default": null},
+            {"name": "deleted_at", "type": "datetime", "nullable": true, "default": null},
+            {"name": "status", "type": "int(2)", "nullable": false, "default": "1"}
+          ],
+          "primary_key": ["id"],
+          "soft_deletes": true
+        },
+        "user_file_locks": {
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "user_id", "type": "int(11)", "nullable": false, "default": null, "v2_note": "Snapshot per A5."},
+            {"name": "type", "type": "enum('lock','delete')", "nullable": false, "default": "lock"},
+            {"name": "machine_id", "type": "int(11)", "nullable": false, "default": "0", "note": "FK to machines.id (becomes machine_documents.id)."},
+            {"name": "machine_file_id", "type": "int(11)", "nullable": false, "default": "0", "note": "FK to machine_files.id (becomes machine_document_files.id)."},
+            {"name": "is_locked", "type": "enum('Y','N')", "nullable": false, "default": "N"},
+            {"name": "created_at", "type": "datetime", "nullable": false, "default": null},
+            {"name": "updated_at", "type": "datetime", "nullable": true, "default": null}
+          ],
+          "primary_key": ["id"]
+        },
+        "types": {
+          "purpose": "Polymorphic categorization across Equipments / Stop reason / Scrap reason / Parts / Orders / Content.",
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "name", "type": "varchar(255)", "nullable": true, "default": null},
+            {"name": "type", "type": "enum('Performance','Availability','Quality','Other','Not applicable')", "nullable": false, "default": "Not applicable"},
+            {"name": "entity", "type": "enum('Equipments','Content','Stop reason','Scrap reason','Parts','Orders')", "nullable": true, "default": "Equipments"},
+            {"name": "description", "type": "text", "nullable": true, "default": null},
+            {"name": "icon", "type": "varchar(255)", "nullable": true, "default": "noimage.jpg"},
+            {"name": "is_active", "type": "enum('Y','N')", "nullable": false, "default": "Y"},
+            {"name": "exclude_type", "type": "bit(1)", "nullable": false, "default": "b'0'"},
+            {"name": "sort_order", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "deleted_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "created_at", "type": "timestamp", "nullable": false, "default": "current_timestamp()"},
+            {"name": "updated_at", "type": "timestamp", "nullable": false, "default": "current_timestamp()"}
+          ],
+          "primary_key": ["id"],
+          "soft_deletes": true
+        },
+        "scrap_reasons": {
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "name", "type": "varchar(255)", "nullable": true, "default": null},
+            {"name": "status", "type": "int(2)", "nullable": false, "default": "1"},
+            {"name": "created_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "updated_at", "type": "timestamp", "nullable": true, "default": "current_timestamp()"},
+            {"name": "deleted_at", "type": "datetime", "nullable": true, "default": null},
+            {"name": "type_id", "type": "int(11)", "nullable": false, "default": "0", "fk_to": "types.id"},
+            {"name": "description", "type": "varchar(255)", "nullable": false, "default": "''"},
+            {"name": "sort_order", "type": "int(11)", "nullable": false, "default": "0"}
+          ],
+          "primary_key": ["id"],
+          "soft_deletes": true
+        },
+        "stop_reasons": {
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "name", "type": "varchar(255)", "nullable": true, "default": null},
+            {"name": "status", "type": "int(2)", "nullable": false, "default": "1"},
+            {"name": "created_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "updated_at", "type": "timestamp", "nullable": true, "default": "current_timestamp()"},
+            {"name": "deleted_at", "type": "datetime", "nullable": true, "default": null},
+            {"name": "type_id", "type": "int(11)", "nullable": false, "default": "0", "fk_to": "types.id"},
+            {"name": "description", "type": "varchar(255)", "nullable": false, "default": "''"},
+            {"name": "sort_order", "type": "int(11)", "nullable": false, "default": "0"}
+          ],
+          "primary_key": ["id"],
+          "soft_deletes": true
+        },
+        "stop_category": {
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "name", "type": "varchar(255)", "nullable": true, "default": null},
+            {"name": "type", "type": "enum('Performance','Availability','Quality','Other')", "nullable": false, "default": "Performance"},
+            {"name": "description", "type": "varchar(512)", "nullable": false, "default": null},
+            {"name": "icon", "type": "varchar(255)", "nullable": true, "default": null},
+            {"name": "created_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "updated_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "deleted_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "is_active", "type": "enum('Y','N')", "nullable": false, "default": "Y"}
+          ],
+          "primary_key": ["id"],
+          "soft_deletes": true
+        },
+        "work_shifts": {
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "name", "type": "varchar(255)", "nullable": true, "default": null},
+            {"name": "start_time", "type": "time", "nullable": true, "default": null},
+            {"name": "end_time", "type": "time", "nullable": true, "default": null},
+            {"name": "break_start_time", "type": "time", "nullable": true, "default": null},
+            {"name": "break_end_time", "type": "time", "nullable": true, "default": null},
+            {"name": "break_times", "type": "varchar(512)", "nullable": true, "default": null, "note": "Multi-break JSON."},
+            {"name": "working_days", "type": "varchar(50)", "nullable": true, "default": null, "note": "Comma-separated day codes."},
+            {"name": "status", "type": "int(2)", "nullable": false, "default": "1"},
+            {"name": "created_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "updated_at", "type": "timestamp", "nullable": true, "default": "current_timestamp()"},
+            {"name": "deleted_at", "type": "datetime", "nullable": true, "default": null}
+          ],
+          "primary_key": ["id"],
+          "soft_deletes": true
+        },
+        "tbl_shift_schedules": {
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "status", "type": "bit(1)", "nullable": false, "default": "b'1'"},
+            {"name": "title", "type": "varchar(100)", "nullable": false, "default": null},
+            {"name": "description", "type": "varchar(512)", "nullable": true, "default": null},
+            {"name": "created_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "updated_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "deleted_at", "type": "timestamp", "nullable": true, "default": null}
+          ],
+          "primary_key": ["id"],
+          "soft_deletes": true
+        },
+        "tbl_shift_schedule_data": {
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "parent_id", "type": "int(11)", "nullable": false, "default": "0"},
+            {"name": "title", "type": "varchar(100)", "nullable": false, "default": null},
+            {"name": "schedule_id", "type": "int(11)", "nullable": false, "default": null, "fk_to": "tbl_shift_schedules.id"},
+            {"name": "start", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "end", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "textColor", "type": "varchar(20)", "nullable": false, "default": null},
+            {"name": "backgroundColor", "type": "varchar(20)", "nullable": false, "default": null},
+            {"name": "is_reccuring", "type": "bit(1)", "nullable": false, "default": "b'0'", "note": "Note: misspelled 'reccuring' in legacy."},
+            {"name": "created_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "updated_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "rc_data", "type": "text", "nullable": true, "default": null, "note": "Recurrence rule JSON."},
+            {"name": "break_data", "type": "text", "nullable": true, "default": null}
+          ],
+          "primary_key": ["id"],
+          "indexes": [{"name": "schedule_id", "type": "INDEX", "columns": ["schedule_id"]}]
+        },
+        "salary_group": {
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "name", "type": "varchar(255)", "nullable": true, "default": null},
+            {"name": "hourly_rate", "type": "decimal(10,0)", "nullable": false, "default": "0"},
+            {"name": "info", "type": "varchar(512)", "nullable": false, "default": null},
+            {"name": "created_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "updated_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "deleted_at", "type": "timestamp", "nullable": true, "default": null}
+          ],
+          "primary_key": ["id"],
+          "soft_deletes": true
+        },
+        "dashboards": {
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "status", "type": "tinyint(4)", "nullable": false, "default": "1"},
+            {"name": "name", "type": "varchar(255)", "nullable": false, "default": null},
+            {"name": "slot_data", "type": "mediumtext", "nullable": true, "default": null},
+            {"name": "total_slots", "type": "tinyint(4)", "nullable": false, "default": "6"},
+            {"name": "created_by", "type": "int(11)", "nullable": false, "default": null, "v2_note": "Snapshot per A5."},
+            {"name": "created_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "updated_at", "type": "timestamp", "nullable": true, "default": null}
+          ],
+          "primary_key": ["id"]
+        },
+        "dashboard_widgets": {
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "title", "type": "varchar(255)", "nullable": false, "default": null},
+            {"name": "img_path", "type": "varchar(255)", "nullable": false, "default": null},
+            {"name": "settings", "type": "varchar(1024)", "nullable": false, "default": "''"},
+            {"name": "created_by", "type": "int(11)", "nullable": false, "default": null, "v2_note": "Snapshot per A5."},
+            {"name": "created_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "updated_at", "type": "timestamp", "nullable": true, "default": null},
+            {"name": "deleted_at", "type": "timestamp", "nullable": true, "default": null}
+          ],
+          "primary_key": ["id"],
+          "soft_deletes": true
+        },
+        "objects": {
+          "purpose": "Generic object/icon library. UNUSED in active code (B1 finding — only a dead `use App\\Models\\Objects;` import in DashboardController.php). DROP in v2.",
+          "columns": [
+            {"name": "id", "type": "int(11)", "nullable": false, "default": null, "auto_increment": true},
+            {"name": "name", "type": "varchar(255)", "nullable": false, "default": null},
+            {"name": "image", "type": "varchar(255)", "nullable": true, "default": null},
+            {"name": "status", "type": "int(2)", "nullable": false, "default": "1"},
+            {"name": "created_at", "type": "datetime", "nullable": false, "default": null},
+            {"name": "updated_at", "type": "datetime", "nullable": false, "default": null}
+          ],
+          "primary_key": ["id"],
+          "drop_in_v2": true
+        },
+        "users_replicated": {
+          "alias_for": "users",
+          "purpose": "The tenant DB also contains a `users` table cloned from master (per the legacy DB-per-tenant + dual-write design). Same column set as master.users. In v2 this is collapsed: the single public.users is the source of truth.",
+          "drop_in_v2": true
+        },
+        "social_logins_replicated": {
+          "alias_for": "social_logins",
+          "purpose": "Cloned from master. Drop in v2.",
+          "drop_in_v2": true
+        },
+        "roles_replicated": {
+          "alias_for": "roles",
+          "drop_in_v2": true
+        },
+        "permissions_replicated": {
+          "alias_for": "permissions",
+          "drop_in_v2": true
+        },
+        "permission_role_replicated": {
+          "alias_for": "permission_role",
+          "drop_in_v2": true
+        },
+        "assigned_roles_replicated": {
+          "alias_for": "assigned_roles",
+          "drop_in_v2": true
+        },
+        "history_replicated": {
+          "alias_for": "history",
+          "drop_in_v2": true
+        },
+        "history_types_replicated": {
+          "alias_for": "history_types",
+          "drop_in_v2": true
+        },
+        "password_resets_replicated": {
+          "alias_for": "password_resets",
+          "drop_in_v2": true
+        },
+        "migrations_replicated": {
+          "alias_for": "migrations",
+          "drop_in_v2": true
+        }
+      }
+    }
+  },
+  "discrepancies": {
+    "master_missing_tables": {
+      "description": "Tables that exist in production master DB (per controller code references and docs-1 analysis) but are NOT in common_db.sql (which is a 2017 template snapshot). Operator must dump these from live master before Phase 2.",
+      "tables": [
+        {"name": "cms", "evidence": "Cms model + DashboardController CMS methods"},
+        {"name": "cms_images", "evidence": "CmsImage model + getCmsImage/postCmsImage/deleteCmsImage"},
+        {"name": "sliders", "evidence": "Slider model + DashboardController slider methods"},
+        {"name": "testimonials", "evidence": "Testimonial model + DashboardController testimonial methods"},
+        {"name": "site_settings", "evidence": "SiteSettings model"},
+        {"name": "tbl_feedbacks", "evidence": "Feedback model + FeedbackController"},
+        {"name": "tbl_delay_notifications", "evidence": "DelayNotification model"},
+        {"name": "company_machine", "evidence": "CompanyMachine model"},
+        {"name": "machine_programme", "evidence": "MachineProgramme model + DashboardController programme methods"},
+        {"name": "machine_programme_files", "evidence": "MachineProgrammeFiles model"},
+        {"name": "work_station", "evidence": "WorkStation model + DashboardController workstation methods"},
+        {"name": "symbols", "evidence": "Symbols model + SymbolController"},
+        {"name": "equipment_type", "evidence": "EquipmentType model — present in old common_db.sql but may now live elsewhere"},
+        {"name": "main_db_info", "evidence": "Referenced in CommonClass::CreateDatabase as `DB::table('main_db_info')`"}
+      ]
+    },
+    "tenant_missing_tables": {
+      "description": "Tables in production tenant DBs that are NOT in demoChildDb.sql (the 2025-05 template). May have been added per-tenant outside the template.",
+      "tables": [
+        {"name": "main_db_info", "evidence": "Referenced in CommonClass for cPanel xmlapi credentials"}
+      ]
+    },
+    "ghost_models": {
+      "description": "PHP classes referenced in Api/MachineController.php but no model file exists in app/Models/ — runtime errors waiting to happen if these code paths are reached.",
+      "classes": [
+        {"name": "App\\Models\\OrderReport", "referenced_in": "Api/MachineController.php (lines 14, 1138, 1182, 1196, 1292, 1302, 2082)", "status": "Not migrated to v2 — verify all referencing code paths are commented out / dead before Phase 1."},
+        {"name": "App\\Models\\OrderQueue", "referenced_in": "Api/MachineController.php (lines 15, 363)", "status": "Reference is in a commented-out log line — harmless. Drop the import."},
+        {"name": "App\\Models\\Dyanamo\\OrderReportData", "referenced_in": "Api/MachineController.php (lines 19, 1284, 1340, 1411, 1424, 1425)", "status": "DynamoDB-flavored — code paths instantiate the class but downstream behaviour unclear. Verify before Phase 6."},
+        {"name": "App\\Jobs\\UpdateOrderReport", "referenced_in": "Api/MachineController.php (line 33, 638)", "status": "Reference at line 638 is commented out. The line 33 `use` import is dead."}
+      ]
+    },
+    "naming_inconsistencies": {
+      "description": "Column naming inconsistencies that the v2 Prisma schema must reconcile.",
+      "items": [
+        {"convention": "equipment FK column", "variants": ["equipment_id", "equip_id", "flow_object_key"], "tables": {"equipment_id": ["equipment_assign", "equipment_orders", "equipment_parts", "equipment_scrap_reasons", "equipment_shift_schedule", "equipment_stop_reasons", "user_equipments", "machines", "folders"], "equip_id": ["equipment_properties", "tbl_machines", "tbl_warning_data", "tbl_orders"], "flow_object_key": ["production_data", "scrap_data", "stop_data"]}, "v2_decision": "Rename ALL to equipment_id at the application layer; the DB columns may keep their legacy names if migrating data, but Prisma model fields are unified to `equipmentId`."},
+        {"convention": "soft-delete column type", "variants": ["timestamp NULL", "datetime DEFAULT NULL"], "v2_decision": "Postgres timestamptz NULL across the board."},
+        {"convention": "active flag", "variants": ["status int(2) DEFAULT 1", "is_active enum('Y','N')", "status enum('Y','N')", "status enum('Active','Inactive')"], "v2_decision": "boolean is_active across the board."},
+        {"convention": "table prefix", "variants": ["tbl_*", "no prefix"], "v2_decision": "Drop tbl_ prefix in v2; keep @@map() to original name when migrating data."}
+      ]
+    },
+    "tables_with_no_indexes_beyond_pk": {
+      "description": "Tables in the live tenant DB that lack secondary indexes — to add in v2.",
+      "tables": [
+        "equipment_orders", "equipment_parts", "equipment_scrap_reasons", "equipment_stop_reasons", "equipment_shift_schedule",
+        "flow_designs", "flow_design_attributes", "folders", "machines", "machine_files",
+        "objects", "parts", "scrap_reasons", "stop_category", "stop_reasons", "tbl_orders",
+        "tbl_machine_previous_starts", "tbl_shift_schedules", "user_equipments", "user_file_locks", "work_shifts",
+        "dashboards", "dashboard_widgets", "salary_group", "history_types"
+      ]
+    }
+  },
+  "ddl_excerpts": {
+    "tbl_orders_create": "CREATE TABLE `tbl_orders` (\n  `id` int(11) NOT NULL,\n  `status` tinyint(2) NOT NULL DEFAULT 1,\n  `type_id` int(11) NOT NULL,\n  `order_nr` varchar(50) NOT NULL,\n  `description` varchar(255) NOT NULL,\n  `flow_id` int(11) NOT NULL,\n  `equip_id` int(11) NOT NULL,\n  `part_id` int(11) NOT NULL,\n  `start_date` timestamp NULL DEFAULT NULL,\n  `end_date` timestamp NULL DEFAULT NULL,\n  `planned_qty` int(11) NOT NULL,\n  `ok_qty` int(11) NOT NULL,\n  `scrap_qty` int(11) NOT NULL,\n  `planned_hrs` int(11) NOT NULL DEFAULT 0,\n  `worked_hrs` int(11) NOT NULL DEFAULT 0,\n  `remaining_qty` int(11) NOT NULL DEFAULT 0,\n  `remaining_hrs` int(11) NOT NULL DEFAULT 0,\n  `sort_order` int(11) NOT NULL DEFAULT 0,\n  `created_at` timestamp NULL DEFAULT NULL,\n  `updated_at` timestamp NULL DEFAULT NULL,\n  `deleted_at` timestamp NULL DEFAULT NULL\n) ENGINE=InnoDB DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;"
+  }
+}
