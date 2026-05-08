@@ -1,12 +1,17 @@
 import { Controller, Get, NotFoundException } from '@nestjs/common';
+import { ApiBearerAuth, ApiCookieAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser, AuthUser } from '../common/decorators/current-user.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 
+@ApiTags('me')
+@ApiCookieAuth('access_token')
+@ApiBearerAuth('bearer')
 @Controller('me')
 export class MeController {
   constructor(private readonly prisma: PrismaService) {}
 
   @Get()
+  @ApiOperation({ summary: 'Current authenticated user + tenants + roles.' })
   async me(@CurrentUser() authUser: AuthUser) {
     const user = await this.prisma.user.findUnique({
       where: { id: authUser.id },

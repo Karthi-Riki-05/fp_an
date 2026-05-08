@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
 import { ValidationPipe } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
@@ -16,10 +17,48 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
+
+  // OpenAPI / Swagger UI mounted at /api/docs (outside the api/v1 prefix).
+  // The login endpoint sets an httpOnly cookie, and Swagger UI's
+  // `withCredentials` flag below makes the browser send it on subsequent
+  // "Try it out" calls — so once you POST /auth/login, every other endpoint
+  // is authenticated automatically.
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('FP Analyzer API')
+    .setDescription(
+      'NestJS backend for FP Analyzer.\n\n' +
+        'Auth: cookie-based JWT (POST /auth/login sets the access_token cookie). ' +
+        'Bearer JWT also accepted via the Authorize button.\n\n' +
+        'Tenant routing: most domain endpoints use the `tenantId` claim from ' +
+        'the JWT. Admins can override via `X-Tenant-Id` header.',
+    )
+    .setVersion('0.1.0')
+    .addCookieAuth('access_token', {
+      type: 'apiKey',
+      in: 'cookie',
+      name: 'access_token',
+    })
+    .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'bearer')
+    .addApiKey({ type: 'apiKey', in: 'header', name: 'X-Tenant-Id' }, 'X-Tenant-Id')
+    .addServer('/', 'this server')
+    .build();
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api/docs', app, document, {
+    swaggerOptions: {
+      persistAuthorization: true,
+      withCredentials: true, // sends cookies on Try-it-out
+      tagsSorter: 'alpha',
+      operationsSorter: 'alpha',
+    },
+    customSiteTitle: 'FP Analyzer API',
+  });
+
   app.enableShutdownHooks();
   const port = Number(process.env.PORT ?? 4000);
   await app.listen(port, '0.0.0.0');
-  app.get(Logger).log(`Backend listening on http://0.0.0.0:${port}/api/v1`);
+  const log = app.get(Logger);
+  log.log(`Backend listening on http://0.0.0.0:${port}/api/v1`);
+  log.log(`Swagger UI:           http://0.0.0.0:${port}/api/docs`);
 }
 
 bootstrap().catch((err) => {
