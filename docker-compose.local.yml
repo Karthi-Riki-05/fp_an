@@ -54,7 +54,7 @@ services:
       MAIL_HOST: mailhog
       MAIL_PORT: 1025
     ports:
-      - '4000:4000'
+      - '${BACKEND_PORT:-4000}:4000'
     volumes:
       - ./backend:/app
       - backend-node-modules:/app/node_modules
@@ -81,7 +81,7 @@ services:
       NODE_ENV: development
       NEXT_TELEMETRY_DISABLED: '1'
     ports:
-      - '3000:3000'
+      - '${FRONTEND_PORT:-3030}:3000'
     volumes:
       - ./frontend:/app
       - frontend-node-modules:/app/node_modules

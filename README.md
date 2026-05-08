@@ -69,7 +69,10 @@ docker compose --env-file .env.local -f docker-compose.local.yml up --build
 
 # 4. Verify (in another terminal):
 curl http://localhost:4000/api/v1/health    # expect { "status": "ok", checks: { db: "unknown", redis: "unknown" }, ... }
-curl -I http://localhost:3000/              # expect HTTP/1.1 200 OK
+curl -I http://localhost:3030/              # expect HTTP/1.1 200 OK
+# (Host-side ports — frontend defaults to 3030, configurable via FRONTEND_PORT
+#  in .env.local; backend defaults to 4000, configurable via BACKEND_PORT.
+#  Container-internal ports stay 3000 / 4000.)
 
 # Optional: MailHog UI
 open http://localhost:8025
