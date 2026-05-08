@@ -46,8 +46,26 @@ cp .env.example .env.local
 #    POSTGRES_PASSWORD, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET, JWT_DEVICE_SECRET
 #    For dev you can use anything — these get rotated for production.
 
-# 3. Start the local compose.
-docker compose -f docker-compose.local.yml up --build
+# 3. Start the local compose. The --env-file flag is required so Compose
+#    can substitute ${POSTGRES_PORT}, ${REDIS_PORT}, etc. into the YAML.
+#    (Compose only auto-loads `.env`, not `.env.local`.)
+docker compose --env-file .env.local -f docker-compose.local.yml up --build
+
+# Tip: if you hit "Bind for 0.0.0.0:5432 failed: port is already allocated",
+# something else has Postgres on 5432. Either stop it, or set
+# POSTGRES_PORT=15432 in .env.local — only the host-side mapping changes;
+# DATABASE_URL stays postgres:5432 (container-internal).
+#
+# macOS gotcha: Docker Desktop's File Sharing allow-list excludes
+# /Applications by default, which breaks the dev bind mounts. Two options:
+#   a) Add /Applications/XAMPP/xamppfiles/htdocs to
+#      Docker Desktop -> Settings -> Resources -> File Sharing,
+#      then restart Docker Desktop. Hot reload then works.
+#   b) Or run with the verify override (no bind mounts, no hot reload):
+#      docker compose --env-file .env.local \
+#        -f docker-compose.local.yml \
+#        -f docker-compose.verify.yml \
+#        up -d --wait
 
 # 4. Verify (in another terminal):
 curl http://localhost:4000/api/v1/health    # expect { "status": "ok", checks: { db: "unknown", redis: "unknown" }, ... }

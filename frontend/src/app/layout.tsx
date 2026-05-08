@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
-import { AntdRegistry } from '@ant-design/nextjs-registry';
-import { ConfigProvider, theme } from 'antd';
+import { Providers } from './providers';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -22,20 +21,7 @@ export default async function RootLayout({
     <html lang={locale}>
       <body>
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <AntdRegistry>
-            <ConfigProvider
-              theme={{
-                algorithm: theme.defaultAlgorithm,
-                token: {
-                  // Brand colors from legacy public/assets/sass/ — refined in Phase 4.
-                  colorPrimary: '#954cfe',
-                  colorInfo: '#01b9d0',
-                },
-              }}
-            >
-              {children}
-            </ConfigProvider>
-          </AntdRegistry>
+          <Providers>{children}</Providers>
         </NextIntlClientProvider>
       </body>
     </html>

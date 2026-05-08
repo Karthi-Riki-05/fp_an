@@ -1,0 +1,16 @@
+# Verification override (NOT for normal dev).
+# Strips the source bind mounts so the stack runs purely from the built
+# images — useful when /Applications/... isn't in Docker Desktop's
+# File Sharing allow-list. Hot reload doesn't work without the bind mount.
+#
+# Usage:
+#   docker compose --env-file .env.local \
+#     -f docker-compose.local.yml \
+#     -f docker-compose.verify.yml \
+#     up -d --wait
+
+services:
+  backend:
+    volumes: !reset []
+  frontend:
+    volumes: !reset []

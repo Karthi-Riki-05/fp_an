@@ -8,7 +8,11 @@ const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
   poweredByHeader: false,
-  // Phase 4 will add experimental.serverActions config etc. as needed.
+  // Required for Ant Design 5 + Next.js 14 App Router. Without this Next's
+  // optimizePackageImports mangles AntD's barrel exports through the React
+  // Client Manifest and dev SSR throws "__barrel_optimize__" errors.
+  // Per the official AntD Next.js integration guide.
+  transpilePackages: ['antd', '@ant-design/icons', 'rc-util', 'rc-pagination', 'rc-picker', 'rc-notification', 'rc-tooltip', 'rc-tree', 'rc-table'],
 };
 
 export default withNextIntl(nextConfig);
