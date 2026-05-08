@@ -171,44 +171,7 @@ async function main() {
       console.log(`  ${role.name}: ${grants.length} permissions`);
     }
 
-    // -------- super admin --------
-    const seedEmail = ensure(process.env.SEED_SUPERADMIN_EMAIL);
-    const seedPassword = ensure(process.env.SEED_SUPERADMIN_PASSWORD);
-    if (seedEmail && seedPassword) {
-      console.log(`[seed] super-admin user (${seedEmail})`);
-      const passwordHash = await bcrypt.hash(seedPassword, 12);
-      const user = await prisma.user.upsert({
-        where: { email: seedEmail },
-        update: {
-          name: 'Super Admin',
-          firstName: 'Super',
-          lastName: 'Admin',
-          confirmed: true,
-          status: 1,
-        },
-        create: {
-          name: 'Super Admin',
-          firstName: 'Super',
-          lastName: 'Admin',
-          email: seedEmail,
-          password: passwordHash,
-          confirmed: true,
-          status: 1,
-        },
-      });
-      const adminRoleId = roleByName.get('Administrator');
-      if (adminRoleId) {
-        await prisma.userRole.upsert({
-          where: { userId_roleId: { userId: user.id, roleId: adminRoleId } },
-          update: {},
-          create: { userId: user.id, roleId: adminRoleId },
-        });
-      }
-    } else {
-      console.log('[seed] SEED_SUPERADMIN_EMAIL/PASSWORD not set — skipping super-admin');
-    }
-
-    // -------- demo tenant + demo user --------
+    // -------- demo tenant (provision before users so user2 can attach to it) --------
     console.log('[seed] demo tenant');
     let demo = await prisma.tenant.findUnique({ where: { slug: 'demo' } });
     if (!demo) {
@@ -231,46 +194,77 @@ async function main() {
     const cloned = await provisionTenantSchema(prisma, demoSchemaName);
     console.log(`  schema ${demoSchemaName}: ${cloned} tables cloned`);
 
-    console.log('[seed] demo tenant user');
-    const demoUserEmail = 'user@demo.local';
-    const demoUserHash = await bcrypt.hash('demo-password', 12);
-    const demoUser = await prisma.user.upsert({
-      where: { email: demoUserEmail },
-      update: {
-        name: 'Demo User',
-        firstName: 'Demo',
-        lastName: 'User',
-        confirmed: true,
-        status: 1,
-      },
-      create: {
-        name: 'Demo User',
-        firstName: 'Demo',
-        lastName: 'User',
-        email: demoUserEmail,
-        password: demoUserHash,
-        confirmed: true,
-        status: 1,
-      },
+    // -------- cleanup: drop legacy dev emails on each run --------
+    const LEGACY_DEV_EMAILS = ['admin@fpanalyzer.local', 'user@demo.local'];
+    const deleted = await prisma.user.deleteMany({
+      where: { email: { in: LEGACY_DEV_EMAILS } },
     });
-    const userRoleId = roleByName.get('User');
-    if (userRoleId) {
-      await prisma.userRole.upsert({
-        where: { userId_roleId: { userId: demoUser.id, roleId: userRoleId } },
-        update: {},
-        create: { userId: demoUser.id, roleId: userRoleId },
-      });
+    if (deleted.count > 0) {
+      console.log(`[seed] cleaned up ${deleted.count} legacy dev users`);
     }
-    await prisma.tenantUser.upsert({
-      where: { tenantId_userId: { tenantId: demo.id, userId: demoUser.id } },
-      update: { status: true, roleId: userRoleId ?? null },
-      create: {
-        tenantId: demo.id,
-        userId: demoUser.id,
-        roleId: userRoleId ?? null,
-        status: true,
-      },
-    });
+
+    // -------- dev users: user1 (Administrator) + user2 (Company in demo tenant) --------
+    const adminRoleId = roleByName.get('Administrator');
+    const companyRoleId = roleByName.get('Company');
+
+    const adminEmail    = ensure(process.env.SEED_SUPERADMIN_EMAIL);
+    const adminPassword = ensure(process.env.SEED_SUPERADMIN_PASSWORD);
+    if (adminEmail && adminPassword && adminRoleId) {
+      console.log(`[seed] admin user (${adminEmail})`);
+      const hash = await bcrypt.hash(adminPassword, 12);
+      const u = await prisma.user.upsert({
+        where: { email: adminEmail },
+        update: { name: 'Admin User', firstName: 'Admin', lastName: 'User', confirmed: true, status: 1 },
+        create: {
+          name: 'Admin User',
+          firstName: 'Admin',
+          lastName: 'User',
+          email: adminEmail,
+          password: hash,
+          confirmed: true,
+          status: 1,
+        },
+      });
+      await prisma.userRole.upsert({
+        where: { userId_roleId: { userId: u.id, roleId: adminRoleId } },
+        update: {},
+        create: { userId: u.id, roleId: adminRoleId },
+      });
+    } else {
+      console.log('[seed] SEED_SUPERADMIN_EMAIL/PASSWORD not set — skipping admin user');
+    }
+
+    const companyEmail    = ensure(process.env.SEED_COMPANY_EMAIL);
+    const companyPassword = ensure(process.env.SEED_COMPANY_PASSWORD);
+    if (companyEmail && companyPassword && companyRoleId && demo) {
+      console.log(`[seed] company-role user (${companyEmail}) attached to demo tenant`);
+      const hash = await bcrypt.hash(companyPassword, 12);
+      const u = await prisma.user.upsert({
+        where: { email: companyEmail },
+        update: { name: 'Company User', firstName: 'Company', lastName: 'User', confirmed: true, status: 1 },
+        create: {
+          name: 'Company User',
+          firstName: 'Company',
+          lastName: 'User',
+          email: companyEmail,
+          password: hash,
+          confirmed: true,
+          status: 1,
+        },
+      });
+      await prisma.userRole.upsert({
+        where: { userId_roleId: { userId: u.id, roleId: companyRoleId } },
+        update: {},
+        create: { userId: u.id, roleId: companyRoleId },
+      });
+      await prisma.tenantUser.upsert({
+        where: { tenantId_userId: { tenantId: demo.id, userId: u.id } },
+        update: { status: true, roleId: companyRoleId },
+        create: { tenantId: demo.id, userId: u.id, roleId: companyRoleId, status: true },
+      });
+    } else {
+      console.log('[seed] SEED_COMPANY_EMAIL/PASSWORD not set — skipping company user');
+    }
 
     const fingerprint = createHash('sha256')
       .update(PERMISSIONS.map((p) => p.name).sort().join(','))

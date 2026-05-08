@@ -86,7 +86,6 @@ model User {
   updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt         DateTime? @map("deleted_at") @db.Timestamptz
 
-  socialLogins SocialLogin[]
   userRoles    UserRole[]
   tenantUsers  TenantUser[]
   history      History[]
@@ -97,24 +96,9 @@ model User {
   @@schema("public")
 }
 
-model SocialLogin {
-  id         Int      @id @default(autoincrement())
-  userId     Int      @map("user_id")
-  provider   String   @db.VarChar(32)
-  providerId String   @map("provider_id") @db.VarChar(255)
-  token      String?  @db.VarChar(255)
-  avatar     String?  @db.VarChar(255)
-  legacyId   BigInt?  @unique @map("legacy_id")
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([provider, providerId])
-  @@map("social_logins")
-  @@schema("public")
-}
+// SocialLogin model removed (operator decision, post Phase 4a). Social OAuth
+// providers are not used in v3. The legacy social_logins table is dropped
+// during the next prisma db push.
 
 model Role {
   id        Int      @id @default(autoincrement())

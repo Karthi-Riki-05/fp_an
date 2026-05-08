@@ -2,16 +2,11 @@
 
 import {
   ArrowLeftOutlined,
-  FacebookFilled,
-  GithubFilled,
-  GoogleOutlined,
-  LinkedinFilled,
   LockOutlined,
-  TwitterOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { App, Button, Card, Divider, Input, Space, Typography } from 'antd';
+import { App, Button, Card, Input, Space, Typography } from 'antd';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -30,14 +25,6 @@ const loginSchema = z.object({
   password: z.string().min(1, { message: 'Password is required' }),
 });
 type LoginValues = z.infer<typeof loginSchema>;
-
-const SOCIAL_PROVIDERS = [
-  { id: 'google',   icon: GoogleOutlined,  label: 'Google',   color: '#dd4b39' },
-  { id: 'facebook', icon: FacebookFilled,  label: 'Facebook', color: '#3b5998' },
-  { id: 'github',   icon: GithubFilled,    label: 'GitHub',   color: '#1f2328' },
-  { id: 'linkedin', icon: LinkedinFilled,  label: 'LinkedIn', color: '#0077b5' },
-  { id: 'twitter',  icon: TwitterOutlined, label: 'Twitter',  color: '#1da1f2' },
-];
 
 export default function LoginPage() {
   const router = useRouter();
@@ -183,31 +170,9 @@ export default function LoginPage() {
             </Space>
           </form>
 
-          <Divider plain style={{ margin: '24px 0 16px', color: 'rgba(0,0,0,0.45)', fontSize: 12 }}>
-            or continue with
-          </Divider>
-
-          <Space size={8} wrap style={{ width: '100%', justifyContent: 'center' }}>
-            {SOCIAL_PROVIDERS.map((p) => {
-              const Icon = p.icon;
-              return (
-                <Button
-                  key={p.id}
-                  size="middle"
-                  shape="circle"
-                  aria-label={`Sign in with ${p.label}`}
-                  icon={<Icon style={{ color: p.color }} />}
-                  onClick={() => {
-                    window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/oauth/${p.id}`;
-                  }}
-                />
-              );
-            })}
-          </Space>
-
           <Text
             type="secondary"
-            style={{ display: 'block', textAlign: 'center', marginTop: 20, fontSize: 12 }}
+            style={{ display: 'block', textAlign: 'center', marginTop: 24, fontSize: 12 }}
           >
             Need an account? Email <a href="mailto:info@fpanalyzer.se">info@fpanalyzer.se</a>
           </Text>
@@ -224,8 +189,8 @@ export default function LoginPage() {
           >
             <strong>Dev credentials:</strong>
             <ul style={{ margin: '4px 0 0', paddingLeft: 16 }}>
-              <li><code>admin@fpanalyzer.local</code> / <code>dev-password-change-me</code></li>
-              <li><code>user@demo.local</code> / <code>demo-password</code></li>
+              <li><code>user1@gmail.com</code> / <code>password123</code> — Administrator</li>
+              <li><code>user2@gmail.com</code> / <code>password123</code> — Company (demo tenant)</li>
             </ul>
           </div>
         </Card>
