@@ -7,23 +7,37 @@ RUN apk add --no-cache wget openssl
 COPY backend/package.json backend/package-lock.json* ./
 RUN npm install --no-audit --no-fund
 
+# ---- prisma client generation -----------------------------------------------
+# Run prisma generate so TypeScript can find @prisma/client types at compile
+# time. Schema must be present for this to work.
+FROM node:20-alpine AS prisma-gen
+WORKDIR /app
+RUN apk add --no-cache openssl
+COPY --from=deps /app/node_modules ./node_modules
+COPY backend/prisma ./prisma
+COPY backend/package.json ./
+RUN npx prisma generate
+
 # ---- dev stage (used by docker-compose.local.yml) ---------------------------
 FROM node:20-alpine AS dev
 WORKDIR /app
-RUN apk add --no-cache wget openssl
-COPY --from=deps /app/node_modules ./node_modules
+RUN apk add --no-cache wget openssl bash
+COPY --from=prisma-gen /app/node_modules ./node_modules
 COPY backend/ ./
 ENV NODE_ENV=development
 EXPOSE 4000
-CMD ["npm", "run", "start:dev"]
+# On dev startup: regenerate client (covers schema edits via bind mount),
+# push the schema to the DB, run seed, then start Nest in watch mode.
+# All three are idempotent.
+CMD ["sh", "-c", "npx prisma generate && npx prisma db push --skip-generate --accept-data-loss && npx ts-node prisma/seed.ts && npm run start:dev"]
 
 # ---- builder ----------------------------------------------------------------
 FROM node:20-alpine AS builder
 WORKDIR /app
 RUN apk add --no-cache openssl
-COPY --from=deps /app/node_modules ./node_modules
+COPY --from=prisma-gen /app/node_modules ./node_modules
+COPY --from=prisma-gen /app/prisma ./prisma
 COPY backend/ ./
-RUN npx prisma generate || true
 RUN npm run build
 RUN npm prune --omit=dev
 
@@ -39,4 +53,6 @@ COPY --from=builder /app/prisma ./prisma
 USER node
 EXPOSE 4000
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["node", "dist/main.js"]
+# In prod: prisma migrate deploy (Phase 6 generates the migrations) +
+# optionally seed (idempotent), then run the built JS.
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]

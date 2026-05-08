@@ -1,37 +1,1512 @@
-// FP Analyzer — Prisma schema scaffold (Phase 1).
+// FP Analyzer — Prisma schema (Phase 2).
 //
-// Models are intentionally absent here. Phase 2 generates the full schema
-// from /new_fp/legacy-schema.json + the model mapping in MIGRATION_NOTES.md
-// §4.3, with the schema-per-tenant strategy from §11.2 (multiSchema preview)
-// and the soft-delete strategy from §4.4 (no global middleware).
+// Generated from /new_fp/legacy-schema.json + the model mapping in
+// MIGRATION_NOTES.md §4.3. Multi-schema (public + tenant_template);
+// per-tenant schemas (tenant_<id>) are cloned from tenant_template at
+// tenant creation time per §11.2.
+//
+// Soft-delete: explicit `deletedAt` fields, no global Prisma middleware
+// (per §4.4). Use the notDeleted() helper in src/common/soft-delete.ts.
+//
+// User snapshots on tenant tables (per §11.5 / R3 v3): tables that
+// record "who did this" carry a (*_user_id, *_email, *_name) triple,
+// captured at create time, immutable thereafter. Phase 3's service
+// layer enforces immutability.
+//
+// Partitioning (per §4.6): machine_data is a simple non-partitioned
+// table in Phase 2 dev. Phase 6's migration script converts the physical
+// table to PARTITION BY RANGE (start_time) monthly, with a maintenance
+// BullMQ cron creating next-month partitions. The Prisma model below
+// describes the parent shape.
+//
+// pg_trgm GIN indexes (per §11.2) on autocomplete-relevant columns:
+// orders.order_nr, orders.description, parts.name, parts.part_no,
+// equipment.name, machine_documents.name, machine_programmes.name.
+//
+// Legacy `Objects` model dropped (B1). Legacy `Machines` renamed to
+// `MachineDocument` (A1). Legacy `tbl_*` prefix dropped via @@map.
 
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["multiSchema"]
+  previewFeatures = ["multiSchema", "postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-  schemas  = ["public", "tenant_template"]
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  schemas    = ["public", "tenant_template"]
+  extensions = [pg_trgm]
 }
 
-// Phase 2 inserts:
-//   - Public-schema models: User, Role, Permission, RolePermission, UserRole,
-//     SocialLogin, Cms, CmsImage, Slider, Testimonial, SiteSetting, History,
-//     HistoryType, Tenant (with `timezone` column per §17), TenantUser.
-//   - Tenant_template-schema models: Equipment, EquipmentType, EquipmentProperty,
-//     EquipmentOrder, EquipmentPart, EquipmentShiftSchedule, EquipmentScrapReason,
-//     EquipmentStopReason, UserEquipment, Machine (legacy tbl_machines),
-//     MachineData (partitioned by start_time, monthly — see §4.6),
-//     MachinePrevStart, MachineStatus, MachineUserSetting, MachineDocument,
-//     MachineDocumentFile, MachineProgramme, MachineProgrammeFile,
-//     MachineAssignment, ProductionData, ScrapData, StopData, WarningData,
-//     Order, Part, FlowDesign, FlowDesignAttribute, WorkShift, ShiftSchedule,
-//     ShiftScheduleDataEntry, Workstation, Folder, UserFileLock, Type,
-//     ScrapReason, StopReason, StopCategory, Board, BoardWidget, SalaryGroup,
-//     Feedback, Symbol, TenantMachine.
+// =========================================================================
+// PUBLIC SCHEMA — platform-wide
+// =========================================================================
+
+enum FcmDevice {
+  android
+  ios
+
+  @@schema("public")
+}
+
+enum TenantStatus {
+  active
+  suspended
+  archived
+
+  @@schema("public")
+}
+
+model User {
+  id                Int       @id @default(autoincrement())
+  // companyId is kept for legacy data-migration compatibility; the new
+  // source of truth for tenant membership is the TenantUser join table.
+  companyId         Int       @default(0) @map("company_id")
+  name              String    @db.VarChar(255)
+  firstName         String    @default("") @map("first_name") @db.VarChar(255)
+  lastName          String    @default("") @map("last_name") @db.VarChar(255)
+  email             String    @unique @db.VarChar(255)
+  password          String?   @db.VarChar(255)
+  image             String    @default("") @db.VarChar(255)
+  status            Int       @default(1) @db.SmallInt
+  confirmationCode  String    @default("") @map("confirmation_code") @db.VarChar(255)
+  confirmed         Boolean   @default(false)
+  rememberToken     String?   @map("remember_token") @db.VarChar(100)
+  emailVerifiedAt   DateTime? @map("email_verified_at") @db.Timestamptz
+  // Legacy db_name/db_username/db_password DROPPED (§11.1) — replaced by Tenant.schemaName.
+  // Legacy session_timeout DROPPED (§13.3) — replaced by JWT TTL.
+  equipmentTreePos  String    @default("") @map("equipment_tree_pos") @db.VarChar(1024)
+  analyzerSettings  String    @default("") @map("analyzer_settings") @db.VarChar(1024)
+  tablePreferences  Json?     @map("table_settings")
+  fcmToken          String?   @map("fcm_token") @db.VarChar(255)
+  fcmDevice         FcmDevice @default(android) @map("fcm_device")
+  unitOnly          Boolean   @default(false) @map("unit_only")
+  legacyId          BigInt?   @unique @map("legacy_id")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt         DateTime? @map("deleted_at") @db.Timestamptz
+
+  socialLogins SocialLogin[]
+  userRoles    UserRole[]
+  tenantUsers  TenantUser[]
+  history      History[]
+
+  @@index([companyId])
+  @@index([deletedAt])
+  @@map("users")
+  @@schema("public")
+}
+
+model SocialLogin {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  provider   String   @db.VarChar(32)
+  providerId String   @map("provider_id") @db.VarChar(255)
+  token      String?  @db.VarChar(255)
+  avatar     String?  @db.VarChar(255)
+  legacyId   BigInt?  @unique @map("legacy_id")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([provider, providerId])
+  @@map("social_logins")
+  @@schema("public")
+}
+
+model Role {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @db.VarChar(255)
+  // `all = true` is a super-admin shortcut: holds every permission implicitly.
+  all       Boolean  @default(false)
+  sort      Int      @default(0) @db.SmallInt
+  legacyId  BigInt?  @unique @map("legacy_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@map("roles")
+  @@schema("public")
+}
+
+model Permission {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(255)
+  displayName String   @map("display_name") @db.VarChar(255)
+  sort        Int      @default(0) @db.SmallInt
+  legacyId    BigInt?  @unique @map("legacy_id")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+  @@schema("public")
+}
+
+model RolePermission {
+  id           Int @id @default(autoincrement())
+  roleId       Int @map("role_id")
+  permissionId Int @map("permission_id")
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+  @@schema("public")
+}
+
+// Replaces legacy `assigned_roles` table.
+model UserRole {
+  id     Int @id @default(autoincrement())
+  userId Int @map("user_id")
+  roleId Int @map("role_id")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@map("user_roles")
+  @@schema("public")
+}
+
+model PasswordReset {
+  email     String    @db.VarChar(255)
+  token     String    @db.VarChar(255)
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz
+
+  @@id([email, token])
+  @@index([email])
+  @@index([token])
+  @@map("password_resets")
+  @@schema("public")
+}
+
+model HistoryType {
+  id        Int       @id @default(autoincrement())
+  name      String    @db.VarChar(255)
+  legacyId  BigInt?   @unique @map("legacy_id")
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+
+  history History[]
+
+  @@map("history_types")
+  @@schema("public")
+}
+
+model History {
+  id        Int       @id @default(autoincrement())
+  typeId    Int       @map("type_id")
+  userId    Int       @map("user_id")
+  entityId  Int?      @map("entity_id")
+  icon      String?   @db.VarChar(255)
+  class     String?   @db.VarChar(255)
+  text      String    @db.VarChar(255)
+  assets    String?   @db.VarChar(255)
+  legacyId  BigInt?   @unique @map("legacy_id")
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+
+  type HistoryType @relation(fields: [typeId], references: [id], onDelete: Cascade)
+  user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([typeId])
+  @@index([userId])
+  @@index([entityId])
+  @@map("history")
+  @@schema("public")
+}
+
+// CMS — managed through admin UI, served by /api/v1/cms/pages/:slug.
+model Cms {
+  id        Int      @id @default(autoincrement())
+  slug      String   @unique @db.VarChar(255)
+  title     String   @db.VarChar(255)
+  content   String?
+  status    Boolean  @default(true)
+  legacyId  BigInt?  @unique @map("legacy_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  images CmsImage[]
+
+  @@index([deletedAt])
+  @@map("cms")
+  @@schema("public")
+}
+
+model CmsImage {
+  id        Int       @id @default(autoincrement())
+  cmsId     Int       @map("cms_id")
+  path      String    @db.VarChar(255)
+  alt       String?   @db.VarChar(255)
+  legacyId  BigInt?   @unique @map("legacy_id")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+
+  cms Cms @relation(fields: [cmsId], references: [id], onDelete: Cascade)
+
+  @@index([cmsId])
+  @@index([deletedAt])
+  @@map("cms_images")
+  @@schema("public")
+}
+
+model Slider {
+  id        Int      @id @default(autoincrement())
+  title     String?  @db.VarChar(255)
+  image     String   @db.VarChar(255)
+  link      String?  @db.VarChar(512)
+  status    Boolean  @default(true)
+  sortOrder Int      @default(0) @map("sort_order")
+  legacyId  BigInt?  @unique @map("legacy_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("sliders")
+  @@schema("public")
+}
+
+model Testimonial {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(255)
+  role      String?  @db.VarChar(255)
+  body      String
+  image     String?  @db.VarChar(255)
+  status    Boolean  @default(true)
+  sortOrder Int      @default(0) @map("sort_order")
+  legacyId  BigInt?  @unique @map("legacy_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("testimonials")
+  @@schema("public")
+}
+
+model SiteSetting {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique @db.VarChar(255)
+  value     String?
+  legacyId  BigInt?  @unique @map("legacy_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("site_settings")
+  @@schema("public")
+}
+
+// Tenant — replaces the legacy users.db_name/db_username/db_password trio.
+// Per §17, every tenant has a timezone; per §11.2 every tenant has a schemaName.
+model Tenant {
+  id          Int          @id @default(autoincrement())
+  slug        String       @unique @db.VarChar(255)
+  name        String       @db.VarChar(255)
+  schemaName  String       @unique @map("schema_name") @db.VarChar(63)
+  timezone    String       @default("Europe/Stockholm") @db.VarChar(64)
+  status      TenantStatus @default(active)
+  primaryUserId Int?       @map("primary_user_id")
+  legacyDbName String?     @map("legacy_db_name") @db.VarChar(255)
+  legacyId    BigInt?      @unique @map("legacy_id")
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+
+  users TenantUser[]
+
+  @@index([status])
+  @@map("tenants")
+  @@schema("public")
+}
+
+model TenantUser {
+  id        Int      @id @default(autoincrement())
+  tenantId  Int      @map("tenant_id")
+  userId    Int      @map("user_id")
+  // Per-tenant role assignment (e.g. Company-admin in tenant A, User in tenant B).
+  // Phase 3 wires this to the RolesGuard / PermissionsGuard.
+  roleId    Int?     @map("role_id")
+  status    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId])
+  @@index([userId])
+  @@map("tenant_users")
+  @@schema("public")
+}
+
+// =========================================================================
+// TENANT_TEMPLATE SCHEMA — cloned per tenant.
 //
-// Snapshot fields per §11.5 / §13.20: every tenant table that records "who
-// did this" gets a *_user_id BIGINT NULL + *_email TEXT + *_name TEXT triple,
-// captured at create time and immutable thereafter (§11.5 R3 paragraph).
+// FKs WITHIN the schema are real Postgres FKs. References to public.users
+// (created_by, locked_by, etc.) are denormalised user snapshots per §11.5,
+// NOT FKs — three columns: <prefix>_user_id (int, no FK), <prefix>_email
+// (varchar), <prefix>_name (varchar). Captured at write time, immutable.
+// =========================================================================
+
+enum YN {
+  Y
+  N
+
+  @@schema("tenant_template")
+}
+
+enum TypeKind {
+  Performance
+  Availability
+  Quality
+  Other
+  NotApplicable
+
+  @@schema("tenant_template")
+}
+
+enum TypeEntity {
+  Equipment
+  Content
+  StopReason
+  ScrapReason
+  Part
+  Order
+
+  @@schema("tenant_template")
+}
+
+enum StopCategoryKind {
+  Performance
+  Availability
+  Quality
+  Other
+
+  @@schema("tenant_template")
+}
+
+enum MachineRunningStatus {
+  on
+  off
+
+  @@schema("tenant_template")
+}
+
+enum MachineSignalType {
+  on
+  off
+  warning
+
+  @@schema("tenant_template")
+}
+
+enum MachineDataRegistration {
+  no
+  yes
+  pre
+
+  @@schema("tenant_template")
+}
+
+enum MachineFileType {
+  Image
+  Excel
+  PDF
+  Video
+
+  @@schema("tenant_template")
+}
+
+enum FileLockType {
+  lock
+  delete
+
+  @@schema("tenant_template")
+}
+
+enum AssignmentStatus {
+  Active
+  Inactive
+
+  @@schema("tenant_template")
+}
+
+enum FlowDesignAttributeKind {
+  Object
+  File
+  Folder
+  Equipment
+
+  @@schema("tenant_template")
+}
+
+enum StopDataKind {
+  reg
+  pre
+
+  @@schema("tenant_template")
+}
+
+enum ValueAddedType {
+  currency
+  percentage
+
+  @@schema("tenant_template")
+}
+
+enum OrderSelection {
+  free_text
+  list
+
+  @@schema("tenant_template")
+}
+
+// ----------------------------- Categorization -------------------------------
+
+model Type {
+  id           Int        @id @default(autoincrement())
+  name         String?    @db.VarChar(255)
+  kind         TypeKind   @default(NotApplicable) @map("type")
+  entity       TypeEntity @default(Equipment)
+  description  String?
+  icon         String?    @default("noimage.jpg") @db.VarChar(255)
+  isActive     Boolean    @default(true) @map("is_active")
+  excludeType  Boolean    @default(false) @map("exclude_type")
+  sortOrder    Int        @default(0) @map("sort_order")
+  legacyId     BigInt?    @unique @map("legacy_id")
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime   @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt    DateTime?  @map("deleted_at") @db.Timestamptz
+
+  parts        Part[]
+  scrapReasons ScrapReason[]
+  stopReasons  StopReason[]
+  orders       Order[]
+  folders      Folder[]
+  equipments   Equipment[]
+  scrapData    ScrapData[]
+  stopData     StopData[]
+
+  @@index([entity, isActive])
+  @@index([deletedAt])
+  @@map("types")
+  @@schema("tenant_template")
+}
+
+model ScrapReason {
+  id          Int       @id @default(autoincrement())
+  name        String?   @db.VarChar(255)
+  status      Int       @default(1) @db.SmallInt
+  typeId      Int       @default(0) @map("type_id")
+  description String    @default("") @db.VarChar(255)
+  sortOrder   Int       @default(0) @map("sort_order")
+  legacyId    BigInt?   @unique @map("legacy_id")
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
+
+  type Type @relation(fields: [typeId], references: [id])
+
+  equipmentScrapReasons EquipmentScrapReason[]
+  scrapData             ScrapData[]
+
+  @@index([typeId])
+  @@index([deletedAt])
+  @@map("scrap_reasons")
+  @@schema("tenant_template")
+}
+
+model StopReason {
+  id          Int       @id @default(autoincrement())
+  name        String?   @db.VarChar(255)
+  status      Int       @default(1) @db.SmallInt
+  typeId      Int       @default(0) @map("type_id")
+  description String    @default("") @db.VarChar(255)
+  sortOrder   Int       @default(0) @map("sort_order")
+  legacyId    BigInt?   @unique @map("legacy_id")
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
+
+  type Type @relation(fields: [typeId], references: [id])
+
+  equipmentStopReasons EquipmentStopReason[]
+  stopData             StopData[]
+
+  @@index([typeId])
+  @@index([deletedAt])
+  @@map("stop_reasons")
+  @@schema("tenant_template")
+}
+
+model StopCategory {
+  id          Int               @id @default(autoincrement())
+  name        String?           @db.VarChar(255)
+  kind        StopCategoryKind  @default(Performance) @map("type")
+  description String            @default("") @db.VarChar(512)
+  icon        String?           @db.VarChar(255)
+  isActive    Boolean           @default(true) @map("is_active")
+  legacyId    BigInt?           @unique @map("legacy_id")
+  createdAt   DateTime?         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime?         @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime?         @map("deleted_at") @db.Timestamptz
+
+  @@index([deletedAt])
+  @@map("stop_category")
+  @@schema("tenant_template")
+}
+
+// ----------------------------- Equipment -------------------------------
+
+model Equipment {
+  id          Int       @id @default(autoincrement())
+  companyId   Int       @default(0) @map("company_id")
+  sortOrder   Int       @default(0) @map("sort_order")
+  parentId    Int       @default(0) @map("parent_id")
+  typeId      Int       @default(0) @map("type_id")
+  name        String?   @db.VarChar(255)
+  description String?
+  icon        String    @default("noimage.jpg") @db.VarChar(255)
+  isActive    Boolean   @default(true) @map("is_active")
+  legacyId    BigInt?   @unique @map("legacy_id")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
+
+  type     Type    @relation(fields: [typeId], references: [id])
+
+  properties           EquipmentProperty[]
+  scrapReasons         EquipmentScrapReason[]
+  stopReasons          EquipmentStopReason[]
+  parts                EquipmentPart[]
+  orders               EquipmentOrder[]
+  shiftSchedules       EquipmentShiftSchedule[]
+  assignments          EquipmentAssign[]
+  userEquipments       UserEquipment[]
+  machines             Machine[]
+  machineDocuments     MachineDocument[]
+  folders              Folder[]
+  warningData          WarningData[]
+  // FlowDesignAttribute references via relation_id+type — polymorphic, no FK.
+
+  @@index([parentId])
+  @@index([typeId])
+  @@index([isActive])
+  @@index([parentId, sortOrder])
+  @@index([deletedAt])
+  // pg_trgm GIN for autocomplete (MIGRATION_NOTES §11.2).
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "equipment_name_trgm_idx")
+  @@map("equipment")
+  @@schema("tenant_template")
+}
+
+model EquipmentProperty {
+  id              Int            @id @default(autoincrement())
+  equipmentId     Int            @map("equip_id")
+  typeId          Int            @map("type_id")
+  cycleTime       String         @default("") @map("cycle_time") @db.VarChar(512)
+  costPerHour     Int            @default(0) @map("cost_per_hour")
+  currency        String         @default("") @db.VarChar(10)
+  operator        Int            @default(0)
+  salaryGroupId   Int            @map("salary_group_id")
+  valueAddedType  ValueAddedType @default(currency) @map("value_added_type")
+  valueAddedVal   String         @map("value_added_val") @db.VarChar(10)
+  orderSelection  OrderSelection @default(free_text) @map("order_selection")
+  legacyId        BigInt?        @unique @map("legacy_id")
+  createdAt       DateTime?      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime?      @updatedAt @map("updated_at") @db.Timestamptz
+
+  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  @@index([equipmentId])
+  @@index([salaryGroupId])
+  @@map("equipment_properties")
+  @@schema("tenant_template")
+}
+
+model EquipmentOrder {
+  id          Int       @id @default(autoincrement())
+  equipmentId Int       @default(0) @map("equipment_id")
+  orderTypeId Int       @default(0) @map("order_type_id")
+  status      Int       @default(1) @db.SmallInt
+  legacyId    BigInt?   @unique @map("legacy_id")
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
+
+  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  @@index([equipmentId])
+  @@index([orderTypeId])
+  @@index([deletedAt])
+  @@map("equipment_orders")
+  @@schema("tenant_template")
+}
+
+model EquipmentPart {
+  id          Int       @id @default(autoincrement())
+  equipmentId Int       @default(0) @map("equipment_id")
+  partTypeId  Int       @default(0) @map("part_type_id")
+  status      Int       @default(1) @db.SmallInt
+  legacyId    BigInt?   @unique @map("legacy_id")
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
+
+  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  @@index([equipmentId])
+  @@index([partTypeId])
+  @@index([deletedAt])
+  @@map("equipment_parts")
+  @@schema("tenant_template")
+}
+
+model EquipmentShiftSchedule {
+  id                Int     @id @default(autoincrement())
+  equipmentId       Int     @map("equipment_id")
+  scheduleId        Int     @map("schedule_id")
+  alsoAssignImport  Boolean @default(false) @map("also_assign_import")
+  legacyId          BigInt? @unique @map("legacy_id")
+
+  equipment Equipment     @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  schedule  ShiftSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@index([equipmentId])
+  @@index([scheduleId])
+  @@map("equipment_shift_schedule")
+  @@schema("tenant_template")
+}
+
+model EquipmentScrapReason {
+  id            Int       @id @default(autoincrement())
+  equipmentId   Int       @default(0) @map("equipment_id")
+  reasonTypeId  Int       @default(0) @map("reason_type_id")
+  status        Int       @default(1) @db.SmallInt
+  legacyId      BigInt?   @unique @map("legacy_id")
+  createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz
+
+  equipment Equipment    @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  reason    ScrapReason  @relation(fields: [reasonTypeId], references: [id])
+
+  @@index([equipmentId])
+  @@index([reasonTypeId])
+  @@index([deletedAt])
+  @@map("equipment_scrap_reasons")
+  @@schema("tenant_template")
+}
+
+model EquipmentStopReason {
+  id            Int       @id @default(autoincrement())
+  equipmentId   Int       @default(0) @map("equipment_id")
+  reasonTypeId  Int       @default(0) @map("reason_type_id")
+  status        Int       @default(1) @db.SmallInt
+  legacyId      BigInt?   @unique @map("legacy_id")
+  createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz
+
+  equipment Equipment   @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  reason    StopReason  @relation(fields: [reasonTypeId], references: [id])
+
+  @@index([equipmentId])
+  @@index([reasonTypeId])
+  @@index([deletedAt])
+  @@map("equipment_stop_reasons")
+  @@schema("tenant_template")
+}
+
+model EquipmentAssign {
+  id          Int              @id @default(autoincrement())
+  equipmentId Int              @default(0) @map("equipment_id")
+  // User snapshot (per §11.5).
+  userId      Int              @default(0) @map("user_id")
+  userEmail   String           @default("") @map("user_email") @db.VarChar(255)
+  userName    String           @default("") @map("user_name") @db.VarChar(255)
+  status      AssignmentStatus @default(Active)
+  legacyId    BigInt?          @unique @map("legacy_id")
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime?        @map("deleted_at") @db.Timestamptz
+
+  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  @@index([equipmentId])
+  @@index([userId])
+  @@index([deletedAt])
+  @@map("equipment_assign")
+  @@schema("tenant_template")
+}
+
+// User snapshot pattern (per §11.5).
+model UserEquipment {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  userEmail   String   @default("") @map("user_email") @db.VarChar(255)
+  userName    String   @default("") @map("user_name") @db.VarChar(255)
+  equipmentId Int      @default(0) @map("equipment_id")
+  icon        String   @default("noimage.jpg") @db.VarChar(255)
+  status      Int      @default(1) @db.SmallInt
+  legacyId    BigInt?  @unique @map("legacy_id")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+
+  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, equipmentId])
+  @@index([equipmentId])
+  @@map("user_equipments")
+  @@schema("tenant_template")
+}
+
+// ----------------------------- Parts / Orders -------------------------------
+
+model Part {
+  id            Int       @id @default(autoincrement())
+  name          String    @db.VarChar(255)
+  partNo        String    @default("0") @map("part_no") @db.VarChar(255)
+  description   String?
+  status        Int       @default(1) @db.SmallInt
+  typeId        Int       @default(0) @map("type_id")
+  purchasePrice Decimal   @default(0) @map("purchase_price") @db.Decimal(10, 0)
+  salesPrice    Decimal   @default(0) @map("sales_price") @db.Decimal(10, 0)
+  sortOrder     Int       @default(0) @map("sort_order")
+  legacyId      BigInt?   @unique @map("legacy_id")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz
+
+  type Type @relation(fields: [typeId], references: [id])
+
+  productionData ProductionData[]
+  scrapData      ScrapData[]
+  stopData       StopData[]
+  orders         Order[]
+
+  @@index([typeId])
+  @@index([deletedAt])
+  // pg_trgm GIN for part autocomplete.
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "part_name_trgm_idx")
+  @@index([partNo(ops: raw("gin_trgm_ops"))], type: Gin, map: "part_no_trgm_idx")
+  @@map("parts")
+  @@schema("tenant_template")
+}
+
+model Order {
+  id            Int       @id @default(autoincrement())
+  status        Int       @default(1) @db.SmallInt
+  typeId        Int       @map("type_id")
+  orderNr       String    @map("order_nr") @db.VarChar(50)
+  description   String    @db.VarChar(255)
+  flowId        Int       @map("flow_id")
+  // R2: legacy column was equip_id; renamed to equipment_id in v3.
+  equipmentId   Int       @map("equipment_id")
+  partId        Int       @map("part_id")
+  startDate     DateTime? @map("start_date") @db.Timestamptz
+  endDate       DateTime? @map("end_date") @db.Timestamptz
+  plannedQty    Int       @default(0) @map("planned_qty")
+  okQty         Int       @default(0) @map("ok_qty")
+  scrapQty      Int       @default(0) @map("scrap_qty")
+  plannedHrs    Int       @default(0) @map("planned_hrs")
+  workedHrs     Int       @default(0) @map("worked_hrs")
+  remainingQty  Int       @default(0) @map("remaining_qty")
+  remainingHrs  Int       @default(0) @map("remaining_hrs")
+  sortOrder     Int       @default(0) @map("sort_order")
+  legacyId      BigInt?   @unique @map("legacy_id")
+  createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz
+
+  type Type @relation(fields: [typeId], references: [id])
+  flow FlowDesign @relation(fields: [flowId], references: [id])
+  part Part       @relation(fields: [partId], references: [id])
+
+  @@unique([orderNr])
+  @@index([typeId])
+  @@index([flowId])
+  @@index([equipmentId])
+  @@index([partId])
+  @@index([startDate, endDate])
+  @@index([deletedAt])
+  @@index([orderNr(ops: raw("gin_trgm_ops"))], type: Gin, map: "order_nr_trgm_idx")
+  @@index([description(ops: raw("gin_trgm_ops"))], type: Gin, map: "order_description_trgm_idx")
+  @@map("orders")
+  @@schema("tenant_template")
+}
+
+// ----------------------------- Flow design -------------------------------
+
+model FlowDesign {
+  id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(250)
+  flowData    String?   @map("flow_data")
+  status      Int       @default(1) @db.SmallInt
+  legacyId    BigInt?   @unique @map("legacy_id")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
+
+  attributes     FlowDesignAttribute[]
+  productionData ProductionData[]
+  scrapData      ScrapData[]
+  stopData       StopData[]
+  orders         Order[]
+
+  @@index([deletedAt])
+  @@map("flow_designs")
+  @@schema("tenant_template")
+}
+
+model FlowDesignAttribute {
+  id           Int                     @id @default(autoincrement())
+  flowDesignId Int                     @map("flow_design_id")
+  // relation_id is polymorphic (points at one of: Equipment, Folder, MachineDocument, Symbol)
+  // depending on `kind`. No FK at the DB level.
+  relationId   Int                     @map("relation_id")
+  kind         FlowDesignAttributeKind @map("type")
+  posLeft      Int                     @default(0) @map("left")
+  posRight     Int                     @default(0) @map("right")
+  legacyId     BigInt?                 @unique @map("legacy_id")
+  createdAt    DateTime                @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime?               @updatedAt @map("updated_at") @db.Timestamptz
+
+  flowDesign FlowDesign @relation(fields: [flowDesignId], references: [id], onDelete: Cascade)
+
+  @@index([flowDesignId])
+  @@index([kind, relationId])
+  @@map("flow_design_attributes")
+  @@schema("tenant_template")
+}
+
+// ----------------------------- Production data -------------------------------
+
+// IMPORTANT: created_by is a user snapshot per §11.5; no FK to public.users.
+model ProductionData {
+  id              Int       @id @default(autoincrement())
+  flowId          Int       @default(0) @map("flow_id")
+  // Legacy column name; semantically references Equipment.id (the equipment a flow node represents).
+  flowObjectKey   Int       @default(0) @map("flow_object_key")
+  partId          Int       @default(0) @map("part_id")
+  workShiftId    Int       @default(0) @map("work_shift_id")
+  workHours       String?   @map("work_hours") @db.VarChar(10)
+  partQty         Int       @default(0) @map("part_qty")
+  plannedQty      Int       @default(0) @map("planned_qty")
+  orderNo         String?   @default("") @map("order_no") @db.VarChar(255)
+  date            DateTime? @db.Date
+  status          Int       @default(1) @db.SmallInt
+  comment         String    @default("") @db.VarChar(255)
+  // User snapshot (§11.5)
+  createdByUserId Int       @default(0) @map("created_by")
+  createdByEmail  String    @default("") @map("created_by_email") @db.VarChar(255)
+  createdByName   String    @default("") @map("created_by_name") @db.VarChar(255)
+  workShiftName   String?   @map("work_shift_name") @db.VarChar(50)
+  legacyId        BigInt?   @unique @map("legacy_id")
+  createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz
+
+  flow      FlowDesign @relation(fields: [flowId], references: [id])
+  part      Part       @relation(fields: [partId], references: [id])
+  workShift WorkShift  @relation(fields: [workShiftId], references: [id])
+
+  @@index([flowId])
+  @@index([flowObjectKey])
+  @@index([partId])
+  @@index([workShiftId])
+  @@index([createdByUserId])
+  @@index([flowId, workShiftId, date])
+  @@index([deletedAt])
+  @@map("production_data")
+  @@schema("tenant_template")
+}
+
+model ScrapData {
+  id              Int       @id @default(autoincrement())
+  flowId          Int       @default(0) @map("flow_id")
+  flowObjectKey   Int       @default(0) @map("flow_object_key")
+  partId          Int       @default(0) @map("part_id")
+  workShiftId    Int       @default(0) @map("work_shift_id")
+  orderNo         String?   @default("") @map("order_no") @db.VarChar(255)
+  quantity        Int?
+  reasonId        Int       @default(0) @map("reason")
+  date            DateTime? @db.Date
+  status          Int       @default(1) @db.SmallInt
+  comment         String    @default("") @db.VarChar(255)
+  createdByUserId Int       @default(0) @map("created_by")
+  createdByEmail  String    @default("") @map("created_by_email") @db.VarChar(255)
+  createdByName   String    @default("") @map("created_by_name") @db.VarChar(255)
+  scrapTypeId     Int       @default(0) @map("scrap_type_id")
+  picture         String?   @db.VarChar(255)
+  workShiftName   String?   @map("work_shift_name") @db.VarChar(50)
+  legacyId        BigInt?   @unique @map("legacy_id")
+  createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz
+
+  flow      FlowDesign  @relation(fields: [flowId], references: [id])
+  part      Part        @relation(fields: [partId], references: [id])
+  workShift WorkShift   @relation(fields: [workShiftId], references: [id])
+  reason    ScrapReason @relation(fields: [reasonId], references: [id])
+  scrapType Type        @relation(fields: [scrapTypeId], references: [id])
+
+  @@index([flowId])
+  @@index([flowObjectKey])
+  @@index([partId])
+  @@index([workShiftId])
+  @@index([reasonId])
+  @@index([scrapTypeId])
+  @@index([createdByUserId])
+  @@index([flowId, workShiftId, date])
+  @@index([deletedAt])
+  @@map("scrap_data")
+  @@schema("tenant_template")
+}
+
+model StopData {
+  id                Int          @id @default(autoincrement())
+  flowId            Int          @default(0) @map("flow_id")
+  flowObjectKey     Int          @default(0) @map("flow_object_key")
+  partId            Int          @default(0) @map("part_id")
+  workShiftId      Int          @default(0) @map("work_shift_id")
+  orderNo           String?      @default("") @map("order_no") @db.VarChar(255)
+  date              DateTime?    @db.Date
+  reasonId          Int?         @default(0) @map("reason")
+  hours             Int          @default(0)
+  minutes           Int          @default(0)
+  time              String?      @db.VarChar(20)
+  quantity          Int          @default(0)
+  sumOfTime         Int          @default(0) @map("sum_of_time")
+  stopTimestamp     DateTime?    @map("stop_timestamp") @db.Timestamptz
+  restartTimestamp  DateTime?    @map("restart_timestamp") @db.Timestamptz
+  status            Int          @default(1) @db.SmallInt
+  comment           String       @default("") @db.VarChar(255)
+  createdByUserId   Int          @default(0) @map("created_by")
+  createdByEmail    String       @default("") @map("created_by_email") @db.VarChar(255)
+  createdByName     String       @default("") @map("created_by_name") @db.VarChar(255)
+  stopTypeId        Int          @default(0) @map("stop_type_id")
+  picture           String?      @db.VarChar(255)
+  workShiftName     String?      @map("work_shift_name") @db.VarChar(50)
+  machineStopId     Int          @default(0) @map("machine_stop_id")
+  stopDataKind      StopDataKind? @default(reg) @map("stop_data_type")
+  legacyId          BigInt?      @unique @map("legacy_id")
+  createdAt         DateTime?    @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime?    @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt         DateTime?    @map("deleted_at") @db.Timestamptz
+
+  flow      FlowDesign  @relation(fields: [flowId], references: [id])
+  part      Part        @relation(fields: [partId], references: [id])
+  workShift WorkShift   @relation(fields: [workShiftId], references: [id])
+  reason    StopReason? @relation(fields: [reasonId], references: [id])
+  stopType  Type        @relation(fields: [stopTypeId], references: [id])
+
+  @@index([flowId])
+  @@index([flowObjectKey])
+  @@index([partId])
+  @@index([workShiftId])
+  @@index([reasonId])
+  @@index([stopTypeId])
+  @@index([machineStopId])
+  @@index([createdByUserId])
+  @@index([flowId, workShiftId, date])
+  @@index([stopTimestamp])
+  @@index([deletedAt])
+  @@map("stop_data")
+  @@schema("tenant_template")
+}
+
+model WarningData {
+  id                Int       @id @default(autoincrement())
+  // Legacy column was equip_id; renamed to equipment_id (R2 v3).
+  equipmentId       Int       @map("equipment_id")
+  machineId         Int       @map("machine_id")
+  notificationText  String    @map("notification_text") @db.VarChar(512)
+  fromTime          DateTime? @map("from_time") @db.Timestamptz
+  toTime            DateTime? @map("to_time") @db.Timestamptz
+  duration          Int       @default(0)
+  // User snapshot (§11.5)
+  createdByUserId   Int       @default(0) @map("created_by")
+  createdByEmail    String    @default("") @map("created_by_email") @db.VarChar(255)
+  createdByName     String    @default("") @map("created_by_name") @db.VarChar(255)
+  legacyId          BigInt?   @unique @map("legacy_id")
+  createdAt         DateTime? @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+
+  equipment Equipment @relation(fields: [equipmentId], references: [id])
+
+  @@index([equipmentId])
+  @@index([machineId])
+  @@index([fromTime, toTime])
+  @@map("warning_data")
+  @@schema("tenant_template")
+}
+
+// ----------------------------- IoT Machines -------------------------------
+
+// Legacy `tbl_machines` → `Machine` (the IoT unit, per §4.2 A1).
+model Machine {
+  id                       Int                  @id @default(autoincrement())
+  // Legacy column was equip_id; renamed to equipment_id.
+  equipmentId              Int                  @default(0) @map("equipment_id")
+  pinNo                    Int                  @map("pin_no") @db.SmallInt
+  installationDate         DateTime?            @map("installation_date") @db.Timestamptz
+  runningStatus            MachineRunningStatus @map("running_status")
+  wifiId                   String?              @map("wifi_id") @db.VarChar(50)
+  bluetoothId              String?              @map("bluetooth_id") @db.VarChar(50)
+  hasUnregisterData        String               @default("no") @map("has_unregister_data") @db.VarChar(3)
+  filterTime               Int                  @default(0) @map("filter_time")
+  filterTimeOn             Int                  @default(0) @map("filter_time_on")
+  unitName                 String               @map("unit_name") @db.VarChar(50)
+  unitConnected            String               @default("yes") @map("unit_connected") @db.VarChar(3)
+  lastOnline               DateTime?            @map("last_online") @db.Timestamptz
+  signalType               MachineSignalType    @default(on) @map("signal_type")
+  logWarning               Boolean              @default(false) @map("log_warning")
+  customNotificationText   String?              @map("custom_notification_text") @db.VarChar(100)
+  notificationDefault      Boolean              @default(true) @map("notification_default")
+  isAutoRegistered         String               @default("no") @map("is_auto_registered") @db.VarChar(3)
+  autoRegisteredData       String?              @map("auto_registered_data")
+  counterDetails           String?              @map("counter_details")
+  parentId                 Int?                 @map("parent_id")
+  legacyId                 BigInt?              @unique @map("legacy_id")
+  createdAt                DateTime             @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt                DateTime             @updatedAt @map("updated_at") @db.Timestamptz
+
+  equipment    Equipment            @relation(fields: [equipmentId], references: [id])
+
+  data         MachineData[]
+  prevStarts   MachinePrevStart[]
+  statuses     MachineStatus[]
+  userSettings MachineUserSetting[]
+
+  @@index([equipmentId])
+  @@index([parentId])
+  @@map("machines")
+  @@schema("tenant_template")
+}
+
+// Highest-volume table. Phase 6 migration converts to PARTITION BY RANGE
+// (start_time) monthly per §4.6. For Phase 2 dev, this is a normal table.
+model MachineData {
+  id              Int                       @id @default(autoincrement())
+  machineId       Int                       @map("machine_id")
+  startTime       DateTime?                 @map("start_time") @db.Timestamptz
+  endTime         DateTime?                 @map("end_time") @db.Timestamptz
+  isRegistered    MachineDataRegistration   @default(no) @map("is_registered")
+  isValidData     Boolean                   @default(true) @map("is_valid_data")
+  productionTime  String?                   @map("production_time") @db.VarChar(10)
+  legacyId        BigInt?                   @unique @map("legacy_id")
+
+  machine Machine @relation(fields: [machineId], references: [id], onDelete: Cascade)
+
+  @@index([machineId])
+  @@index([startTime])
+  @@index([machineId, startTime])
+  @@map("machine_data")
+  @@schema("tenant_template")
+}
+
+model MachinePrevStart {
+  id            Int       @id @default(autoincrement())
+  machineId     Int       @map("machine_id")
+  prevStartTime DateTime? @map("prev_start_time") @db.Timestamptz
+  prevStopTime  DateTime? @map("prev_stop_time") @db.Timestamptz
+  legacyId      BigInt?   @unique @map("legacy_id")
+
+  machine Machine @relation(fields: [machineId], references: [id], onDelete: Cascade)
+
+  @@index([machineId])
+  @@map("machine_previous_starts")
+  @@schema("tenant_template")
+}
+
+model MachineStatus {
+  id        Int                  @id @default(autoincrement())
+  machineId Int                  @map("machine_id")
+  status    MachineRunningStatus
+  time      String?              @db.VarChar(30)
+  legacyId  BigInt?              @unique @map("legacy_id")
+
+  machine Machine @relation(fields: [machineId], references: [id], onDelete: Cascade)
+
+  @@index([machineId])
+  @@index([time])
+  @@map("machine_status")
+  @@schema("tenant_template")
+}
+
+model MachineUserSetting {
+  id            Int     @id @default(autoincrement())
+  // User snapshot (§11.5)
+  userId        Int     @map("user_id")
+  userEmail     String  @default("") @map("user_email") @db.VarChar(255)
+  userName      String  @default("") @map("user_name") @db.VarChar(255)
+  machineId     Int     @map("machine_id")
+  isVoiceMsg    Boolean @default(false) @map("is_voice_msg")
+  isVibrate     Boolean @default(false) @map("is_vibrate")
+  isSound       Boolean @default(true) @map("is_sound")
+  soundFileName String? @map("sound_file_name") @db.VarChar(100)
+  legacyId      BigInt? @unique @map("legacy_id")
+
+  machine Machine @relation(fields: [machineId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, machineId])
+  @@index([machineId])
+  @@map("machine_user_settings")
+  @@schema("tenant_template")
+}
+
+// ----------------------------- Machine documents (file manager) -------------------------------
+
+// Legacy `machines` table → `MachineDocument` (A1 rename).
+model MachineDocument {
+  id          Int       @id @default(autoincrement())
+  equipmentId Int       @default(0) @map("equipment_id")
+  folderId    Int       @default(0) @map("folder_id")
+  name        String?   @db.VarChar(255)
+  isMain      Boolean   @default(false) @map("is_main")
+  isLocked    Boolean   @default(false) @map("is_locked")
+  legacyId    BigInt?   @unique @map("legacy_id")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
+
+  equipment Equipment              @relation(fields: [equipmentId], references: [id])
+  folder    Folder?                @relation(fields: [folderId], references: [id])
+  files     MachineDocumentFile[]
+  fileLocks UserFileLock[]
+
+  @@index([equipmentId])
+  @@index([folderId])
+  @@index([deletedAt])
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "machine_document_name_trgm_idx")
+  @@map("machine_documents")
+  @@schema("tenant_template")
+}
+
+// Legacy `machine_files` table → `MachineDocumentFile` (A1 rename).
+model MachineDocumentFile {
+  id              Int             @id @default(autoincrement())
+  machineDocId    Int             @default(0) @map("machine_id")
+  filename        String?         @default("noimage.png") @db.VarChar(255)
+  filetype        MachineFileType? @default(Image)
+  isMain          Boolean         @default(false) @map("is_main")
+  isLocked        Boolean         @default(false) @map("is_locked")
+  uploadedAt      DateTime?       @map("uploaded_at") @db.Timestamptz
+  downloadedAt    DateTime?       @map("downloaded_at") @db.Timestamptz
+  isActive        Boolean         @default(true) @map("is_active")
+  notes           String          @default("") @db.Text
+  // Uploader snapshot (§11.5)
+  uploadedByUserId  Int           @default(0) @map("user_id")
+  uploadedByEmail   String        @default("") @map("uploaded_by_email") @db.VarChar(255)
+  uploadedByName    String        @default("") @map("uploaded_by_name") @db.VarChar(255)
+  // Lock-holder snapshot (§11.5) — populated when isLocked = true.
+  lockedByUserId    Int           @default(0) @map("locked_by_user_id")
+  lockedByEmail     String        @default("") @map("locked_by_email") @db.VarChar(255)
+  lockedByName      String        @default("") @map("locked_by_name") @db.VarChar(255)
+  legacyId          BigInt?       @unique @map("legacy_id")
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt         DateTime?     @map("deleted_at") @db.Timestamptz
+
+  document MachineDocument @relation(fields: [machineDocId], references: [id], onDelete: Cascade)
+
+  fileLocks UserFileLock[]
+
+  @@index([machineDocId])
+  @@index([uploadedByUserId])
+  @@index([deletedAt])
+  @@map("machine_document_files")
+  @@schema("tenant_template")
+}
+
+// ----------------------------- Programmes -------------------------------
+
+model MachineProgramme {
+  id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(255)
+  description String?
+  status      Int       @default(1) @db.SmallInt
+  legacyId    BigInt?   @unique @map("legacy_id")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  files          MachineProgrammeFile[]
+  tenantMachines TenantMachine[]
+
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "machine_programme_name_trgm_idx")
+  @@map("machine_programmes")
+  @@schema("tenant_template")
+}
+
+model MachineProgrammeFile {
+  id            Int      @id @default(autoincrement())
+  programmeId   Int      @map("programme_id")
+  filename      String   @db.VarChar(255)
+  // Uploader snapshot (§11.5)
+  uploadedByUserId Int      @default(0) @map("user_id")
+  uploadedByEmail  String   @default("") @map("uploaded_by_email") @db.VarChar(255)
+  uploadedByName   String   @default("") @map("uploaded_by_name") @db.VarChar(255)
+  legacyId      BigInt?  @unique @map("legacy_id")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  programme MachineProgramme @relation(fields: [programmeId], references: [id], onDelete: Cascade)
+
+  @@index([programmeId])
+  @@index([uploadedByUserId])
+  @@map("machine_programme_files")
+  @@schema("tenant_template")
+}
+
+// Legacy `company_machine` table — links a Tenant to a MachineProgramme.
+// Renamed `TenantMachine` per the v2 → v3 tenant terminology (§4.3).
+model TenantMachine {
+  id          Int      @id @default(autoincrement())
+  programmeId Int      @map("programme_id")
+  legacyId    BigInt?  @unique @map("legacy_id")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  programme MachineProgramme @relation(fields: [programmeId], references: [id], onDelete: Cascade)
+
+  @@index([programmeId])
+  @@map("tenant_machines")
+  @@schema("tenant_template")
+}
+
+// ----------------------------- Workstations -------------------------------
+
+model Workstation {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(255)
+  machineId Int?     @map("machine_id")
+  status    Int      @default(1) @db.SmallInt
+  legacyId  BigInt?  @unique @map("legacy_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([machineId])
+  @@map("workstations")
+  @@schema("tenant_template")
+}
+
+// ----------------------------- Folders / file locks -------------------------------
+
+model Folder {
+  id          Int       @id @default(autoincrement())
+  equipmentId Int       @default(0) @map("equipment_id")
+  name        String    @db.VarChar(255)
+  folderType  Int       @map("folder_type")
+  status      Int       @default(1) @db.SmallInt
+  legacyId    BigInt?   @unique @map("legacy_id")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
+
+  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  type      Type      @relation(fields: [folderType], references: [id])
+
+  documents MachineDocument[]
+
+  @@index([equipmentId])
+  @@index([folderType])
+  @@index([deletedAt])
+  @@map("folders")
+  @@schema("tenant_template")
+}
+
+model UserFileLock {
+  id                  Int          @id @default(autoincrement())
+  // Lock-holder snapshot (§11.5)
+  userId              Int          @map("user_id")
+  userEmail           String       @default("") @map("user_email") @db.VarChar(255)
+  userName            String       @default("") @map("user_name") @db.VarChar(255)
+  kind                FileLockType @default(lock) @map("type")
+  machineDocId        Int          @default(0) @map("machine_id")
+  machineDocFileId    Int          @default(0) @map("machine_file_id")
+  isLocked            Boolean      @default(false) @map("is_locked")
+  legacyId            BigInt?      @unique @map("legacy_id")
+  createdAt           DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt           DateTime?    @updatedAt @map("updated_at") @db.Timestamptz
+
+  document     MachineDocument     @relation(fields: [machineDocId],     references: [id], onDelete: Cascade)
+  documentFile MachineDocumentFile @relation(fields: [machineDocFileId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([machineDocId])
+  @@index([machineDocFileId])
+  @@map("user_file_locks")
+  @@schema("tenant_template")
+}
+
+// ----------------------------- Shifts / schedules -------------------------------
+
+model WorkShift {
+  id              Int       @id @default(autoincrement())
+  name            String?   @db.VarChar(255)
+  startTime       DateTime? @map("start_time") @db.Time
+  endTime         DateTime? @map("end_time") @db.Time
+  breakStartTime  DateTime? @map("break_start_time") @db.Time
+  breakEndTime    DateTime? @map("break_end_time") @db.Time
+  breakTimes      String?   @map("break_times") @db.VarChar(512)
+  workingDays     String?   @map("working_days") @db.VarChar(50)
+  status          Int       @default(1) @db.SmallInt
+  legacyId        BigInt?   @unique @map("legacy_id")
+  createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz
+
+  productionData ProductionData[]
+  scrapData      ScrapData[]
+  stopData       StopData[]
+
+  @@index([deletedAt])
+  @@map("work_shifts")
+  @@schema("tenant_template")
+}
+
+model ShiftSchedule {
+  id          Int       @id @default(autoincrement())
+  status      Boolean   @default(true)
+  title       String    @db.VarChar(100)
+  description String?   @db.VarChar(512)
+  legacyId    BigInt?   @unique @map("legacy_id")
+  createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
+
+  data            ShiftScheduleData[]
+  equipmentLinks  EquipmentShiftSchedule[]
+
+  @@index([deletedAt])
+  @@map("shift_schedules")
+  @@schema("tenant_template")
+}
+
+model ShiftScheduleData {
+  id              Int       @id @default(autoincrement())
+  parentId        Int       @default(0) @map("parent_id")
+  title           String    @db.VarChar(100)
+  scheduleId      Int       @map("schedule_id")
+  start           DateTime? @db.Timestamptz
+  end             DateTime? @db.Timestamptz
+  textColor       String    @map("text_color") @db.VarChar(20)
+  backgroundColor String    @map("background_color") @db.VarChar(20)
+  isRecurring     Boolean   @default(false) @map("is_recurring")
+  rcData          String?   @map("rc_data")
+  breakData       String?   @map("break_data")
+  legacyId        BigInt?   @unique @map("legacy_id")
+  createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+
+  schedule ShiftSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+
+  @@index([scheduleId])
+  @@index([start, end])
+  @@map("shift_schedule_data")
+  @@schema("tenant_template")
+}
+
+// ----------------------------- Boards / dashboards -------------------------------
+
+model Board {
+  id              Int       @id @default(autoincrement())
+  status          Int       @default(1) @db.SmallInt
+  name            String    @db.VarChar(255)
+  slotData        String?   @map("slot_data")
+  totalSlots      Int       @default(6) @map("total_slots") @db.SmallInt
+  // Creator snapshot (§11.5)
+  createdByUserId Int       @map("created_by")
+  createdByEmail  String    @default("") @map("created_by_email") @db.VarChar(255)
+  createdByName   String    @default("") @map("created_by_name") @db.VarChar(255)
+  legacyId        BigInt?   @unique @map("legacy_id")
+  createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+
+  widgets BoardWidget[]
+
+  @@index([createdByUserId])
+  @@map("dashboards")
+  @@schema("tenant_template")
+}
+
+model BoardWidget {
+  id              Int       @id @default(autoincrement())
+  boardId         Int       @map("board_id")
+  title           String    @db.VarChar(255)
+  imgPath         String    @map("img_path") @db.VarChar(255)
+  settings        String    @default("") @db.VarChar(1024)
+  // Creator snapshot (§11.5)
+  createdByUserId Int       @map("created_by")
+  createdByEmail  String    @default("") @map("created_by_email") @db.VarChar(255)
+  createdByName   String    @default("") @map("created_by_name") @db.VarChar(255)
+  legacyId        BigInt?   @unique @map("legacy_id")
+  createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz
+
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@index([boardId])
+  @@index([deletedAt])
+  @@map("dashboard_widgets")
+  @@schema("tenant_template")
+}
+
+// ----------------------------- Misc -------------------------------
+
+model SalaryGroup {
+  id         Int       @id @default(autoincrement())
+  name       String?   @db.VarChar(255)
+  hourlyRate Decimal   @default(0) @map("hourly_rate") @db.Decimal(10, 0)
+  info       String    @default("") @db.VarChar(512)
+  legacyId   BigInt?   @unique @map("legacy_id")
+  createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime? @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz
+
+  @@index([deletedAt])
+  @@map("salary_group")
+  @@schema("tenant_template")
+}
+
+model Feedback {
+  id              Int       @id @default(autoincrement())
+  subject         String    @db.VarChar(255)
+  body            String
+  status          Int       @default(1) @db.SmallInt
+  // User snapshot (§11.5)
+  createdByUserId Int       @map("user_id")
+  createdByEmail  String    @default("") @map("created_by_email") @db.VarChar(255)
+  createdByName   String    @default("") @map("created_by_name") @db.VarChar(255)
+  legacyId        BigInt?   @unique @map("legacy_id")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz
+
+  @@index([createdByUserId])
+  @@index([deletedAt])
+  @@map("feedbacks")
+  @@schema("tenant_template")
+}
+
+model Symbol {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(255)
+  image     String?  @db.VarChar(255)
+  status    Int      @default(1) @db.SmallInt
+  sortOrder Int      @default(0) @map("sort_order")
+  legacyId  BigInt?  @unique @map("legacy_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("symbols")
+  @@schema("tenant_template")
+}

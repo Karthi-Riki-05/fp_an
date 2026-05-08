@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
+import { PrismaModule } from './prisma/prisma.module';
+import { RedisModule } from './redis/redis.module';
 import { HealthModule } from './health/health.module';
 
 @Module({
@@ -15,6 +17,8 @@ import { HealthModule } from './health/health.module';
         level: process.env.LOG_LEVEL ?? 'info',
       },
     }),
+    PrismaModule,
+    RedisModule,
     HealthModule,
   ],
 })
