@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { toApiError } from '../../../lib/api-client';
 import { useLogout, useMe } from '../../../lib/api/auth';
+import { canAccessBackend } from '../../../lib/auth';
 
 const { Title, Text } = Typography;
 
@@ -149,15 +150,16 @@ export default function DashboardPage() {
     }
   };
 
-  // Hide admin tile for non-admins; hide units tile if user has no
-  // tenant memberships (matches legacy logic).
+  // Administration tile follows the legacy @permission('view-backend')
+  // gate — visible to Administrator (all=true) and Company roles.
+  const showAdmin = canAccessBackend(me);
   const visibleTiles = useMemo(() => {
     if (!me) return [];
     return TILES.filter((tile) => {
-      if (tile.key === 'admin' && !me.isAdmin) return false;
+      if (tile.key === 'admin' && !showAdmin) return false;
       return true;
     });
-  }, [me]);
+  }, [me, showAdmin]);
 
   // ---- Tab 1: Startpage (tile launcher) ----
   const StartpageTab = (

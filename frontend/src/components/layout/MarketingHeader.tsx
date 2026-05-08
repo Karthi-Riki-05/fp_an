@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { brand } from '../../lib/assets';
 import { toApiError } from '../../lib/api-client';
 import { useLogout, useMe } from '../../lib/api/auth';
+import { canAccessBackend } from '../../lib/auth';
 
 const { Text } = Typography;
 const { useBreakpoint } = Grid;
@@ -71,7 +72,9 @@ export function MarketingHeader({ locale = 'sv' }: MarketingHeaderProps) {
   const userMenuItems = [
     { key: 'startpage',      label: <Link href="/dashboard">{userLabels.startpage}</Link> },
     { key: 'changePassword', label: <Link href="/profile/edit">{userLabels.changePassword}</Link> },
-    ...(me?.isAdmin
+    // Administration is visible to anyone with view-backend (Administrator
+    // or Company role) — matches legacy @permission('view-backend').
+    ...(canAccessBackend(me)
       ? [{ key: 'administration', label: <Link href="/admin">{userLabels.administration}</Link> }]
       : []),
     { type: 'divider' as const },
