@@ -1,0 +1,9 @@
+# All robots allowed
+User-agent: *
+Disallow: /login
+Disallow: /fpanalyzer.apk
+Disallow: /services-detail.html
+Disallow: /index.php/login
+
+# Sitemap files
+Sitemap: https://fpanalyzer.se/sitemap.xml

@@ -25,8 +25,21 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Pages under (authenticated) require the cookie. Match by path prefix.
-  const protectedPrefixes = ['/dashboard', '/equipment', '/admin'];
+  // Pages requiring auth. Match by path prefix.
+  const protectedPrefixes = [
+    '/dashboard',
+    '/equipment',
+    '/admin',
+    '/monitor',
+    '/analyzer',
+    '/myresult',
+    '/units',
+    '/machines',
+    '/orders',
+    '/boards',
+    '/feedback',
+    '/profile',
+  ];
   const isProtected = protectedPrefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));
   if (isProtected && !hasCookie) {
     const url = req.nextUrl.clone();

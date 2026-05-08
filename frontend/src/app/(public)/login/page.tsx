@@ -1,18 +1,43 @@
 'use client';
 
-import { LockOutlined, UserOutlined } from '@ant-design/icons';
-import { App, Button, Card, Divider, Form, Input, Typography } from 'antd';
+import {
+  ArrowLeftOutlined,
+  FacebookFilled,
+  GithubFilled,
+  GoogleOutlined,
+  LinkedinFilled,
+  LockOutlined,
+  TwitterOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { App, Button, Card, Divider, Input, Space, Typography } from 'antd';
+import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { brand } from '../../../lib/assets';
 import { toApiError } from '../../../lib/api-client';
 import { useLogin } from '../../../lib/api/auth';
+import { PublicShell } from '../../../components/layout/PublicShell';
 
 const { Title, Text } = Typography;
 
-interface FormValues {
-  email: string;
-  password: string;
-}
+const loginSchema = z.object({
+  email: z.string().email({ message: 'Enter a valid email' }),
+  password: z.string().min(1, { message: 'Password is required' }),
+});
+type LoginValues = z.infer<typeof loginSchema>;
+
+const SOCIAL_PROVIDERS = [
+  { id: 'google',   icon: GoogleOutlined,  label: 'Google',   color: '#dd4b39' },
+  { id: 'facebook', icon: FacebookFilled,  label: 'Facebook', color: '#3b5998' },
+  { id: 'github',   icon: GithubFilled,    label: 'GitHub',   color: '#1f2328' },
+  { id: 'linkedin', icon: LinkedinFilled,  label: 'LinkedIn', color: '#0077b5' },
+  { id: 'twitter',  icon: TwitterOutlined, label: 'Twitter',  color: '#1da1f2' },
+];
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,7 +47,13 @@ export default function LoginPage() {
   const { message } = App.useApp();
   const [submitting, setSubmitting] = useState(false);
 
-  const onSubmit = async (values: FormValues) => {
+  const { control, handleSubmit, formState: { errors } } = useForm<LoginValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+    mode: 'onBlur',
+  });
+
+  const onSubmit = handleSubmit(async (values) => {
     setSubmitting(true);
     try {
       await login.mutateAsync(values);
@@ -34,74 +65,171 @@ export default function LoginPage() {
     } finally {
       setSubmitting(false);
     }
-  };
+  });
 
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 24,
-        background: '#f5f5f7',
-      }}
-    >
-      <Card style={{ width: 380 }} bordered>
-        <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <Title level={3} style={{ marginBottom: 4 }}>
-            FP Analyzer
-          </Title>
-          <Text type="secondary">Sign in to your account</Text>
-        </div>
-
-        <Form<FormValues>
-          name="login"
-          autoComplete="off"
-          onFinish={onSubmit}
-          layout="vertical"
-          initialValues={{ email: '', password: '' }}
+    <PublicShell minimal>
+      <main
+        style={{
+          minHeight: 'calc(100vh - 64px - 90px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '32px 16px',
+        }}
+      >
+        <Card
+          bordered
+          style={{ width: '100%', maxWidth: 420 }}
+          bodyStyle={{ padding: 32 }}
         >
-          <Form.Item
-            name="email"
-            label="Email"
-            rules={[
-              { required: true, message: 'Email is required.' },
-              { type: 'email', message: 'Enter a valid email.' },
-            ]}
+          <Link
+            href="/"
+            aria-label="Back to home"
+            style={{
+              color: 'rgba(0,0,0,0.45)',
+              fontSize: 13,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              marginBottom: 16,
+            }}
           >
-            <Input prefix={<UserOutlined />} placeholder="you@company.com" autoFocus />
-          </Form.Item>
+            <ArrowLeftOutlined /> Back
+          </Link>
 
-          <Form.Item
-            name="password"
-            label="Password"
-            rules={[{ required: true, message: 'Password is required.' }]}
+          <div style={{ textAlign: 'center', marginBottom: 24 }}>
+            <Image
+              src={brand.logo}
+              alt="FP Analyzer"
+              width={180}
+              height={48}
+              priority
+              style={{ height: 48, width: 'auto' }}
+            />
+            <Title level={4} style={{ marginTop: 16, marginBottom: 4, fontWeight: 500 }}>
+              Sign in to your account
+            </Title>
+          </div>
+
+          <form onSubmit={onSubmit} noValidate>
+            <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+              <div>
+                <label htmlFor="email" style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500 }}>
+                  Email
+                </label>
+                <Controller
+                  control={control}
+                  name="email"
+                  render={({ field }) => (
+                    <Input
+                      {...field}
+                      id="email"
+                      type="email"
+                      size="large"
+                      autoComplete="email"
+                      autoFocus
+                      prefix={<UserOutlined style={{ color: 'rgba(0,0,0,0.25)' }} />}
+                      placeholder="you@company.com"
+                      status={errors.email ? 'error' : ''}
+                      aria-invalid={Boolean(errors.email)}
+                      aria-describedby={errors.email ? 'email-error' : undefined}
+                    />
+                  )}
+                />
+                {errors.email && (
+                  <div id="email-error" role="alert" style={{ color: '#dd4b39', fontSize: 12, marginTop: 4 }}>
+                    {errors.email.message}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="password" style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500 }}>
+                  Password
+                </label>
+                <Controller
+                  control={control}
+                  name="password"
+                  render={({ field }) => (
+                    <Input.Password
+                      {...field}
+                      id="password"
+                      size="large"
+                      autoComplete="current-password"
+                      prefix={<LockOutlined style={{ color: 'rgba(0,0,0,0.25)' }} />}
+                      placeholder="•••••••••"
+                      status={errors.password ? 'error' : ''}
+                      aria-invalid={Boolean(errors.password)}
+                      aria-describedby={errors.password ? 'pw-error' : undefined}
+                    />
+                  )}
+                />
+                {errors.password && (
+                  <div id="pw-error" role="alert" style={{ color: '#dd4b39', fontSize: 12, marginTop: 4 }}>
+                    {errors.password.message}
+                  </div>
+                )}
+                <div style={{ textAlign: 'right', marginTop: 6 }}>
+                  <Link href="/password/reset" style={{ fontSize: 12 }}>
+                    Forgot your password?
+                  </Link>
+                </div>
+              </div>
+
+              <Button type="primary" size="large" htmlType="submit" loading={submitting} block>
+                Sign in
+              </Button>
+            </Space>
+          </form>
+
+          <Divider plain style={{ margin: '24px 0 16px', color: 'rgba(0,0,0,0.45)', fontSize: 12 }}>
+            or continue with
+          </Divider>
+
+          <Space size={8} wrap style={{ width: '100%', justifyContent: 'center' }}>
+            {SOCIAL_PROVIDERS.map((p) => {
+              const Icon = p.icon;
+              return (
+                <Button
+                  key={p.id}
+                  size="middle"
+                  shape="circle"
+                  aria-label={`Sign in with ${p.label}`}
+                  icon={<Icon style={{ color: p.color }} />}
+                  onClick={() => {
+                    window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/oauth/${p.id}`;
+                  }}
+                />
+              );
+            })}
+          </Space>
+
+          <Text
+            type="secondary"
+            style={{ display: 'block', textAlign: 'center', marginTop: 20, fontSize: 12 }}
           >
-            <Input.Password prefix={<LockOutlined />} placeholder="•••••••••" />
-          </Form.Item>
-
-          <Form.Item>
-            <Button type="primary" htmlType="submit" block loading={submitting}>
-              Sign in
-            </Button>
-          </Form.Item>
-        </Form>
-
-        <Divider plain style={{ margin: '8px 0 12px' }}>
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            dev credentials
+            Need an account? Email <a href="mailto:info@fpanalyzer.se">info@fpanalyzer.se</a>
           </Text>
-        </Divider>
-        <ul style={{ fontSize: 12, color: '#6b6b6b', margin: 0, paddingLeft: 16 }}>
-          <li>
-            <code>admin@fpanalyzer.local</code> / <code>dev-password-change-me</code> — Admin
-          </li>
-          <li>
-            <code>user@demo.local</code> / <code>demo-password</code> — Demo tenant user
-          </li>
-        </ul>
-      </Card>
-    </main>
+
+          <div
+            style={{
+              marginTop: 16,
+              padding: 12,
+              background: '#f5f7f9',
+              borderRadius: 6,
+              fontSize: 11,
+              color: '#666',
+            }}
+          >
+            <strong>Dev credentials:</strong>
+            <ul style={{ margin: '4px 0 0', paddingLeft: 16 }}>
+              <li><code>admin@fpanalyzer.local</code> / <code>dev-password-change-me</code></li>
+              <li><code>user@demo.local</code> / <code>demo-password</code></li>
+            </ul>
+          </div>
+        </Card>
+      </main>
+    </PublicShell>
   );
 }

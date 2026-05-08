@@ -1,0 +1,31 @@
+{
+  "short_name": "FPAnalyzer",
+  "name": "FPAnalyzer",
+  "description": "Flow analyzer, Flow design, Stop data, Scrap data, Produktion data",
+  "icons": [
+    {
+      "src": "/site/images/ic_fpanalyzer_192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/site/images/ic_fpanalyzer_512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/?source=pwa",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "scope": "/",
+  "theme_color": "#ffffff",
+  "shortcuts": [
+    {
+      "name": "KONTAKTA OSS",
+      "short_name": "Contact",
+      "description": "Vill du att vi kontaktar er?",
+      "url": "/?source=pwa#contact_us",
+      "icons": [{ "src": "/site/images/ic_fpanalyzer_192.png", "sizes": "192x192" }]
+    }   
+  ]
+}
