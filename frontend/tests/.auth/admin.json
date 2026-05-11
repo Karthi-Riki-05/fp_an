@@ -1,0 +1,25 @@
+{
+  "cookies": [
+    {
+      "name": "access_token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsImVtYWlsIjoidXNlcjFAZ21haWwuY29tIiwidGVuYW50SWQiOm51bGwsInJvbGVzIjpbIkFkbWluaXN0cmF0b3IiXSwia2luZCI6IndlYiIsImlhdCI6MTc3ODM1MDgzNywiZXhwIjoxNzc4MzUxNzM3fQ.rwE9bz8V2LeGMIB6oUg4T_WBjeXp4YgjYJKcSia9onc",
+      "domain": "fptest.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "access_token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsImVtYWlsIjoidXNlcjFAZ21haWwuY29tIiwidGVuYW50SWQiOm51bGwsInJvbGVzIjpbIkFkbWluaXN0cmF0b3IiXSwia2luZCI6IndlYiIsImlhdCI6MTc3ODM1MDgzNywiZXhwIjoxNzc4MzUxNzM3fQ.rwE9bz8V2LeGMIB6oUg4T_WBjeXp4YgjYJKcSia9onc",
+      "domain": "api.fptest.com",
+      "path": "/",
+      "expires": -1,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": []
+}

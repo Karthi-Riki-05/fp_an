@@ -98,6 +98,7 @@ export default function TenantsPage() {
         dataSource={list.data ?? []}
         loading={list.isLoading}
         pagination={false}
+        scroll={{ x: true }}
         style={{ marginTop: 16, background: '#fff' }}
       />
 

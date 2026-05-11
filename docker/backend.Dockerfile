@@ -29,7 +29,7 @@ EXPOSE 4000
 # On dev startup: regenerate client (covers schema edits via bind mount),
 # push the schema to the DB, run seed, then start Nest in watch mode.
 # All three are idempotent.
-CMD ["sh", "-c", "npx prisma generate && npx prisma db push --skip-generate --accept-data-loss && npx ts-node prisma/seed.ts && npm run start:dev"]
+CMD ["sh", "-c", "npx prisma generate && npx prisma db push --skip-generate --accept-data-loss && node prisma/seed.js && npm run start:dev"]
 
 # ---- builder ----------------------------------------------------------------
 FROM node:20-alpine AS builder

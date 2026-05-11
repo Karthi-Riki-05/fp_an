@@ -37,3 +37,50 @@ export function useLogout() {
     onSuccess: () => qc.clear(),
   });
 }
+
+export interface ImpersonateResponse {
+  user: {
+    id: number;
+    email: string;
+    name: string;
+    tenantId: number | null;
+    roles: string[];
+    impersonatorId?: number;
+  };
+  expiresIn: number;
+}
+
+/**
+ * Issues an impersonation JWT (server sets cookie). After success, the next
+ * /me call will reflect the target user. Caller is responsible for showing
+ * the persistent banner (see ImpersonationBanner).
+ */
+export function useImpersonate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ targetUserId, tenantId }: { targetUserId: number; tenantId: number }) => {
+      const { data } = await apiClient.post<ImpersonateResponse>(
+        `/admin/users/${targetUserId}/impersonate`,
+        {},
+        { headers: { 'X-Tenant-Id': String(tenantId) } },
+      );
+      return data;
+    },
+    onSuccess: () => qc.clear(), // refetch /me + everything tenant-scoped
+  });
+}
+
+/**
+ * Ends an impersonation session and restores the original Super Admin token.
+ * No re-login needed.
+ */
+export function useStopImpersonation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await apiClient.post<ImpersonateResponse>('/auth/impersonate/stop', {});
+      return data;
+    },
+    onSuccess: () => qc.clear(),
+  });
+}

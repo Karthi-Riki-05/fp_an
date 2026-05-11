@@ -59,6 +59,8 @@ services:
       context: .
       dockerfile: docker/frontend.Dockerfile
       target: prod
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     restart: unless-stopped
     env_file: .env.production
     environment:

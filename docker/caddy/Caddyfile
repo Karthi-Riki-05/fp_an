@@ -1,0 +1,15 @@
+{
+	# Use Caddy's local CA — certs are auto-issued for fptest.com / api.fptest.com.
+	# Trust the root CA once: System Keychain > trust "Caddy Local Authority".
+	local_certs
+}
+
+fptest.com {
+	encode gzip
+	reverse_proxy frontend:3000
+}
+
+api.fptest.com {
+	encode gzip
+	reverse_proxy backend:4000
+}

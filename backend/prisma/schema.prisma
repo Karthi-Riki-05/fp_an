@@ -185,17 +185,20 @@ model HistoryType {
 }
 
 model History {
-  id        Int       @id @default(autoincrement())
-  typeId    Int       @map("type_id")
-  userId    Int       @map("user_id")
-  entityId  Int?      @map("entity_id")
-  icon      String?   @db.VarChar(255)
-  class     String?   @db.VarChar(255)
-  text      String    @db.VarChar(255)
-  assets    String?   @db.VarChar(255)
-  legacyId  BigInt?   @unique @map("legacy_id")
-  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  id             Int       @id @default(autoincrement())
+  typeId         Int       @map("type_id")
+  userId         Int       @map("user_id")
+  // Phase 4b D6 schema gap: when a Super Admin acts while impersonating another user,
+  // userId = the impersonated user (JWT sub) and impersonatorId = the original admin.
+  impersonatorId Int?      @map("impersonator_id")
+  entityId       Int?      @map("entity_id")
+  icon           String?   @db.VarChar(255)
+  class          String?   @db.VarChar(255)
+  text           String    @db.VarChar(255)
+  assets         String?   @db.VarChar(255)
+  legacyId       BigInt?   @unique @map("legacy_id")
+  createdAt      DateTime? @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   type HistoryType @relation(fields: [typeId], references: [id], onDelete: Cascade)
   user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -203,6 +206,7 @@ model History {
   @@index([typeId])
   @@index([userId])
   @@index([entityId])
+  @@index([impersonatorId])
   @@map("history")
   @@schema("public")
 }
@@ -245,44 +249,84 @@ model CmsImage {
 }
 
 model Slider {
-  id        Int      @id @default(autoincrement())
-  title     String?  @db.VarChar(255)
-  image     String   @db.VarChar(255)
-  link      String?  @db.VarChar(512)
-  status    Boolean  @default(true)
-  sortOrder Int      @default(0) @map("sort_order")
-  legacyId  BigInt?  @unique @map("legacy_id")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  id          Int      @id @default(autoincrement())
+  title       String?  @db.VarChar(255)
+  description String?  @db.VarChar(1024)
+  image       String   @db.VarChar(255)
+  link        String?  @db.VarChar(512)
+  status      Boolean  @default(true)
+  sortOrder   Int      @default(0) @map("sort_order")
+  legacyId    BigInt?  @unique @map("legacy_id")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   @@map("sliders")
   @@schema("public")
 }
 
 model Testimonial {
-  id        Int      @id @default(autoincrement())
-  name      String   @db.VarChar(255)
-  role      String?  @db.VarChar(255)
-  body      String
-  image     String?  @db.VarChar(255)
-  status    Boolean  @default(true)
-  sortOrder Int      @default(0) @map("sort_order")
-  legacyId  BigInt?  @unique @map("legacy_id")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(255)
+  companyName String   @map("company_name") @db.VarChar(255)
+  title       String?  @db.VarChar(255)
+  // role kept nullable for richer testimonial UX (e.g. speaker job title);
+  // legacy app never populated this — migrated rows leave it null.
+  role        String?  @db.VarChar(255)
+  body        String
+  image       String?  @db.VarChar(255)
+  status      Boolean  @default(true)
+  sortOrder   Int      @default(0) @map("sort_order")
+  legacyId    BigInt?  @unique @map("legacy_id")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   @@map("testimonials")
   @@schema("public")
 }
 
+// Feedback — platform-scoped per Phase 4b Gap 5 (legacy stored these in master DB).
+// `tenantId` denormalised so Super Admin can list/filter per company without joining
+// to TenantUser. User snapshot (§11.5) lets old rows survive user/tenant deletion.
+// `visibleToTenant` is a future-flag — when true, the Company role can see the row
+// in their own tenant view. Default false matches legacy "platform-only" behaviour.
+model Feedback {
+  id                Int       @id @default(autoincrement())
+  body              String
+  status            Int       @default(1) @db.SmallInt
+  tenantId          Int?      @map("tenant_id")
+  tenantNameSnap    String    @default("") @map("tenant_name_snap") @db.VarChar(255)
+  userId            Int?      @map("user_id")
+  userEmailSnap     String    @default("") @map("user_email_snap") @db.VarChar(255)
+  userNameSnap      String    @default("") @map("user_name_snap") @db.VarChar(255)
+  visibleToTenant   Boolean   @default(false) @map("visible_to_tenant")
+  legacyId          BigInt?   @unique @map("legacy_id")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt         DateTime? @map("deleted_at") @db.Timestamptz
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([deletedAt])
+  @@index([createdAt])
+  @@map("feedbacks")
+  @@schema("public")
+}
+
+// Mirrors legacy site_settings (type, var_key, var_value) triplet so Social
+// Management can list rows by type='social' cleanly. status toggles a row's
+// visibility on the public site.
 model SiteSetting {
   id        Int      @id @default(autoincrement())
-  key       String   @unique @db.VarChar(255)
-  value     String?
+  type      String   @db.VarChar(64)
+  varKey    String   @map("var_key") @db.VarChar(255)
+  varValue  String?  @map("var_value")
+  status    Boolean  @default(true)
   legacyId  BigInt?  @unique @map("legacy_id")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
+  @@unique([type, varKey])
+  @@index([type])
   @@map("site_settings")
   @@schema("public")
 }
@@ -1461,25 +1505,8 @@ model SalaryGroup {
   @@schema("tenant_template")
 }
 
-model Feedback {
-  id              Int       @id @default(autoincrement())
-  subject         String    @db.VarChar(255)
-  body            String
-  status          Int       @default(1) @db.SmallInt
-  // User snapshot (§11.5)
-  createdByUserId Int       @map("user_id")
-  createdByEmail  String    @default("") @map("created_by_email") @db.VarChar(255)
-  createdByName   String    @default("") @map("created_by_name") @db.VarChar(255)
-  legacyId        BigInt?   @unique @map("legacy_id")
-  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz
-
-  @@index([createdByUserId])
-  @@index([deletedAt])
-  @@map("feedbacks")
-  @@schema("tenant_template")
-}
+// Feedback was relocated to public schema in Phase 4b — see public.Feedback.
+// (Per Gap 5 of SUPER_ADMIN_PORT.md.)
 
 model Symbol {
   id        Int      @id @default(autoincrement())

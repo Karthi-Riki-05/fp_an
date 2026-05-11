@@ -227,6 +227,7 @@ export default function EquipmentListPage() {
           gridTemplateColumns: 'minmax(260px, 320px) 1fr',
           gap: 16,
           alignItems: 'start',
+          minWidth: 0,
         }}
         className="fp-equipment-grid"
       >
@@ -247,6 +248,7 @@ export default function EquipmentListPage() {
 
         <Card
           bodyStyle={{ padding: 0 }}
+          style={{ minWidth: 0 }}
           title={
             <Input
               size="small"

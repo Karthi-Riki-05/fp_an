@@ -11,6 +11,8 @@ export interface MeResponse {
   activeTenantId: number | null;
   isAdmin: boolean;
   roles: string[];
+  /** Effective permission names. Admins (Administrator role with all=true) get every permission. */
+  permissions: string[];
   tenants: Array<{
     id: number;
     slug: string;
@@ -19,6 +21,10 @@ export interface MeResponse {
     timezone: string;
     status: 'active' | 'suspended' | 'archived';
   }>;
+  /** Set when this session is impersonating another user. id of the original Super Admin. */
+  impersonatorId: number | null;
+  /** When impersonating, the original Super Admin's name + email — for the banner. */
+  impersonator: { id: number; name: string; email: string } | null;
 }
 
 export interface LoginResponse {
@@ -40,6 +46,38 @@ export interface TenantSummary {
   timezone: string;
   status: 'active' | 'suspended' | 'archived';
   createdAt: string;
+}
+
+export interface AdminUser {
+  id: number;
+  name: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  confirmed: boolean;
+  active: boolean;
+  /** ISO timestamp string. */
+  createdAt: string;
+  roles: string[];
+}
+
+export interface GlobalAdminUser extends AdminUser {
+  companyId: number;
+  companyName: string;
+}
+
+export interface AdminUserListResponse {
+  data: AdminUser[];
+  total: number;
+  page: number;
+  perPage: number;
+}
+
+export interface GlobalUserListResponse {
+  data: GlobalAdminUser[];
+  total: number;
+  page: number;
+  perPage: number;
 }
 
 export interface Equipment {

@@ -14,8 +14,9 @@ import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { brand } from '../../../lib/assets';
-import { toApiError } from '../../../lib/api-client';
+import { apiClient, toApiError } from '../../../lib/api-client';
 import { useLogin } from '../../../lib/api/auth';
+import type { MeResponse } from '../../../lib/api/types';
 import { PublicShell } from '../../../components/layout/PublicShell';
 
 const { Title, Text } = Typography;
@@ -44,8 +45,9 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       await login.mutateAsync(values);
+      const { data: me } = await apiClient.get<MeResponse>('/me');
       message.success('Signed in.');
-      router.push(next);
+      router.push(me.isAdmin ? '/admin/dashboard' : next);
     } catch (err) {
       const e = toApiError(err);
       message.error(e.status === 401 ? 'Invalid email or password.' : e.message);

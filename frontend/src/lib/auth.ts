@@ -1,16 +1,21 @@
 import type { MeResponse } from './api/types';
 
-/**
- * Backend access — mirrors the legacy @permission('view-backend') gate.
- *
- * Both Administrator (all=true) and Company (tenant admin) roles have the
- * `view-backend` permission per the seed (see backend/prisma/seed.ts
- * COMPANY_PERMISSIONS). Until /me returns the full permission list, we
- * approximate by checking role names — keeps the frontend in sync with
- * the backend without an extra API round-trip.
- */
-export function canAccessBackend(me: MeResponse | undefined | null): boolean {
+type Me = MeResponse | undefined | null;
+
+/** Generic permission check — true if me holds any of the listed permissions. */
+export function hasPermission(me: Me, ...permissions: string[]): boolean {
   if (!me) return false;
-  if (me.isAdmin) return true;
-  return me.roles.includes('Company');
+  if (me.isAdmin) return true;                  // all=true Administrator shortcut
+  return permissions.some((p) => me.permissions?.includes(p));
+}
+
+/** Mirrors the legacy @permission('view-backend') gate. */
+export function canAccessBackend(me: Me): boolean {
+  return hasPermission(me, 'view-backend');
+}
+
+/** Convenience for role-based UI affordances. */
+export function hasRole(me: Me, ...roles: string[]): boolean {
+  if (!me) return false;
+  return roles.some((r) => me.roles?.includes(r));
 }
