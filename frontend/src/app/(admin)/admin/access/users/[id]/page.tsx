@@ -28,7 +28,7 @@ import {
 } from 'antd';
 import dayjs from 'dayjs';
 import { useRouter } from 'next/navigation';
-import { use, useState } from 'react';
+import { useState } from 'react';
 import { toApiError } from '../../../../../../lib/api-client';
 import {
   useAdminUser,
@@ -42,9 +42,8 @@ import { UserFormModal } from '../UserFormModal';
 
 const { Title, Text } = Typography;
 
-export default function UserDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id: idStr } = use(params);
-  const userId = Number(idStr);
+export default function UserDetailPage({ params }: { params: { id: string } }) {
+  const userId = Number(params.id);
   const router = useRouter();
   const { message } = App.useApp();
 

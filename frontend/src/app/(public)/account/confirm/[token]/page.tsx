@@ -24,9 +24,9 @@ async function confirmToken(token: string): Promise<{ ok: boolean; message?: str
 export default async function ConfirmAccountPage({
   params,
 }: {
-  params: Promise<{ token: string }>;
+  params: { token: string };
 }) {
-  const { token } = await params;
+  const { token } = params;
   const result = await confirmToken(token);
 
   return (
