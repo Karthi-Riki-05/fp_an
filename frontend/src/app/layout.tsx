@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Lato, Poppins } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
-import { getLocale, getMessages } from 'next-intl/server';
+import { getMessages } from 'next-intl/server';
 import { Providers } from './providers';
 import './globals.css';
 
@@ -38,8 +38,12 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const locale = await getLocale();
   const messages = await getMessages();
+  // request.ts hardcodes 'sv' (Phase 1 stub, no locale routing yet).
+  // getLocale() without a next-intl middleware falls back to Accept-Language
+  // and returns 'en' for English browsers, causing a server/client lang mismatch.
+  // Keep this in sync with request.ts until proper locale routing is built.
+  const locale = 'sv';
 
   return (
     <html lang={locale} className={`${lato.variable} ${poppins.variable}`}>
