@@ -34,10 +34,12 @@ import {
   useAdminUser,
   useChangeUserPassword,
   useDeleteAdminUser,
+  useGlobalUser,
   useResendConfirmation,
   useToggleAdminUserStatus,
 } from '../../../../../../lib/api/admin-users';
 import { useMe } from '../../../../../../lib/api/auth';
+import type { GlobalAdminUser } from '../../../../../../lib/api/types';
 import { UserFormModal } from '../UserFormModal';
 
 const { Title, Text } = Typography;
@@ -48,13 +50,30 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
   const { message } = App.useApp();
 
   const { data: me } = useMe();
-  const scope = { tenantId: me?.activeTenantId ?? null, isAdmin: me?.isAdmin ?? false };
-  const { data: user, isLoading, refetch } = useAdminUser(scope, userId);
 
-  const toggleStatus = useToggleAdminUserStatus(scope);
-  const remove = useDeleteAdminUser(scope);
-  const resendConfirm = useResendConfirmation(scope);
-  const changePw = useChangeUserPassword(scope);
+  // Super Admin (no activeTenantId) fetches via the tenant-free superadmin endpoint.
+  // Company Admin fetches via the tenant-scoped endpoint (tenantId from JWT).
+  const isGlobalAdmin = Boolean(me?.isAdmin && !me?.activeTenantId);
+  const tenantScope = { tenantId: me?.activeTenantId ?? null, isAdmin: me?.isAdmin ?? false };
+
+  const globalFetch = useGlobalUser(isGlobalAdmin ? userId : null);
+  const tenantFetch = useAdminUser(tenantScope, isGlobalAdmin ? null : userId);
+
+  const user = isGlobalAdmin ? globalFetch.data : tenantFetch.data;
+  const isLoading = isGlobalAdmin ? globalFetch.isLoading : tenantFetch.isLoading;
+  const refetch = isGlobalAdmin ? globalFetch.refetch : tenantFetch.refetch;
+
+  // Mutations need the user's tenant ID. For Super Admin it comes from
+  // user.companyId (from the global fetch); for Company Admin it's activeTenantId.
+  const mutationTenantId = isGlobalAdmin
+    ? (user as GlobalAdminUser | undefined)?.companyId ?? null
+    : me?.activeTenantId ?? null;
+  const mutationScope = { tenantId: mutationTenantId, isAdmin: me?.isAdmin ?? false };
+
+  const toggleStatus = useToggleAdminUserStatus(mutationScope);
+  const remove = useDeleteAdminUser(mutationScope);
+  const resendConfirm = useResendConfirmation(mutationScope);
+  const changePw = useChangeUserPassword(mutationScope);
 
   const [editOpen, setEditOpen] = useState(false);
   const [pwOpen, setPwOpen] = useState(false);
@@ -103,7 +122,7 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
 
   const onResend = async () => {
     try {
-      await resendConfirm.mutateAsync(user.id);
+      await resendConfirm.mutateAsync({ id: user.id });
       message.success('Confirmation email queued.');
     } catch (err) {
       message.error(toApiError(err).message);
@@ -153,7 +172,9 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
         <Title level={3} style={{ margin: 0 }}>{user.name}</Title>
         <Tag color={user.active ? 'green' : 'red'}>{user.active ? 'Active' : 'Inactive'}</Tag>
         <Tag color={user.confirmed ? 'green' : 'orange'}>
-          {user.confirmed ? <><CheckCircleOutlined /> Confirmed</> : <><CloseCircleOutlined /> Unconfirmed</>}
+          {user.confirmed
+            ? <><CheckCircleOutlined /> Confirmed</>
+            : <><CloseCircleOutlined /> Unconfirmed</>}
         </Tag>
         {user.roles.map((r) => <Tag key={r} color="blue">{r}</Tag>)}
       </div>
@@ -166,6 +187,11 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
         <Descriptions.Item label="Email">
           <Text copyable={{ text: user.email }}>{user.email}</Text>
         </Descriptions.Item>
+        {isGlobalAdmin && (user as GlobalAdminUser).companyName && (
+          <Descriptions.Item label="Company">
+            {(user as GlobalAdminUser).companyName}
+          </Descriptions.Item>
+        )}
         <Descriptions.Item label="Roles">
           {user.roles.length ? user.roles.map((r) => <Tag key={r} color="blue">{r}</Tag>) : '—'}
         </Descriptions.Item>
@@ -175,8 +201,7 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
         <Descriptions.Item label="Confirmed">
           {user.confirmed
             ? <Tag color="green" icon={<CheckCircleOutlined />}>Yes</Tag>
-            : <Tag color="orange" icon={<CloseCircleOutlined />}>No</Tag>
-          }
+            : <Tag color="orange" icon={<CloseCircleOutlined />}>No</Tag>}
         </Descriptions.Item>
         <Descriptions.Item label="Created at">
           {user.createdAt ? dayjs(user.createdAt).format('YYYY-MM-DD HH:mm') : '—'}
@@ -221,7 +246,7 @@ export default function UserDetailPage({ params }: { params: { id: string } }) {
         open={editOpen}
         user={user}
         onClose={() => { setEditOpen(false); refetch(); }}
-        scope={scope}
+        scope={mutationScope}
       />
 
       <Modal

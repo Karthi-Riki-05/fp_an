@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../api-client';
-import type { AdminUser, AdminUserListResponse, GlobalUserListResponse } from './types';
+import type { AdminUser, AdminUserListResponse, GlobalAdminUser, GlobalUserListResponse } from './types';
 
 export interface ListAdminUsersParams {
   page?: number;
@@ -63,6 +63,18 @@ function tenantHeaders(tenantId: number | null, isAdmin: boolean) {
 export interface TenantScope {
   tenantId: number | null;
   isAdmin: boolean;
+}
+
+/** Global single-user fetch for superadmin — calls /superadmin/users/:id, no tenant required. */
+export function useGlobalUser(id: number | null) {
+  return useQuery({
+    queryKey: ['superadmin-users', 'detail', id] as const,
+    queryFn: async () => {
+      const { data } = await apiClient.get<GlobalAdminUser>(`/superadmin/users/${id}`);
+      return data;
+    },
+    enabled: id !== null,
+  });
 }
 
 /** Global user list for superadmin — calls /superadmin/users, no tenant required. */
@@ -240,23 +252,25 @@ export function usePermanentDeleteUser(scope: TenantScope) {
 
 export function useChangeUserPassword(scope: TenantScope) {
   return useMutation({
-    mutationFn: async ({ id, password }: { id: number; password: string }) => {
-      await apiClient.post(
-        `/admin/users/${id}/password`,
-        { password },
-        { headers: tenantHeaders(scope.tenantId, scope.isAdmin) },
-      );
+    mutationFn: async ({ id, password, tenantId: overrideTenantId }: { id: number; password: string; tenantId?: number | null }) => {
+      const hdrs = overrideTenantId
+        ? { 'X-Tenant-Id': String(overrideTenantId) }
+        : tenantHeaders(scope.tenantId, scope.isAdmin);
+      await apiClient.post(`/admin/users/${id}/password`, { password }, { headers: hdrs });
     },
   });
 }
 
 export function useResendConfirmation(scope: TenantScope) {
   return useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async ({ id, tenantId: overrideTenantId }: { id: number; tenantId?: number | null }) => {
+      const hdrs = overrideTenantId
+        ? { 'X-Tenant-Id': String(overrideTenantId) }
+        : tenantHeaders(scope.tenantId, scope.isAdmin);
       const { data } = await apiClient.post<{ ok: true; queued: boolean }>(
         `/admin/users/${id}/confirm/resend`,
         {},
-        { headers: tenantHeaders(scope.tenantId, scope.isAdmin) },
+        { headers: hdrs },
       );
       return data;
     },

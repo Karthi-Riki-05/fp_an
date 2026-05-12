@@ -450,6 +450,28 @@ async function resendConfirmation(tenant, actor, id) {
   return { ok: true, queued: true };
 }
 
+// Superadmin-only: fetch a single user without requiring a tenant context.
+async function findOneGlobal(id) {
+  const u = await prisma.user.findFirst({
+    where: { id, deletedAt: null },
+    include: {
+      userRoles: { include: { role: { select: { name: true } } } },
+      tenantUsers: {
+        where: { status: true },
+        include: { tenant: { select: { id: true, name: true } } },
+        orderBy: { id: 'asc' },
+        take: 1,
+      },
+    },
+  });
+  if (!u) throw new NotFoundError('user-not-found');
+  return {
+    ...mapUser(u),
+    companyId: u.tenantUsers[0]?.tenant?.id ?? null,
+    companyName: u.tenantUsers[0]?.tenant?.name ?? '',
+  };
+}
+
 async function recordImpersonateStart(actor, targetId) {
   const target = await prisma.user.findUnique({ where: { id: targetId }, select: { email: true } });
   await record({ actor, typeName: 'User', entityId: targetId, text: `started impersonating user ${target?.email ?? targetId}`, icon: 'user-secret', cssClass: 'impersonate-start' });
@@ -460,7 +482,7 @@ async function recordImpersonateStop(actor, originalAdminId) {
 }
 
 module.exports = {
-  list, listAll, findOne, summary, create, createWithNewTenant, update,
+  list, listAll, findOne, findOneGlobal, summary, create, createWithNewTenant, update,
   softDelete, toggleStatus, toggleConfirm, listDeleted,
   changePassword, restore, permanentDelete, resendConfirmation,
   recordImpersonateStart, recordImpersonateStop,

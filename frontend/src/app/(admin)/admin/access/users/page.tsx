@@ -197,11 +197,11 @@ function GlobalUsersTable({ me, status }: { me: { id: number; isAdmin: boolean }
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
   const [search, setSearch] = useState('');
-  const [editing, setEditing] = useState<AdminUser | null>(null);
-  const [pwTarget, setPwTarget] = useState<AdminUser | null>(null);
+  const [editing, setEditing] = useState<GlobalAdminUser | null>(null);
+  const [pwTarget, setPwTarget] = useState<GlobalAdminUser | null>(null);
   const [pwForm] = Form.useForm<{ password: string; confirm: string }>();
 
-  const scope = { tenantId: null, isAdmin: true };
+  const scope = { tenantId: null as number | null, isAdmin: true };
 
   const params = useMemo<ListAdminUsersParams>(() => {
     const p: ListAdminUsersParams = { page, perPage, sort: 'id', order: 'asc' };
@@ -272,7 +272,7 @@ function GlobalUsersTable({ me, status }: { me: { id: number; isAdmin: boolean }
     if (!pwTarget) return;
     try {
       const values = await pwForm.validateFields();
-      await changePw.mutateAsync({ id: pwTarget.id, password: values.password });
+      await changePw.mutateAsync({ id: pwTarget.id, password: values.password, tenantId: pwTarget.companyId });
       message.success(`Password updated for ${pwTarget.email}.`);
       setPwTarget(null);
       pwForm.resetFields();
@@ -282,9 +282,9 @@ function GlobalUsersTable({ me, status }: { me: { id: number; isAdmin: boolean }
     }
   };
 
-  const onResend = async (row: AdminUser) => {
+  const onResend = async (row: GlobalAdminUser) => {
     try {
-      await resendConfirm.mutateAsync(row.id);
+      await resendConfirm.mutateAsync({ id: row.id, tenantId: row.companyId });
       message.success(`Confirmation email queued for ${row.email}.`);
     } catch (err) {
       message.error(toApiError(err).message);
@@ -432,7 +432,12 @@ function GlobalUsersTable({ me, status }: { me: { id: number; isAdmin: boolean }
         style={{ background: '#fff' }}
       />
 
-      <UserFormModal open={editing !== null} user={editing} onClose={() => setEditing(null)} scope={scope} />
+      <UserFormModal
+        open={editing !== null}
+        user={editing}
+        onClose={() => setEditing(null)}
+        scope={{ tenantId: editing?.companyId ?? null, isAdmin: true }}
+      />
 
       <Modal
         open={pwTarget !== null}
@@ -564,7 +569,7 @@ function TenantUsersTable({
 
   const onResend = async (row: AdminUser) => {
     try {
-      await resendConfirm.mutateAsync(row.id);
+      await resendConfirm.mutateAsync({ id: row.id });
       message.success(`Confirmation queued for ${row.email}.`);
     } catch (err) { message.error(toApiError(err).message); }
   };
