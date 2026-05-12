@@ -1,11 +1,23 @@
 'use strict';
 
-const nodemailer = require('nodemailer');
+// Lazy-require nodemailer so the backend doesn't crash on startup if the
+// package isn't installed yet (e.g. freshly pulled before `npm install`).
+let _nodemailer = null;
+function loadNodemailer() {
+  if (_nodemailer) return _nodemailer;
+  try {
+    _nodemailer = require('nodemailer');
+  } catch {
+    throw new Error('nodemailer is not installed — run `npm install` in the backend container');
+  }
+  return _nodemailer;
+}
 
 let _transporter = null;
 
 function getTransporter() {
   if (_transporter) return _transporter;
+  const nodemailer = loadNodemailer();
   _transporter = nodemailer.createTransport({
     host: process.env.MAIL_HOST || 'mailhog',
     port: Number(process.env.MAIL_PORT || 1025),
