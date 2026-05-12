@@ -44,6 +44,8 @@ async function login(email, plainPassword) {
 
   if (user.status !== 1) throw new UnauthorizedError('user-disabled');
 
+  if (!user.confirmed) throw new ForbiddenError('account_not_confirmed');
+
   const roleNames = user.userRoles.map((ur) => ur.role.name);
   const isAdmin = user.userRoles.some((ur) => ur.role.all);
   const tenantId = isAdmin ? null : user.tenantUsers[0]?.tenantId ?? null;

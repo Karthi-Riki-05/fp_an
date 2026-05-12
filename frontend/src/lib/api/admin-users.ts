@@ -11,6 +11,8 @@ export interface ListAdminUsersParams {
   /** "true" / "false" — DataTables-style filter. Backend is permissive. */
   confirmed?: 'true' | 'false';
   active?: 'true' | 'false';
+  /** "true" — include soft-deleted rows (superadmin global list only). */
+  deleted?: 'true';
   sort?: 'id' | 'name' | 'email' | 'confirmed' | 'status' | 'createdAt';
   order?: 'asc' | 'desc';
 }
@@ -24,10 +26,17 @@ export interface CreateAdminUserInput {
   confirmed?: boolean;
   active?: boolean;
   roleId?: number;
+  /** Preferred over roleId — array of role names e.g. ['Company'] */
+  roles?: string[];
+  unitOnly?: boolean;
+  /** Accepted by backend DTO; not persisted (JWT TTL governs session). */
+  sessionTimeout?: number;
 }
 
 export type UpdateAdminUserInput = Partial<Omit<CreateAdminUserInput, 'password'>> & {
   password?: string;
+  roles?: string[];
+  unitOnly?: boolean;
 };
 
 const KEYS = {
@@ -126,27 +135,31 @@ export function useUpdateAdminUser(scope: TenantScope) {
 export function useDeleteAdminUser(scope: TenantScope) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: number) => {
-      await apiClient.delete(`/admin/users/${id}`, {
-        headers: tenantHeaders(scope.tenantId, scope.isAdmin),
-      });
+    mutationFn: async ({ id, tenantId: overrideTenantId }: { id: number; tenantId?: number }) => {
+      const hdrs = overrideTenantId
+        ? { 'X-Tenant-Id': String(overrideTenantId) }
+        : tenantHeaders(scope.tenantId, scope.isAdmin);
+      await apiClient.delete(`/admin/users/${id}`, { headers: hdrs });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: KEYS.any(scope.tenantId) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-users'] }),
   });
 }
 
 export function useToggleAdminUserStatus(scope: TenantScope) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, active }: { id: number; active: boolean }) => {
+    mutationFn: async ({ id, active, tenantId: overrideTenantId }: { id: number; active: boolean; tenantId?: number }) => {
+      const hdrs = overrideTenantId
+        ? { 'X-Tenant-Id': String(overrideTenantId) }
+        : tenantHeaders(scope.tenantId, scope.isAdmin);
       const { data } = await apiClient.patch<AdminUser>(
         `/admin/users/${id}/status`,
         { active },
-        { headers: tenantHeaders(scope.tenantId, scope.isAdmin) },
+        { headers: hdrs },
       );
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: KEYS.any(scope.tenantId) }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-users'] }),
   });
 }
 
@@ -201,12 +214,11 @@ export function useDeletedUsers(scope: TenantScope, params: ListAdminUsersParams
 export function useRestoreUser(scope: TenantScope) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: number) => {
-      const { data } = await apiClient.post<AdminUser>(
-        `/admin/users/${id}/restore`,
-        {},
-        { headers: tenantHeaders(scope.tenantId, scope.isAdmin) },
-      );
+    mutationFn: async ({ id, tenantId: overrideTenantId }: { id: number; tenantId?: number }) => {
+      const hdrs = overrideTenantId
+        ? { 'X-Tenant-Id': String(overrideTenantId) }
+        : tenantHeaders(scope.tenantId, scope.isAdmin);
+      const { data } = await apiClient.post<AdminUser>(`/admin/users/${id}/restore`, {}, { headers: hdrs });
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-users'] }),
@@ -216,10 +228,11 @@ export function useRestoreUser(scope: TenantScope) {
 export function usePermanentDeleteUser(scope: TenantScope) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: number) => {
-      await apiClient.delete(`/admin/users/${id}/permanent`, {
-        headers: tenantHeaders(scope.tenantId, scope.isAdmin),
-      });
+    mutationFn: async ({ id, tenantId: overrideTenantId }: { id: number; tenantId?: number }) => {
+      const hdrs = overrideTenantId
+        ? { 'X-Tenant-Id': String(overrideTenantId) }
+        : tenantHeaders(scope.tenantId, scope.isAdmin);
+      await apiClient.delete(`/admin/users/${id}/permanent`, { headers: hdrs });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-users'] }),
   });

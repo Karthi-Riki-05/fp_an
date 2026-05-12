@@ -4,6 +4,7 @@ import { Layout, Spin } from 'antd';
 import { useRouter } from 'next/navigation';
 import { ReactNode } from 'react';
 import { useMe } from '../../lib/api/auth';
+import { ImpersonationBanner } from '../admin/ImpersonationBanner';
 import { MarketingFooter } from './MarketingFooter';
 import { MarketingHeader } from './MarketingHeader';
 
@@ -40,6 +41,7 @@ export function UserShell({ children, locale = 'sv' }: Props) {
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <MarketingHeader locale={locale} />
+      <ImpersonationBanner />
       <Content style={{ background: '#ecf0f5' }}>{children}</Content>
       <MarketingFooter locale={locale} />
     </Layout>

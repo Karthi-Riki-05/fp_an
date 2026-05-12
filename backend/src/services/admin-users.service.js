@@ -1,9 +1,10 @@
 'use strict';
 
-const { randomBytes } = require('crypto');
+const { randomUUID } = require('crypto');
 const { prisma } = require('../prisma/client');
 const { hash } = require('./password.service');
 const { record } = require('./history.service');
+const { sendConfirmationEmail } = require('./mail.service');
 const { ConflictError, ForbiddenError, NotFoundError, BadRequestError } = require('../errors');
 const { Prisma } = require('@prisma/client');
 
@@ -134,12 +135,13 @@ async function summary(tenant, q) {
 
 async function listAll(q) {
   const page = q.page ?? 1; const perPage = q.perPage ?? 25;
-  const where = { deletedAt: null };
+  // deleted=true → show soft-deleted rows; otherwise hide them
+  const where = q.deleted === 'true' ? { deletedAt: { not: null } } : { deletedAt: null };
   if (q.search) where.OR = [{ name: { contains: q.search, mode: 'insensitive' } }, { email: { contains: q.search, mode: 'insensitive' } }];
   if (q.name) where.name = { contains: q.name, mode: 'insensitive' };
   if (q.email) where.email = { contains: q.email, mode: 'insensitive' };
   if (q.confirmed !== undefined) where.confirmed = q.confirmed === 'true';
-  if (q.active !== undefined) where.status = q.active === 'true' ? 1 : 0;
+  if (q.active !== undefined && q.deleted !== 'true') where.status = q.active === 'true' ? 1 : 0;
   const [rows, total] = await prisma.$transaction([
     prisma.user.findMany({
       where,
@@ -200,6 +202,9 @@ async function create(tenant, actor, dto) {
 
   const passwordHash = await hash(dto.password);
 
+  const wantsConfirmEmail = dto.sendConfirmationEmail === true && !dto.confirmed;
+  const confirmCode = wantsConfirmEmail ? randomUUID() : '';
+
   try {
     const created = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
@@ -209,7 +214,8 @@ async function create(tenant, actor, dto) {
           lastName: dto.lastName ?? '',
           email: dto.email,
           password: passwordHash,
-          confirmed: dto.confirmed ?? true,
+          confirmed: dto.confirmed ?? false,
+          confirmationCode: confirmCode,
           status: dto.active === false || dto.status === 0 ? 0 : 1,
           unitOnly: dto.unitOnly ?? false,
           image: dto.image ?? '',
@@ -223,6 +229,11 @@ async function create(tenant, actor, dto) {
       return user;
     });
     await record({ actor, typeName: 'User', entityId: created.id, text: `created user ${created.email}`, icon: 'user', cssClass: 'user' });
+    if (wantsConfirmEmail) {
+      const confirmUrl = `${process.env.APP_URL}/account/confirm/${confirmCode}`;
+      sendConfirmationEmail({ toEmail: created.email, toName: created.name, confirmUrl })
+        .catch((err) => console.error('confirmation email failed:', err.message));
+    }
     return findOne(tenant, created.id);
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') throw new ConflictError('email-already-in-use');
@@ -249,6 +260,8 @@ async function createWithNewTenant(actor, dto, tenantsSvc) {
       slug,
       name: tenantName,
       timezone: dto.tenantTimezone ?? 'Europe/Stockholm',
+      // If admin specified a custom DB name, provision a separate PostgreSQL database
+      dbName: dto.tenantDbName ?? undefined,
     });
 
     const roleNames = dto.roles ?? ['Company'];
@@ -283,7 +296,11 @@ async function createWithNewTenant(actor, dto, tenantsSvc) {
     // Rollback: drop schema + delete tenant row so no orphan is left
     if (provisionedTenant) {
       try {
-        await tenantsSvc.dropSchema(provisionedTenant.schemaName);
+        if (provisionedTenant.dbName) {
+          await tenantsSvc.dropDatabase(provisionedTenant.dbName);
+        } else {
+          await tenantsSvc.dropSchema(provisionedTenant.schemaName);
+        }
         await prisma.tenant.delete({ where: { id: provisionedTenant.id } }).catch(() => {});
       } catch (cleanupErr) {
         console.error('tenant rollback failed:', cleanupErr.message);
@@ -424,10 +441,13 @@ async function permanentDelete(tenant, actor, id) {
 
 async function resendConfirmation(tenant, actor, id) {
   const target = await findUserInTenantOrThrow(tenant, id);
-  const code = randomBytes(24).toString('hex');
+  const code = randomUUID();
   await prisma.user.update({ where: { id: target.id }, data: { confirmationCode: code } });
   await record({ actor, typeName: 'User', entityId: target.id, text: `re-issued confirmation code for ${target.email}`, icon: 'user' });
-  return { ok: true, queued: false };
+  const confirmUrl = `${process.env.APP_URL}/account/confirm/${code}`;
+  sendConfirmationEmail({ toEmail: target.email, toName: target.email, confirmUrl })
+    .catch((err) => console.error('resend confirmation email failed:', err.message));
+  return { ok: true, queued: true };
 }
 
 async function recordImpersonateStart(actor, targetId) {

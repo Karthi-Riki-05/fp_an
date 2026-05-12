@@ -12,7 +12,7 @@ const rateLimiter = rateLimit({
 
 const loginRateLimiter = rateLimit({
   windowMs: 60_000,
-  max: 5,
+  max: Number(process.env.THROTTLE_AUTH_LIMIT ?? 5),
   standardHeaders: true,
   legacyHeaders: false,
   message: { statusCode: 429, message: 'too-many-login-attempts' },

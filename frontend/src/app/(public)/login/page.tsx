@@ -3,10 +3,12 @@
 import {
   ArrowLeftOutlined,
   LockOutlined,
+  MailOutlined,
   UserOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { App, Button, Card, Input, Space, Typography } from 'antd';
+import { App, Alert, Button, Card, Input, Space, Typography } from 'antd';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -21,6 +23,33 @@ import { PublicShell } from '../../../components/layout/PublicShell';
 
 const { Title, Text } = Typography;
 
+function ResendConfirmLink({ email }: { email: string }) {
+  const { message } = App.useApp();
+  const [sent, setSent] = useState(false);
+
+  const resend = async () => {
+    try {
+      await apiClient.post('/auth/confirm/resend', { email });
+      setSent(true);
+      message.success('Confirmation email resent. Check your inbox.');
+    } catch {
+      message.error('Failed to resend. Try again later.');
+    }
+  };
+
+  if (sent) return <span style={{ color: '#52c41a' }}>Sent!</span>;
+  return (
+    <button
+      type="button"
+      onClick={resend}
+      style={{ background: 'none', border: 'none', color: '#1677ff', cursor: 'pointer', padding: 0, fontSize: 'inherit' }}
+    >
+      <MailOutlined style={{ marginRight: 4 }} />
+      Resend confirmation email
+    </button>
+  );
+}
+
 const loginSchema = z.object({
   email: z.string().email({ message: 'Enter a valid email' }),
   password: z.string().min(1, { message: 'Password is required' }),
@@ -34,6 +63,7 @@ export default function LoginPage() {
   const login = useLogin();
   const { message } = App.useApp();
   const [submitting, setSubmitting] = useState(false);
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState('');
 
   const { control, handleSubmit, formState: { errors } } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -50,7 +80,11 @@ export default function LoginPage() {
       router.push(me.isAdmin ? '/admin/dashboard' : next);
     } catch (err) {
       const e = toApiError(err);
-      message.error(e.status === 401 ? 'Invalid email or password.' : e.message);
+      if (e.status === 403 && e.message === 'account_not_confirmed') {
+        setUnconfirmedEmail(values.email);
+      } else {
+        message.error(e.status === 401 ? 'Invalid email or password.' : e.message);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -100,6 +134,22 @@ export default function LoginPage() {
               Sign in to your account
             </Title>
           </div>
+
+          {unconfirmedEmail && (
+            <Alert
+              type="warning"
+              icon={<WarningOutlined />}
+              showIcon
+              style={{ marginBottom: 16 }}
+              message="Your account is not yet confirmed."
+              description={
+                <>
+                  Check your email for the confirmation link.{' '}
+                  <ResendConfirmLink email={unconfirmedEmail} />
+                </>
+              }
+            />
+          )}
 
           <form onSubmit={onSubmit} noValidate>
             <Space direction="vertical" size="middle" style={{ width: '100%' }}>

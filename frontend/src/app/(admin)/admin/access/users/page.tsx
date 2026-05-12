@@ -11,6 +11,7 @@ import {
   PauseCircleOutlined,
   PlayCircleOutlined,
   PlusOutlined,
+  UndoOutlined,
   UserSwitchOutlined,
 } from '@ant-design/icons';
 import {
@@ -28,16 +29,20 @@ import {
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { toApiError } from '../../../../../lib/api-client';
 import {
   ListAdminUsersParams,
   useAdminUsers,
   useChangeUserPassword,
+  useDeactivatedUsers,
   useDeleteAdminUser,
+  useDeletedUsers,
   useGlobalUsers,
+  usePermanentDeleteUser,
   useResendConfirmation,
+  useRestoreUser,
   useToggleAdminUserStatus,
 } from '../../../../../lib/api/admin-users';
 import { useImpersonate, useMe } from '../../../../../lib/api/auth';
@@ -46,12 +51,76 @@ import { UserFormModal } from './UserFormModal';
 
 const { Text, Title } = Typography;
 
+type StatusFilter = 'active' | 'deactivated' | 'deleted';
+
 /* -------------------------------------------------------------------------
- * Shared action buttons (view, edit, key, impersonate, delete)
+ * Top-right action buttons — create actions only (filter is handled by tabs)
+ * ------------------------------------------------------------------------- */
+function HeaderButtons({
+  isAdmin,
+  onCreateCompany,
+}: {
+  isAdmin: boolean;
+  onCreateCompany: () => void;
+}) {
+  const router = useRouter();
+  return (
+    <Space>
+      <Button
+        type="primary"
+        icon={<PlusOutlined />}
+        style={{ background: '#00a65a', borderColor: '#00a65a' }}
+        onClick={() => router.push('/admin/access/users/create')}
+      >
+        Add New
+      </Button>
+      {isAdmin && (
+        <Button onClick={onCreateCompany}>
+          Create Company
+        </Button>
+      )}
+    </Space>
+  );
+}
+
+/* -------------------------------------------------------------------------
+ * Filter tabs — updates ?status query param, no navigation away
+ * ------------------------------------------------------------------------- */
+function StatusTabs({ status }: { status: StatusFilter }) {
+  const router = useRouter();
+  const go = (s: StatusFilter) => router.push(`?status=${s}`);
+
+  const tab = (label: string, value: StatusFilter) => {
+    const active = status === value;
+    return (
+      <Button
+        key={value}
+        size="small"
+        type={active ? 'primary' : 'default'}
+        style={active ? { background: '#01b9d0', borderColor: '#01b9d0' } : {}}
+        onClick={() => !active && go(value)}
+      >
+        {label}
+      </Button>
+    );
+  };
+
+  return (
+    <Space style={{ marginBottom: 12 }}>
+      {tab('All Users', 'active')}
+      {tab('Deactivated Users', 'deactivated')}
+      {tab('Deleted Users', 'deleted')}
+    </Space>
+  );
+}
+
+/* -------------------------------------------------------------------------
+ * Shared action buttons for active users
  * ------------------------------------------------------------------------- */
 function UserActions({
   row,
   me,
+  onView,
   onEdit,
   onKey,
   onImpersonate,
@@ -61,6 +130,7 @@ function UserActions({
 }: {
   row: AdminUser;
   me: { id: number; isAdmin: boolean };
+  onView: () => void;
   onEdit: () => void;
   onKey: () => void;
   onImpersonate: () => void;
@@ -71,7 +141,7 @@ function UserActions({
   return (
     <Space size={2}>
       <Tooltip title="View">
-        <Button type="text" size="small" icon={<EyeOutlined style={{ color: '#00a65a' }} />} onClick={onEdit} />
+        <Button type="text" size="small" icon={<EyeOutlined style={{ color: '#00a65a' }} />} onClick={onView} />
       </Tooltip>
       <Tooltip title="Edit">
         <Button type="text" size="small" icon={<EditOutlined style={{ color: '#3c8dbc' }} />} onClick={onEdit} />
@@ -103,7 +173,7 @@ function UserActions({
       </Tooltip>
       <Popconfirm
         title="Delete this user?"
-        description="This is a soft delete."
+        description="This is a soft delete. The user can be restored from the Deleted Users tab."
         okText="Delete"
         okButtonProps={{ danger: true }}
         onConfirm={onDelete}
@@ -117,86 +187,70 @@ function UserActions({
   );
 }
 
-/* -------------------------------------------------------------------------
- * Header tab buttons — matches old "All Users | Add New | Create Company"
- * ------------------------------------------------------------------------- */
-function HeaderButtons({
-  isAdmin,
-  onAddUser,
-  onCreateCompany,
-}: {
-  isAdmin: boolean;
-  onAddUser: () => void;
-  onCreateCompany: () => void;
-}) {
-  return (
-    <Space>
-      <Button
-        type="primary"
-        style={{ background: '#01b9d0', borderColor: '#01b9d0' }}
-        onClick={() => {}}
-      >
-        All Users
-      </Button>
-      <Button
-        type="primary"
-        icon={<PlusOutlined />}
-        style={{ background: '#00a65a', borderColor: '#00a65a' }}
-        onClick={onAddUser}
-      >
-        Add New
-      </Button>
-      {isAdmin && (
-        <Button onClick={onCreateCompany}>
-          Create Company
-        </Button>
-      )}
-    </Space>
-  );
-}
-
 /* =========================================================================
  * SUPERADMIN global view — all users across all tenants
  * ========================================================================= */
-function GlobalUsersTable({ me }: { me: { id: number; isAdmin: boolean } }) {
+function GlobalUsersTable({ me, status }: { me: { id: number; isAdmin: boolean }; status: StatusFilter }) {
   const { message } = App.useApp();
   const router = useRouter();
 
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
   const [search, setSearch] = useState('');
-  const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<AdminUser | null>(null);
   const [pwTarget, setPwTarget] = useState<AdminUser | null>(null);
   const [pwForm] = Form.useForm<{ password: string; confirm: string }>();
 
   const scope = { tenantId: null, isAdmin: true };
+
   const params = useMemo<ListAdminUsersParams>(() => {
     const p: ListAdminUsersParams = { page, perPage, sort: 'id', order: 'asc' };
     if (search) p.search = search;
+    if (status === 'deactivated') p.active = 'false';
+    if (status === 'deleted') p.deleted = 'true';
     return p;
-  }, [page, perPage, search]);
+  }, [page, perPage, search, status]);
 
   const { data, isFetching } = useGlobalUsers(params);
   const toggleStatus = useToggleAdminUserStatus(scope);
   const remove = useDeleteAdminUser(scope);
+  const restore = useRestoreUser(scope);
+  const hardDelete = usePermanentDeleteUser(scope);
   const impersonate = useImpersonate();
   const changePw = useChangeUserPassword(scope);
   const resendConfirm = useResendConfirmation(scope);
 
-  const onToggleStatus = async (row: AdminUser) => {
+  const onToggleStatus = async (row: GlobalAdminUser) => {
     try {
-      await toggleStatus.mutateAsync({ id: row.id, active: !row.active });
+      await toggleStatus.mutateAsync({ id: row.id, active: !row.active, tenantId: row.companyId });
       message.success(row.active ? 'User deactivated.' : 'User activated.');
     } catch (err) {
       message.error(toApiError(err).message);
     }
   };
 
-  const onDelete = async (id: number) => {
+  const onDelete = async (row: GlobalAdminUser) => {
     try {
-      await remove.mutateAsync(id);
+      await remove.mutateAsync({ id: row.id, tenantId: row.companyId });
       message.success('User deleted.');
+    } catch (err) {
+      message.error(toApiError(err).message);
+    }
+  };
+
+  const onRestore = async (row: GlobalAdminUser) => {
+    try {
+      await restore.mutateAsync({ id: row.id, tenantId: row.companyId });
+      message.success(`Restored ${row.email}.`);
+    } catch (err) {
+      message.error(toApiError(err).message);
+    }
+  };
+
+  const onPermanentDelete = async (row: GlobalAdminUser) => {
+    try {
+      await hardDelete.mutateAsync({ id: row.id, tenantId: row.companyId });
+      message.success(`Permanently deleted ${row.email}.`);
     } catch (err) {
       message.error(toApiError(err).message);
     }
@@ -237,7 +291,7 @@ function GlobalUsersTable({ me }: { me: { id: number; isAdmin: boolean } }) {
     }
   };
 
-  const columns: ColumnsType<GlobalAdminUser> = [
+  const activeColumns: ColumnsType<GlobalAdminUser> = [
     { title: 'S.No', dataIndex: 'id', key: 'id', width: 65 },
     {
       title: 'Company ID',
@@ -271,11 +325,7 @@ function GlobalUsersTable({ me }: { me: { id: number; isAdmin: boolean } }) {
       key: 'roles',
       width: 140,
       render: (roles: string[]) =>
-        roles.length ? (
-          <Tag color="blue">{roles[0]}</Tag>
-        ) : (
-          <Tag color="default">None</Tag>
-        ),
+        roles.length ? <Tag color="blue">{roles[0]}</Tag> : <Tag color="default">None</Tag>,
     },
     {
       title: 'Confirmed',
@@ -300,46 +350,57 @@ function GlobalUsersTable({ me }: { me: { id: number; isAdmin: boolean } }) {
     {
       title: 'Actions',
       key: 'actions',
-      width: 200,
+      width: 220,
       align: 'center',
-      render: (_: unknown, row: GlobalAdminUser) => (
-        <UserActions
-          row={row}
-          me={me}
-          onEdit={() => setEditing(row)}
-          onKey={() => setPwTarget(row)}
-          onImpersonate={() => onImpersonate(row)}
-          onToggleStatus={() => onToggleStatus(row)}
-          onDelete={() => onDelete(row.id)}
-          onResend={() => onResend(row)}
-        />
-      ),
+      render: (_: unknown, row: GlobalAdminUser) =>
+        status === 'deleted' ? (
+          <Space size={4}>
+            <Button size="small" icon={<UndoOutlined />} onClick={() => onRestore(row)}>Restore</Button>
+            <Popconfirm
+              title={`Permanently delete ${row.name}?`}
+              description="This cannot be undone."
+              okText="Permanently delete"
+              okButtonProps={{ danger: true }}
+              onConfirm={() => onPermanentDelete(row)}
+            >
+              <Button size="small" danger icon={<DeleteOutlined />}>Forever</Button>
+            </Popconfirm>
+          </Space>
+        ) : (
+          <UserActions
+            row={row}
+            me={me}
+            onView={() => router.push(`/admin/access/users/${row.id}`)}
+            onEdit={() => setEditing(row)}
+            onKey={() => setPwTarget(row)}
+            onImpersonate={() => onImpersonate(row)}
+            onToggleStatus={() => onToggleStatus(row)}
+            onDelete={() => onDelete(row)}
+            onResend={() => onResend(row)}
+          />
+        ),
     },
   ];
 
+  const emptyText =
+    status === 'deactivated' ? 'No deactivated users found.' :
+    status === 'deleted' ? 'No deleted users found.' :
+    'No users found.';
+
   return (
     <>
-      {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>
           <Title level={4} style={{ margin: 0 }}>User Management</Title>
-          <Text type="secondary">Active Users</Text>
+          <Text type="secondary">
+            {status === 'active' ? 'Active Users' : status === 'deactivated' ? 'Deactivated Users' : 'Deleted Users'}
+          </Text>
         </div>
-        <HeaderButtons
-          isAdmin
-          onAddUser={() => setCreateOpen(true)}
-          onCreateCompany={() => router.push('/admin/tenants')}
-        />
+        <HeaderButtons isAdmin onCreateCompany={() => router.push('/admin/tenants')} />
       </div>
 
-      {/* Sub-tabs: All | Deactivated | Deleted */}
-      <Space style={{ marginBottom: 12 }}>
-        <Button size="small" type="primary" style={{ background: '#01b9d0', borderColor: '#01b9d0' }}>All Users</Button>
-        <Button size="small" onClick={() => router.push('/admin/access/users/deactivated')}>Deactivated Users</Button>
-        <Button size="small" onClick={() => router.push('/admin/access/users/deleted')}>Deleted Users</Button>
-      </Space>
+      <StatusTabs status={status} />
 
-      {/* Search */}
       <div style={{ marginBottom: 12 }}>
         <Input.Search
           placeholder="Search by name or email…"
@@ -351,14 +412,14 @@ function GlobalUsersTable({ me }: { me: { id: number; isAdmin: boolean } }) {
         />
       </div>
 
-      {/* Table */}
       <Table<GlobalAdminUser>
         rowKey="id"
-        columns={columns}
+        columns={activeColumns}
         dataSource={data?.data ?? []}
         loading={isFetching}
         size="small"
         scroll={{ x: true }}
+        locale={{ emptyText }}
         pagination={{
           current: page,
           pageSize: perPage,
@@ -371,7 +432,6 @@ function GlobalUsersTable({ me }: { me: { id: number; isAdmin: boolean } }) {
         style={{ background: '#fff' }}
       />
 
-      <UserFormModal open={createOpen} onClose={() => setCreateOpen(false)} scope={scope} />
       <UserFormModal open={editing !== null} user={editing} onClose={() => setEditing(null)} scope={scope} />
 
       <Modal
@@ -409,14 +469,16 @@ function GlobalUsersTable({ me }: { me: { id: number; isAdmin: boolean } }) {
 }
 
 /* =========================================================================
- * COMPANY ADMIN tenant-scoped view — existing behaviour
+ * COMPANY ADMIN tenant-scoped view
  * ========================================================================= */
 function TenantUsersTable({
   me,
   tenantId,
+  status,
 }: {
   me: { id: number; isAdmin: boolean; activeTenantId: number | null };
   tenantId: number;
+  status: StatusFilter;
 }) {
   const { message } = App.useApp();
   const router = useRouter();
@@ -425,7 +487,6 @@ function TenantUsersTable({
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(25);
   const [search, setSearch] = useState('');
-  const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<AdminUser | null>(null);
   const [pwTarget, setPwTarget] = useState<AdminUser | null>(null);
   const [pwForm] = Form.useForm<{ password: string; confirm: string }>();
@@ -436,12 +497,20 @@ function TenantUsersTable({
     return p;
   }, [page, perPage, search]);
 
-  const { data, isFetching } = useAdminUsers(scope, params);
+  const { data: activeData, isFetching: activeFetching } = useAdminUsers(scope, params);
+  const { data: deactivatedData, isFetching: deactivatedFetching } = useDeactivatedUsers(scope, params);
+  const { data: deletedData, isFetching: deletedFetching } = useDeletedUsers(scope, params);
+
   const toggleStatus = useToggleAdminUserStatus(scope);
   const remove = useDeleteAdminUser(scope);
+  const restore = useRestoreUser(scope);
+  const hardDelete = usePermanentDeleteUser(scope);
   const impersonate = useImpersonate();
   const changePw = useChangeUserPassword(scope);
   const resendConfirm = useResendConfirmation(scope);
+
+  const data = status === 'deactivated' ? deactivatedData : status === 'deleted' ? deletedData : activeData;
+  const isFetching = status === 'deactivated' ? deactivatedFetching : status === 'deleted' ? deletedFetching : activeFetching;
 
   const onToggleStatus = async (row: AdminUser) => {
     try {
@@ -450,10 +519,24 @@ function TenantUsersTable({
     } catch (err) { message.error(toApiError(err).message); }
   };
 
-  const onDelete = async (id: number) => {
+  const onDelete = async (row: AdminUser) => {
     try {
-      await remove.mutateAsync(id);
+      await remove.mutateAsync({ id: row.id });
       message.success('User deleted.');
+    } catch (err) { message.error(toApiError(err).message); }
+  };
+
+  const onRestore = async (row: AdminUser) => {
+    try {
+      await restore.mutateAsync({ id: row.id });
+      message.success(`Restored ${row.email}.`);
+    } catch (err) { message.error(toApiError(err).message); }
+  };
+
+  const onPermanentDelete = async (row: AdminUser) => {
+    try {
+      await hardDelete.mutateAsync({ id: row.id });
+      message.success(`Permanently deleted ${row.email}.`);
     } catch (err) { message.error(toApiError(err).message); }
   };
 
@@ -512,37 +595,55 @@ function TenantUsersTable({
       render: (v: string) => (v ? dayjs(v).format('YYYY-MM-DD') : '—'),
     },
     {
-      title: 'Actions', key: 'actions', width: 200, align: 'center',
-      render: (_: unknown, row: AdminUser) => (
-        <UserActions
-          row={row}
-          me={me}
-          onEdit={() => setEditing(row)}
-          onKey={() => setPwTarget(row)}
-          onImpersonate={() => onImpersonate(row)}
-          onToggleStatus={() => onToggleStatus(row)}
-          onDelete={() => onDelete(row.id)}
-          onResend={() => onResend(row)}
-        />
-      ),
+      title: 'Actions', key: 'actions', width: 220, align: 'center',
+      render: (_: unknown, row: AdminUser) =>
+        status === 'deleted' ? (
+          <Space size={4}>
+            <Button size="small" icon={<UndoOutlined />} onClick={() => onRestore(row)}>Restore</Button>
+            <Popconfirm
+              title={`Permanently delete ${row.name}?`}
+              description="This cannot be undone."
+              okText="Permanently delete"
+              okButtonProps={{ danger: true }}
+              onConfirm={() => onPermanentDelete(row)}
+            >
+              <Button size="small" danger icon={<DeleteOutlined />}>Forever</Button>
+            </Popconfirm>
+          </Space>
+        ) : (
+          <UserActions
+            row={row}
+            me={me}
+            onView={() => router.push(`/admin/access/users/${row.id}`)}
+            onEdit={() => setEditing(row)}
+            onKey={() => setPwTarget(row)}
+            onImpersonate={() => onImpersonate(row)}
+            onToggleStatus={() => onToggleStatus(row)}
+            onDelete={() => onDelete(row)}
+            onResend={() => onResend(row)}
+          />
+        ),
     },
   ];
+
+  const emptyText =
+    status === 'deactivated' ? 'No deactivated users found.' :
+    status === 'deleted' ? 'No deleted users found.' :
+    'No users found.';
 
   return (
     <>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div>
           <Title level={4} style={{ margin: 0 }}>User Management</Title>
-          <Text type="secondary">Active Users</Text>
+          <Text type="secondary">
+            {status === 'active' ? 'Active Users' : status === 'deactivated' ? 'Deactivated Users' : 'Deleted Users'}
+          </Text>
         </div>
-        <HeaderButtons isAdmin={me.isAdmin} onAddUser={() => setCreateOpen(true)} onCreateCompany={() => router.push('/admin/tenants')} />
+        <HeaderButtons isAdmin={me.isAdmin} onCreateCompany={() => router.push('/admin/tenants')} />
       </div>
 
-      <Space style={{ marginBottom: 12 }}>
-        <Button size="small" type="primary" style={{ background: '#01b9d0', borderColor: '#01b9d0' }}>All Users</Button>
-        <Button size="small" onClick={() => router.push('/admin/access/users/deactivated')}>Deactivated Users</Button>
-        <Button size="small" onClick={() => router.push('/admin/access/users/deleted')}>Deleted Users</Button>
-      </Space>
+      <StatusTabs status={status} />
 
       <div style={{ marginBottom: 12 }}>
         <Input.Search
@@ -562,6 +663,7 @@ function TenantUsersTable({
         loading={isFetching}
         size="small"
         scroll={{ x: true }}
+        locale={{ emptyText }}
         pagination={{
           current: page,
           pageSize: perPage,
@@ -574,7 +676,6 @@ function TenantUsersTable({
         style={{ background: '#fff' }}
       />
 
-      <UserFormModal open={createOpen} onClose={() => setCreateOpen(false)} scope={scope} />
       <UserFormModal open={editing !== null} user={editing} onClose={() => setEditing(null)} scope={scope} />
 
       <Modal
@@ -610,23 +711,27 @@ function TenantUsersTable({
 }
 
 /* =========================================================================
- * Page entry point — picks the correct view based on role
+ * Page entry point — picks the correct view based on role + ?status param
  * ========================================================================= */
 export default function UsersPage() {
   const { data: me } = useMe();
+  const searchParams = useSearchParams();
+  const rawStatus = searchParams.get('status');
+  const status: StatusFilter =
+    rawStatus === 'deactivated' ? 'deactivated' :
+    rawStatus === 'deleted' ? 'deleted' :
+    'active';
 
   if (!me) return null;
 
-  // Superadmin without tenant → global view
   if (me.isAdmin && !me.activeTenantId) {
-    return <GlobalUsersTable me={me} />;
+    return <GlobalUsersTable me={me} status={status} />;
   }
 
-  // Company admin (or superadmin with active tenant) → tenant-scoped view
   const tenantId = me.activeTenantId;
   if (!tenantId) {
     return <Text type="danger">You are not associated with a tenant.</Text>;
   }
 
-  return <TenantUsersTable me={me} tenantId={tenantId} />;
+  return <TenantUsersTable me={me} tenantId={tenantId} status={status} />;
 }
