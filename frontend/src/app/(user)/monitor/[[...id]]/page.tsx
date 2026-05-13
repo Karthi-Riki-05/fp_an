@@ -26,27 +26,33 @@ import {
   Typography,
 } from 'antd';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FlowCanvasPlaceholder, type FlowEdge, type FlowNode } from '../../../../components/flow/FlowCanvasPlaceholder';
+import { useMe } from '../../../../lib/api/auth';
+import {
+  decodeReasonValue,
+  groupReasonsForSelect,
+  useEquipmentParts,
+  useEquipmentScrapReasons,
+  useEquipmentStopReasons,
+  useFlowDesignsList,
+} from '../../../../lib/api/monitor';
 
 const { Title, Text } = Typography;
 
 /* ------------------------------------------------------------------------- *
- * Mock data — Phase 4b binds this to /api/v1/flow-monitor/list +
- * /api/v1/flow-designs/:id/monitor with 10s polling per §16 R5.
+ * MOCK canvas data — Phase 4b binds NODES/EDGES to the real flow_data
+ * (GoJS nodeDataArray) once the canvas is wired per §16 R5. Each NODE will
+ * then carry `equipmentId` pointing at a real Equipment.id, which the
+ * register-scrap / register-stop modals cascade off.
  * ------------------------------------------------------------------------- */
 
-const FLOWS = [
-  { id: 'flow-1', name: 'Machining Line 1' },
-  { id: 'flow-2', name: 'Assembly Line 1' },
-];
-
 const NODES: FlowNode[] = [
-  { id: 'n1', label: 'CNC-01',  x: 0.15, y: 0.3, status: 'running' },
-  { id: 'n2', label: 'CNC-02',  x: 0.40, y: 0.3, status: 'warning' },
-  { id: 'n3', label: 'Robot-A', x: 0.65, y: 0.3, status: 'stopped' },
-  { id: 'n4', label: 'Press-1', x: 0.85, y: 0.55, status: 'idle' },
-  { id: 'n5', label: 'QA-1',    x: 0.40, y: 0.7, status: 'running' },
+  { id: 'n1', label: 'CNC-01',  x: 0.15, y: 0.3,  status: 'running' },
+  { id: 'n2', label: 'CNC-02',  x: 0.40, y: 0.3,  status: 'warning' },
+  { id: 'n3', label: 'Robot-A', x: 0.65, y: 0.3,  status: 'stopped' },
+  { id: 'n4', label: 'Press-1', x: 0.85, y: 0.55, status: 'idle'    },
+  { id: 'n5', label: 'QA-1',    x: 0.40, y: 0.7,  status: 'running' },
 ];
 
 const EDGES: FlowEdge[] = [
@@ -70,11 +76,11 @@ const KPIS = {
 
 function statusTag(status: FlowNode['status']) {
   const map: Record<FlowNode['status'], { color: string; label: string; icon: React.ReactNode }> = {
-    running: { color: 'success',         label: 'Running', icon: <PlayCircleOutlined /> },
-    idle:    { color: 'default',         label: 'Idle',    icon: <ClockCircleOutlined /> },
-    stopped: { color: 'error',           label: 'Stopped', icon: <PauseCircleOutlined /> },
-    warning: { color: 'warning',         label: 'Warning', icon: <WarningOutlined /> },
-    offline: { color: 'default',         label: 'Offline', icon: <PauseCircleOutlined /> },
+    running: { color: 'success', label: 'Running', icon: <PlayCircleOutlined /> },
+    idle:    { color: 'default', label: 'Idle',    icon: <ClockCircleOutlined /> },
+    stopped: { color: 'error',   label: 'Stopped', icon: <PauseCircleOutlined /> },
+    warning: { color: 'warning', label: 'Warning', icon: <WarningOutlined /> },
+    offline: { color: 'default', label: 'Offline', icon: <PauseCircleOutlined /> },
   };
   const { color, label, icon } = map[status];
   return <Tag color={color} icon={icon}>{label}</Tag>;
@@ -82,22 +88,98 @@ function statusTag(status: FlowNode['status']) {
 
 export default function FlowMonitorPage() {
   const { message } = App.useApp();
-  const [flowId, setFlowId] = useState(FLOWS[0].id);
+  const { data: me } = useMe();
+  const tenantId = me?.activeTenantId ?? null;
+
+  // Real flow list from /api/v1/admin/flow-designs (B1.4).
+  const { data: flows, isLoading: flowsLoading } = useFlowDesignsList(tenantId);
+  const [flowId, setFlowId] = useState<number | null>(null);
+
+  // Default the flow Select to the first active flow once it loads. The
+  // canvas is still mock so the selected flow doesn't actually drive
+  // NODES/EDGES yet — Phase 4b §16 R5 will wire that.
+  useEffect(() => {
+    if (flows && flows.length > 0 && flowId === null) {
+      setFlowId(flows[0].id);
+    }
+  }, [flows, flowId]);
+
   const [selectedId, setSelectedId] = useState<string | null>('n2');
   const [openModal, setOpenModal] = useState<null | 'production' | 'scrap' | 'stop'>(null);
-  const [form] = Form.useForm();
+  const [scrapForm] = Form.useForm();
+  const [stopForm] = Form.useForm();
+  const [productionForm] = Form.useForm();
 
   const selected = NODES.find((n) => n.id === selectedId) ?? null;
+  // Cascade root for the modals. While the canvas is mock this stays
+  // undefined and the cascading selects render in their "no data" state.
+  const equipmentId = selected?.equipmentId;
 
-  const submit = (kind: 'production' | 'scrap' | 'stop') => {
-    form
-      .validateFields()
-      .then(() => {
-        message.success(`(mock) ${kind} registered for ${selected?.label}`);
-        setOpenModal(null);
-        form.resetFields();
-      })
-      .catch(() => undefined);
+  // Cascading queries — only fire when an equipment id is known (TanStack
+  // `enabled` is wired inside the hooks).
+  const { data: scrapGroups, isLoading: scrapLoading } = useEquipmentScrapReasons(tenantId, equipmentId);
+  const { data: stopGroups, isLoading: stopLoading } = useEquipmentStopReasons(tenantId, equipmentId);
+  const { data: equipmentParts, isLoading: partsLoading } = useEquipmentParts(tenantId, equipmentId);
+
+  const scrapReasonOptions = groupReasonsForSelect(scrapGroups);
+  const stopReasonOptions = groupReasonsForSelect(stopGroups);
+  const partOptions = (equipmentParts ?? []).map((p) => ({
+    value: p.id,
+    label: p.partNo ? `${p.partNo} — ${p.name}` : p.name,
+  }));
+
+  const onClose = () => {
+    setOpenModal(null);
+    scrapForm.resetFields();
+    stopForm.resetFields();
+    productionForm.resetFields();
+  };
+
+  const submitProduction = async () => {
+    try {
+      const values = await productionForm.validateFields();
+      // TODO Phase E: POST /api/v1/admin/results/production with values
+      message.success(`(mock) production registered for ${selected?.label}: ${JSON.stringify(values)}`);
+      onClose();
+    } catch { /* validation errors render inline */ }
+  };
+
+  const submitScrap = async () => {
+    try {
+      const values = await scrapForm.validateFields();
+      // Composite reason value `${typeId}-${reasonId}` is split before submit
+      // so the backend receives separate fields (matches legacy wire format).
+      const { typeId: scrapTypeId, reasonId: scrapReasonId } = decodeReasonValue(values.reason);
+      const payload = {
+        ...values,
+        scrapTypeId,
+        scrapReasonId,
+      };
+      delete payload.reason;
+      // TODO Phase E: POST /api/v1/admin/results/scrap with payload
+      message.success(`(mock) scrap registered for ${selected?.label}: ${JSON.stringify(payload)}`);
+      onClose();
+    } catch { /* validation errors render inline */ }
+  };
+
+  const submitStop = async () => {
+    try {
+      const values = await stopForm.validateFields();
+      const { typeId: stopTypeId, reasonId: stopReasonId } = decodeReasonValue(values.reason);
+      const hours = Number(values.hours ?? 0);
+      const minutes = Number(values.minutes ?? 0);
+      const totalMinutes = hours * 60 + minutes;
+      const payload = {
+        ...values,
+        stopTypeId,
+        stopReasonId,
+        totalMinutes,
+      };
+      delete payload.reason;
+      // TODO Phase E: POST /api/v1/admin/results/stop with payload
+      message.success(`(mock) stop registered for ${selected?.label}: ${JSON.stringify(payload)}`);
+      onClose();
+    } catch { /* validation errors render inline */ }
   };
 
   return (
@@ -121,11 +203,14 @@ export default function FlowMonitorPage() {
         </Space>
         <Space wrap>
           <Select
-            value={flowId}
+            value={flowId ?? undefined}
             onChange={setFlowId}
+            placeholder="Select flow"
+            loading={flowsLoading}
             style={{ minWidth: 220 }}
-            options={FLOWS.map((f) => ({ value: f.id, label: f.name }))}
+            options={(flows ?? []).map((f) => ({ value: f.id, label: f.name }))}
             aria-label="Select flow"
+            notFoundContent={flowsLoading ? 'Loading…' : 'No active flows'}
           />
           <Button icon={<FileExcelOutlined />}>Export</Button>
         </Space>
@@ -226,20 +311,39 @@ export default function FlowMonitorPage() {
         </div>
       </Card>
 
-      {/* Modals */}
+      {/* ── Modals ───────────────────────────────────────────────────────── */}
+
       <Modal
         title={`Register production — ${selected?.label ?? ''}`}
         open={openModal === 'production'}
-        onCancel={() => setOpenModal(null)}
-        onOk={() => submit('production')}
+        onCancel={onClose}
+        onOk={submitProduction}
         okText="Register"
         destroyOnClose
       >
-        <Form form={form} layout="vertical" preserve={false}>
-          <Form.Item name="quantity" label="OK quantity" rules={[{ required: true }]}>
+        <Form form={productionForm} layout="vertical" preserve={false}>
+          <Form.Item
+            name="partId"
+            label="Part"
+            extra={!equipmentId ? 'Part list will populate when the canvas is wired to a real equipment.' : undefined}
+          >
+            <Select
+              loading={partsLoading}
+              disabled={!equipmentId || partsLoading}
+              placeholder="Pick a part (optional)"
+              options={partOptions}
+              showSearch
+              optionFilterProp="label"
+              allowClear
+            />
+          </Form.Item>
+          <Form.Item name="quantity" label="OK quantity" rules={[{ required: true, message: 'Quantity is required' }]}>
             <InputNumber min={0} style={{ width: '100%' }} autoFocus />
           </Form.Item>
-          <Form.Item name="orderNo" label="Order #">
+          <Form.Item name="plannedQty" label="Planned quantity">
+            <InputNumber min={0} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item name="orderNo" label="Order #" extra="Free text — list-mode lookup is a future enhancement (needs EquipmentProperty endpoint).">
             <Input placeholder="optional" />
           </Form.Item>
           <Form.Item name="comment" label="Comment">
@@ -251,22 +355,51 @@ export default function FlowMonitorPage() {
       <Modal
         title={`Register scrap — ${selected?.label ?? ''}`}
         open={openModal === 'scrap'}
-        onCancel={() => setOpenModal(null)}
-        onOk={() => submit('scrap')}
+        onCancel={onClose}
+        onOk={submitScrap}
         okText="Register"
         destroyOnClose
       >
-        <Form form={form} layout="vertical" preserve={false}>
-          <Form.Item name="quantity" label="Scrap quantity" rules={[{ required: true }]}>
+        <Form form={scrapForm} layout="vertical" preserve={false}>
+          <Form.Item
+            name="partId"
+            label="Part"
+            extra={!equipmentId ? 'Part list will populate when the canvas is wired to a real equipment.' : undefined}
+          >
+            <Select
+              loading={partsLoading}
+              disabled={!equipmentId || partsLoading}
+              placeholder="Pick a part (optional)"
+              options={partOptions}
+              showSearch
+              optionFilterProp="label"
+              allowClear
+            />
+          </Form.Item>
+          <Form.Item name="quantity" label="Scrap quantity" rules={[{ required: true, message: 'Quantity is required' }]}>
             <InputNumber min={0} style={{ width: '100%' }} autoFocus />
           </Form.Item>
-          <Form.Item name="reason" label="Reason" rules={[{ required: true }]}>
-            <Select placeholder="Pick a scrap reason" options={[
-              { value: 'wrong-spec',     label: 'Wrong spec' },
-              { value: 'tool-wear',      label: 'Tool wear' },
-              { value: 'material-fault', label: 'Material fault' },
-              { value: 'operator-error', label: 'Operator error' },
-            ]} />
+          <Form.Item
+            name="reason"
+            label="Scrap reason"
+            rules={[{ required: true, message: 'Pick a scrap reason' }]}
+            extra={!equipmentId ? 'Reason list is cascaded from the selected equipment.' : undefined}
+          >
+            <Select
+              loading={scrapLoading}
+              disabled={!equipmentId || scrapLoading}
+              placeholder={equipmentId
+                ? (scrapReasonOptions.length === 0 && !scrapLoading
+                    ? 'No scrap reasons configured for this equipment'
+                    : 'Pick a scrap reason')
+                : 'Select a node on the canvas first'}
+              options={scrapReasonOptions}
+              showSearch
+              optionFilterProp="label"
+            />
+          </Form.Item>
+          <Form.Item name="orderNo" label="Order #" extra="Free text — list-mode lookup is a future enhancement (needs EquipmentProperty endpoint).">
+            <Input placeholder="optional" />
           </Form.Item>
           <Form.Item name="comment" label="Comment">
             <Input.TextArea rows={2} />
@@ -277,24 +410,64 @@ export default function FlowMonitorPage() {
       <Modal
         title={`Register stop — ${selected?.label ?? ''}`}
         open={openModal === 'stop'}
-        onCancel={() => setOpenModal(null)}
-        onOk={() => submit('stop')}
+        onCancel={onClose}
+        onOk={submitStop}
         okText="Register"
         okButtonProps={{ danger: true }}
         destroyOnClose
       >
-        <Form form={form} layout="vertical" preserve={false}>
-          <Form.Item name="duration" label="Duration (minutes)" rules={[{ required: true }]}>
-            <InputNumber min={0} style={{ width: '100%' }} autoFocus />
+        <Form form={stopForm} layout="vertical" preserve={false} initialValues={{ hours: 0, minutes: 0 }}>
+          <Form.Item
+            name="partId"
+            label="Part"
+            extra={!equipmentId ? 'Part list will populate when the canvas is wired to a real equipment.' : undefined}
+          >
+            <Select
+              loading={partsLoading}
+              disabled={!equipmentId || partsLoading}
+              placeholder="Pick a part (optional)"
+              options={partOptions}
+              showSearch
+              optionFilterProp="label"
+              allowClear
+            />
           </Form.Item>
-          <Form.Item name="reason" label="Reason" rules={[{ required: true }]}>
-            <Select placeholder="Pick a stop reason" options={[
-              { value: 'tool-change',     label: 'Tool change' },
-              { value: 'material',        label: 'Material loading' },
-              { value: 'quality',         label: 'Quality issue' },
-              { value: 'break',           label: 'Operator break' },
-              { value: 'setup',           label: 'Setup / changeover' },
-            ]} />
+          <Form.Item name="quantity" label="Quantity">
+            <InputNumber min={0} style={{ width: '100%' }} />
+          </Form.Item>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item name="hours" label="Hours" rules={[{ required: true, message: 'Hours is required' }]}>
+                <InputNumber min={0} style={{ width: '100%' }} autoFocus />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="minutes" label="Minutes" rules={[{ required: true, message: 'Minutes is required' }]}>
+                <InputNumber min={0} max={59} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item
+            name="reason"
+            label="Stop reason"
+            rules={[{ required: true, message: 'Pick a stop reason' }]}
+            extra={!equipmentId ? 'Reason list is cascaded from the selected equipment.' : undefined}
+          >
+            <Select
+              loading={stopLoading}
+              disabled={!equipmentId || stopLoading}
+              placeholder={equipmentId
+                ? (stopReasonOptions.length === 0 && !stopLoading
+                    ? 'No stop reasons configured for this equipment'
+                    : 'Pick a stop reason')
+                : 'Select a node on the canvas first'}
+              options={stopReasonOptions}
+              showSearch
+              optionFilterProp="label"
+            />
+          </Form.Item>
+          <Form.Item name="orderNo" label="Order #" extra="Free text — list-mode lookup is a future enhancement (needs EquipmentProperty endpoint).">
+            <Input placeholder="optional" />
           </Form.Item>
           <Form.Item name="comment" label="Comment">
             <Input.TextArea rows={2} />

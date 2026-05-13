@@ -10,6 +10,13 @@ export interface FlowNode {
   x: number;
   y: number;
   status: 'running' | 'idle' | 'stopped' | 'warning' | 'offline';
+  /**
+   * Real equipment.id this node represents. Required for the Register
+   * scrap/stop modals to cascade reasons/parts/orders. Optional here because
+   * the Phase 4a placeholder feeds mock data; Phase 4b will populate this
+   * from `flow_data.nodeDataArray[i].key` (legacy GoJS state).
+   */
+  equipmentId?: number;
 }
 
 export interface FlowEdge {
