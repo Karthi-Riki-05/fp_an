@@ -5,7 +5,7 @@ const { tenantListPaginated, tenantFindOne, tenantSoftDelete } = require('../hel
 const { NotFoundError } = require('../errors');
 
 const TABLE = 'types';
-const SELECT_MAP = { id: 'id', name: 'name', kind: 'type', entity: 'entity', description: 'description', icon: 'icon', sortOrder: 'sort_order', isActive: 'is_active', createdAt: 'created_at' };
+const SELECT_MAP = { id: 'id', name: 'name', kind: 'type', entity: 'entity', description: 'description', icon: 'icon', sortOrder: 'sort_order', isActive: 'is_active', excludeType: 'exclude_type', createdAt: 'created_at' };
 
 async function list(tenant, q) {
   const filters = [];
@@ -27,10 +27,10 @@ function findOne(tenant, id) {
 async function create(tenant, dto) {
   const rows = await withTenant(tenant, (tx) =>
     tx.$queryRawUnsafe(
-      `INSERT INTO types (name, type, entity, description, icon, sort_order, is_active, created_at, updated_at)
-       VALUES ($1, $2::"tenant_template"."TypeKind", $3::"tenant_template"."TypeEntity", $4, $5, $6, $7, now(), now())
-       RETURNING id, name, type AS "kind", entity, description, icon, sort_order AS "sortOrder", is_active AS "isActive", created_at AS "createdAt"`,
-      dto.name, dto.kind ?? 'NotApplicable', dto.entity ?? 'Equipment', dto.description ?? null, dto.icon ?? 'noimage.jpg', dto.sortOrder ?? 0, dto.isActive ?? true,
+      `INSERT INTO types (name, type, entity, description, icon, sort_order, is_active, exclude_type, created_at, updated_at)
+       VALUES ($1, $2::"tenant_template"."TypeKind", $3::"tenant_template"."TypeEntity", $4, $5, $6, $7, $8, now(), now())
+       RETURNING id, name, type AS "kind", entity, description, icon, sort_order AS "sortOrder", is_active AS "isActive", exclude_type AS "excludeType", created_at AS "createdAt"`,
+      dto.name, dto.kind ?? 'NotApplicable', dto.entity ?? 'Equipment', dto.description ?? null, dto.icon ?? 'noimage.jpg', dto.sortOrder ?? 0, dto.isActive ?? true, Boolean(dto.excludeType ?? false),
     ),
   );
   return rows[0];
@@ -47,13 +47,14 @@ async function update(tenant, id, dto) {
   if (dto.icon !== undefined) push('icon = $?', dto.icon);
   if (dto.sortOrder !== undefined) push('sort_order = $?', dto.sortOrder);
   if (dto.isActive !== undefined) push('is_active = $?', dto.isActive);
+  if (dto.excludeType !== undefined) push('exclude_type = $?', Boolean(dto.excludeType));
   if (sets.length === 0) return findOne(tenant, id);
   sets.push('updated_at = now()');
   values.push(id);
   const rows = await withTenant(tenant, (tx) =>
     tx.$queryRawUnsafe(
       `UPDATE types SET ${sets.join(', ')} WHERE id = $${values.length} AND deleted_at IS NULL
-       RETURNING id, name, type AS "kind", entity, description, icon, sort_order AS "sortOrder", is_active AS "isActive", created_at AS "createdAt"`,
+       RETURNING id, name, type AS "kind", entity, description, icon, sort_order AS "sortOrder", is_active AS "isActive", exclude_type AS "excludeType", created_at AS "createdAt"`,
       ...values,
     ),
   );

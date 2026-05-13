@@ -103,11 +103,14 @@ export function makeAdminCrud<TRow, TCreate, TUpdate, TList = Record<string, unk
 
 // ---- entity row shapes ---------------------------------------------------
 export interface SalaryGroupRow { id: number; name: string | null; hourlyRate: string; info: string; createdAt: string }
-export interface StopReasonRow { id: number; name: string | null; typeId: number; description: string; sortOrder: number; createdAt: string }
+export interface StopReasonRow { id: number; name: string | null; typeId: number; typeName?: string; description: string; sortOrder: number; createdAt: string }
 export interface ScrapReasonRow extends StopReasonRow {}
 export interface AdminTypeRow {
   id: number; name: string | null; kind: string; entity: string;
-  description: string | null; icon: string | null; sortOrder: number; isActive: boolean; createdAt: string;
+  description: string | null; icon: string | null; sortOrder: number; isActive: boolean;
+  /** Only meaningful when entity = 'StopReason'. Stop rows with exclude_type=true are filtered out of OEE calculations. */
+  excludeType: boolean;
+  createdAt: string;
 }
 export interface PartRow {
   id: number; name: string; partNo: string; description: string | null;
@@ -128,7 +131,7 @@ export type StopReasonCreate = { name: string; typeId: number; description?: str
 export type StopReasonUpdate = Partial<StopReasonCreate>;
 export type ScrapReasonCreate = StopReasonCreate;
 export type ScrapReasonUpdate = StopReasonUpdate;
-export type AdminTypeCreate = { name: string; kind?: string; entity?: string; description?: string; icon?: string; sortOrder?: number; isActive?: boolean };
+export type AdminTypeCreate = { name: string; kind?: string; entity?: string; description?: string; icon?: string; sortOrder?: number; isActive?: boolean; excludeType?: boolean };
 export type AdminTypeUpdate = Partial<AdminTypeCreate>;
 export type PartCreate = { name: string; partNo?: string; description?: string; typeId?: number; purchasePrice?: number; salesPrice?: number; sortOrder?: number };
 export type PartUpdate = Partial<PartCreate>;

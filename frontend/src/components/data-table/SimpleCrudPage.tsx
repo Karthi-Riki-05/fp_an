@@ -11,18 +11,28 @@ import {
 } from '../../lib/api/admin-crud';
 import { DataTablePage, DataTableColumn } from './DataTablePage';
 
+/**
+ * Predicate evaluated against the current form values to decide whether a
+ * field is rendered. Used by the Types form (kind / exclude_type visible
+ * only for some entity values).
+ */
+type VisibleWhen = (values: Record<string, unknown>) => boolean;
+
 export type SimpleField =
-  | { name: string; label: string; type: 'text'; required?: boolean; maxLength?: number; placeholder?: string }
-  | { name: string; label: string; type: 'textarea'; required?: boolean; maxLength?: number; rows?: number }
-  | { name: string; label: string; type: 'number'; required?: boolean; min?: number; max?: number; step?: number }
-  | { name: string; label: string; type: 'time'; required?: boolean }
-  | { name: string; label: string; type: 'switch'; defaultChecked?: boolean }
+  | { name: string; label: string; type: 'text'; required?: boolean; maxLength?: number; placeholder?: string; visibleWhen?: VisibleWhen }
+  | { name: string; label: string; type: 'textarea'; required?: boolean; maxLength?: number; rows?: number; visibleWhen?: VisibleWhen }
+  | { name: string; label: string; type: 'number'; required?: boolean; min?: number; max?: number; step?: number; visibleWhen?: VisibleWhen }
+  | { name: string; label: string; type: 'time'; required?: boolean; visibleWhen?: VisibleWhen }
+  | { name: string; label: string; type: 'switch'; defaultChecked?: boolean; visibleWhen?: VisibleWhen }
   | {
       name: string;
       label: string;
       type: 'select';
       required?: boolean;
       options: Array<{ value: string | number; label: string }>;
+      /** Dynamic options: when set, overrides `options` based on current form values. */
+      optionsWhen?: (values: Record<string, unknown>) => Array<{ value: string | number; label: string }>;
+      visibleWhen?: VisibleWhen;
     }
   | {
       /**
@@ -42,6 +52,7 @@ export type SimpleField =
        * selection in a single text column.
        */
       csv?: { separator?: string };
+      visibleWhen?: VisibleWhen;
     };
 
 export interface SimpleCrudPageProps<TRow extends { id: number }> {
@@ -238,24 +249,50 @@ export function SimpleCrudPage<TRow extends { id: number }>(props: SimpleCrudPag
         width={520}
       >
         <Form form={form} layout="vertical" preserve={false}>
-          {fields.map((f) => (
-            <Form.Item
-              key={f.name}
-              name={f.name}
-              label={f.label}
-              valuePropName={f.type === 'switch' ? 'checked' : 'value'}
-              rules={fieldRules(f)}
-            >
-              {renderField(f)}
-            </Form.Item>
-          ))}
+          <ConditionalFields form={form} fields={fields} />
         </Form>
       </Modal>
     </>
   );
 }
 
-function renderField(f: SimpleField): ReactNode {
+/**
+ * Renders form items with conditional `visibleWhen` / dynamic `optionsWhen`
+ * support. Watches every field referenced by these predicates (cheap — the
+ * Form's getFieldsValue() is O(n) in form size and runs once per render).
+ */
+function ConditionalFields({
+  form,
+  fields,
+}: {
+  form: import('antd/es/form').FormInstance;
+  fields: SimpleField[];
+}) {
+  // Form.useWatch returns a snapshot of all form values. Re-reading on every
+  // change here lets visibleWhen / optionsWhen react to user input.
+  const values = (Form.useWatch([], form) ?? {}) as Record<string, unknown>;
+
+  return (
+    <>
+      {fields.map((f) => {
+        if (f.visibleWhen && !f.visibleWhen(values)) return null;
+        return (
+          <Form.Item
+            key={f.name}
+            name={f.name}
+            label={f.label}
+            valuePropName={f.type === 'switch' ? 'checked' : 'value'}
+            rules={fieldRules(f)}
+          >
+            {renderField(f, values)}
+          </Form.Item>
+        );
+      })}
+    </>
+  );
+}
+
+function renderField(f: SimpleField, values: Record<string, unknown>): ReactNode {
   switch (f.type) {
     case 'text':
       return <Input maxLength={f.maxLength} placeholder={f.placeholder} />;
@@ -267,8 +304,10 @@ function renderField(f: SimpleField): ReactNode {
       return <Input placeholder="HH:MM" />;
     case 'switch':
       return <Switch />;
-    case 'select':
-      return <Select options={f.options} allowClear />;
+    case 'select': {
+      const options = f.optionsWhen ? f.optionsWhen(values) : f.options;
+      return <Select options={options} allowClear />;
+    }
     case 'checkbox-group':
       return <Checkbox.Group options={f.options} />;
   }
