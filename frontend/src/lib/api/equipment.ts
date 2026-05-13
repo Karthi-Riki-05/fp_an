@@ -2,7 +2,23 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../api-client';
 import type { Equipment } from './types';
 
-export interface CreateEquipmentInput {
+export type { Equipment } from './types';
+
+export interface EquipmentAssignmentInput {
+  /** Stop reasons assigned to this equipment (stop_category ids). */
+  reasonStopTypeIds?: number[];
+  /** Scrap reasons assigned (types where entity='ScrapReason'). */
+  reasonScrapTypeIds?: number[];
+  /** Part types this equipment runs (types where entity='Part'). */
+  reasonPartTypeIds?: number[];
+  /** Order types this equipment accepts (types where entity='Order'). */
+  reasonOrderTypeIds?: number[];
+  /** Shift schedule the equipment follows. Number 0 / null clears it. */
+  scheduleId?: number | null;
+  alsoAssignImport?: boolean;
+}
+
+export interface CreateEquipmentInput extends EquipmentAssignmentInput {
   name: string;
   parentId?: number;
   typeId?: number;
@@ -12,6 +28,15 @@ export interface CreateEquipmentInput {
 }
 
 export interface UpdateEquipmentInput extends Partial<CreateEquipmentInput> {}
+
+export interface EquipmentDetail extends Equipment {
+  reasonStopTypeIds: number[];
+  reasonScrapTypeIds: number[];
+  reasonPartTypeIds: number[];
+  reasonOrderTypeIds: number[];
+  scheduleId: number | null;
+  alsoAssignImport: boolean;
+}
 
 const EQUIPMENT_KEY = (tenantId: number | null) => ['equipment', tenantId] as const;
 
@@ -45,6 +70,19 @@ export function useCreateEquipment(tenantId: number | null) {
   });
 }
 
+export function useUpdateEquipment(tenantId: number | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, input }: { id: number; input: UpdateEquipmentInput }) => {
+      const { data } = await apiClient.patch<Equipment>(`/equipment/${id}`, input, {
+        headers: tenantHeaders(tenantId),
+      });
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: EQUIPMENT_KEY(tenantId) }),
+  });
+}
+
 export function useDeleteEquipment(tenantId: number | null) {
   const qc = useQueryClient();
   return useMutation({
@@ -54,5 +92,46 @@ export function useDeleteEquipment(tenantId: number | null) {
       });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: EQUIPMENT_KEY(tenantId) }),
+  });
+}
+
+const EQUIPMENT_DETAIL_KEY = (tenantId: number | null, id: number | null) =>
+  ['equipment', 'detail', tenantId, id] as const;
+
+export function useEquipmentDetail(tenantId: number | null, id: number | null) {
+  return useQuery({
+    queryKey: EQUIPMENT_DETAIL_KEY(tenantId, id),
+    queryFn: async () => {
+      const { data } = await apiClient.get<EquipmentDetail>(`/equipment/${id}`, {
+        headers: tenantHeaders(tenantId),
+      });
+      return data;
+    },
+    enabled: id !== null,
+    staleTime: 5_000,
+  });
+}
+
+export interface EquipmentTreeNode {
+  id: number;
+  name: string;
+  icon: string | null;
+  parentId: number | null;
+  isActive: boolean;
+  children: EquipmentTreeNode[];
+}
+
+const EQUIPMENT_TREE_KEY = (tenantId: number | null) => ['equipment-tree', tenantId] as const;
+
+export function useEquipmentTree(tenantId: number | null) {
+  return useQuery({
+    queryKey: EQUIPMENT_TREE_KEY(tenantId),
+    queryFn: async () => {
+      const { data } = await apiClient.get<EquipmentTreeNode[]>('/equipment/tree', {
+        headers: tenantHeaders(tenantId),
+      });
+      return data;
+    },
+    staleTime: 30_000,
   });
 }
