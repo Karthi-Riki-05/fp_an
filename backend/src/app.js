@@ -43,6 +43,7 @@ const adminIotRoutes = require('./routes/admin-iot.routes');
 const adminFlowDesignsRoutes = require('./routes/admin-flow-designs.routes');
 const adminOrdersRoutes = require('./routes/admin-orders.routes');
 const adminSymbolsRoutes = require('./routes/admin-symbols.routes');
+const adminFoldersRoutes = require('./routes/admin-folders.routes');
 
 const app = express();
 
@@ -138,6 +139,7 @@ app.use('/api/v1/admin/iot', adminIotRoutes);
 app.use('/api/v1/admin/flow-designs', adminFlowDesignsRoutes);
 app.use('/api/v1/admin/orders', adminOrdersRoutes);
 app.use('/api/v1/admin/symbols', adminSymbolsRoutes);
+app.use('/api/v1/admin/folders', adminFoldersRoutes);
 
 // 404
 app.use((req, res) => {
