@@ -15,17 +15,15 @@ import {
   Table,
   Tag,
   Tooltip,
-  TreeSelect,
   Typography,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import type { DataNode } from 'antd/es/tree';
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { toApiError } from '../../../../lib/api-client';
 import { useMe } from '../../../../lib/api/auth';
 import { typesApi } from '../../../../lib/api/admin-crud';
-import { useEquipmentTree, type EquipmentTreeNode } from '../../../../lib/api/equipment';
+import { EquipmentTreeSelect } from '../../../../components/equipment/EquipmentTreeSelect';
 import {
   useCreateFolder,
   useDeleteFolder,
@@ -41,15 +39,6 @@ interface FormShape {
   name: string;
   equipmentId?: number;
   folderType?: number;
-}
-
-function treeToTreeSelect(nodes: EquipmentTreeNode[]): DataNode[] {
-  return nodes.map((n) => ({
-    key: n.id,
-    value: n.id,
-    title: n.name,
-    children: n.children?.length ? treeToTreeSelect(n.children) : undefined,
-  }));
 }
 
 export default function FoldersPage() {
@@ -74,13 +63,11 @@ export default function FoldersPage() {
     [page, perPage, search],
   );
   const { data, isFetching } = useFolderList(tenantId, listParams);
-  const { data: tree } = useEquipmentTree(tenantId);
 
   // folder_type → types where entity='Content' (per RESOLVED ii)
   const { data: contentTypes } = typesApi.useList(scope, { entity: 'Content', perPage: 200 });
 
   const folderTypeOptions = (contentTypes?.data ?? []).map((t) => ({ value: t.id, label: t.name ?? `#${t.id}` }));
-  const treeData = tree ? treeToTreeSelect(tree) : [];
 
   const createMut = useCreateFolder(tenantId);
   const updateMut = useUpdateFolder(tenantId);
@@ -249,13 +236,7 @@ export default function FoldersPage() {
             />
           </Form.Item>
           <Form.Item name="equipmentId" label="Equipment" rules={[{ required: true, message: 'Equipment is required' }]}>
-            <TreeSelect
-              treeData={treeData}
-              showSearch
-              treeNodeFilterProp="title"
-              placeholder="Select equipment in the tree"
-              treeDefaultExpandAll={false}
-            />
+            <EquipmentTreeSelect tenantId={tenantId} placeholder="Select equipment in the tree" />
           </Form.Item>
         </Form>
       </Modal>

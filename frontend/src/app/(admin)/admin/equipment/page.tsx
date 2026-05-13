@@ -28,7 +28,6 @@ import {
   Table,
   Tabs,
   Tag,
-  TreeSelect,
   Typography,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -42,13 +41,11 @@ import {
   useDeleteEquipment,
   useEquipmentDetail,
   useEquipmentList,
-  useEquipmentTree,
   useUpdateEquipment,
   type Equipment,
-  type EquipmentTreeNode,
 } from '../../../../lib/api/equipment';
 import { typesApi } from '../../../../lib/api/admin-crud';
-import type { DataNode } from 'antd/es/tree';
+import { EquipmentTreeSelect } from '../../../../components/equipment/EquipmentTreeSelect';
 
 const { Title } = Typography;
 
@@ -85,16 +82,6 @@ const DEFAULT_VALUES: EquipmentFormValues = {
   alsoAssignImport: false,
 };
 
-/** Recursively convert the legacy tree response into a TreeSelect treeData shape. */
-function treeToTreeSelect(nodes: EquipmentTreeNode[]): DataNode[] {
-  return nodes.map((n) => ({
-    key: n.id,
-    value: n.id,
-    title: n.name,
-    children: n.children?.length ? treeToTreeSelect(n.children) : undefined,
-  }));
-}
-
 export default function EquipmentListPage() {
   const { message, modal } = App.useApp();
   const { data: me } = useMe();
@@ -112,7 +99,6 @@ export default function EquipmentListPage() {
 
   // ── Data ───────────────────────────────────────────────────────────────────
   const { data: equipmentRows, isLoading: rowsLoading } = useEquipmentList(tenantId);
-  const { data: tree } = useEquipmentTree(tenantId);
   const { data: detail } = useEquipmentDetail(tenantId, editingId);
 
   const headers = me?.isAdmin && tenantId ? { 'X-Tenant-Id': String(tenantId) } : undefined;
@@ -306,7 +292,6 @@ export default function EquipmentListPage() {
   if (!tenantId) return <Typography.Text type="secondary">Pick a tenant.</Typography.Text>;
 
   // ── Render ────────────────────────────────────────────────────────────────
-  const treeData = tree ? treeToTreeSelect(tree) : [];
 
   return (
     <div>
@@ -369,14 +354,7 @@ export default function EquipmentListPage() {
                   children: (
                     <>
                       <Form.Item name="parentId" label="Parent equipment">
-                        <TreeSelect
-                          treeData={treeData}
-                          allowClear
-                          showSearch
-                          treeNodeFilterProp="title"
-                          placeholder="Select parent equipment (optional)"
-                          treeDefaultExpandAll={false}
-                        />
+                        <EquipmentTreeSelect tenantId={tenantId} placeholder="Select parent equipment (optional)" />
                       </Form.Item>
                       <Form.Item name="typeId" label="Type" rules={[{ required: true, message: 'Type is required' }]}>
                         <Select
