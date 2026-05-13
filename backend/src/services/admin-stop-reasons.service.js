@@ -9,6 +9,9 @@ const SELECT_MAP = { id: 'id', name: 'name', typeId: 'type_id', description: 'de
 
 async function list(tenant, q) {
   const page = q.page ?? 1;
+  // TODO: large tenants may have >50 reasons per type — add ?paginate=false
+  // support or a /all endpoint before scaling past ~5 tenants. The bump from
+  // 10 to 50 was made for the C5 result-edit modal cascading Select.
   const perPage = q.perPage ?? 50;
   const skip = (page - 1) * perPage;
   const params = [];
