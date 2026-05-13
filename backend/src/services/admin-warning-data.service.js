@@ -3,7 +3,7 @@
 const { withTenant } = require('../prisma/client');
 const { NotFoundError } = require('../errors');
 
-const SELECT = `wd.id, e.name AS "equipmentName", wd.duration,
+const SELECT = `wd.id, wd.equipment_id AS "equipmentId", e.name AS "equipmentName", wd.duration,
   wd.notification_text AS "notificationText",
   wd.from_time AS "fromTimestamp", wd.to_time AS "toTimestamp",
   wd.created_at AS "createdAt"`;
