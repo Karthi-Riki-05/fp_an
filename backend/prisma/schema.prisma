@@ -1265,6 +1265,15 @@ model MachineProgramme {
   name        String    @db.VarChar(255)
   description String?
   status      Int       @default(1) @db.SmallInt
+  // Legacy `machine_id` (FK → company_machine.id) was dropped in the
+  // initial port. D3 reintroduces it pointing at MachineDocument (the
+  // current "machines" entity), since the new_fp admin form lets the
+  // user pick a MachineDocument as the programme's parent. Nullable to
+  // keep existing rows intact.
+  machineDocId Int?     @map("machine_doc_id")
+  isLink      Boolean   @default(false) @map("is_link")
+  isLocked    Boolean   @default(false) @map("is_locked")
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
   legacyId    BigInt?   @unique @map("legacy_id")
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
@@ -1272,6 +1281,8 @@ model MachineProgramme {
   files          MachineProgrammeFile[]
   tenantMachines TenantMachine[]
 
+  @@index([machineDocId])
+  @@index([deletedAt])
   @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "machine_programme_name_trgm_idx")
   @@map("machine_programmes")
   @@schema("tenant_template")

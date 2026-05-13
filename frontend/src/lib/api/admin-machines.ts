@@ -88,6 +88,29 @@ export function useUpdateMachine(tenantId: number | null | undefined) {
   });
 }
 
+/**
+ * Plain `[{id, name}]` machine list for Select dropdowns. Used by:
+ *   - D3 machine-programmes form (machineId Select)
+ *   - D4 workstations form (machineId Select)
+ * Pulls the same /admin/machines endpoint at perPage=500 (single page is
+ * fine until tenants approach the soft cap — same TODO as on the
+ * scrap/stop-reasons services).
+ */
+export function useMachinesForSelect(tenantId: number | null | undefined) {
+  return useQuery({
+    queryKey: ['admin', 'machines', 'select', tenantId],
+    queryFn: async () =>
+      (
+        await apiClient.get<{ data: MachineRow[]; total: number }>('/admin/machines', {
+          params: { perPage: 500 },
+          headers: headersFor(tenantId),
+        })
+      ).data.data,
+    enabled: !!tenantId,
+    staleTime: 30_000,
+  });
+}
+
 export function useDeleteMachine(tenantId: number | null | undefined) {
   const qc = useQueryClient();
   return useMutation({
