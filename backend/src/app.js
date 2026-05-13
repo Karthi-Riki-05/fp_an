@@ -24,16 +24,24 @@ const adminTypesRoutes = require('./routes/admin-types.routes');
 const adminUsersRoutes = require('./routes/admin-users.routes');
 const adminStopReasonsRoutes = require('./routes/admin-stop-reasons.routes');
 const adminScrapReasonsRoutes = require('./routes/admin-scrap-reasons.routes');
+const adminStopCategoriesRoutes = require('./routes/admin-stop-categories.routes');
+const adminScrapCategoriesRoutes = require('./routes/admin-scrap-categories.routes');
 const adminPartsRoutes = require('./routes/admin-parts.routes');
 const adminWorkShiftsRoutes = require('./routes/admin-work-shifts.routes');
+const adminShiftSchedulesRoutes = require('./routes/admin-shift-schedules.routes');
+const adminResultsRoutes = require('./routes/admin-results.routes');
 const adminSalaryGroupsRoutes = require('./routes/admin-salary-groups.routes');
 const adminFeedbackRoutes = require('./routes/admin-feedback.routes');
+const adminBoardsRoutes = require('./routes/admin-boards.routes');
 const cmsRoutes = require('./routes/cms.routes');
 const slidersRoutes = require('./routes/sliders.routes');
 const testimonialsRoutes = require('./routes/testimonials.routes');
 const socialRoutes = require('./routes/social.routes');
 const recentHistoryRoutes = require('./routes/recent-history.routes');
 const superadminUsersRoutes = require('./routes/superadmin-users.routes');
+const adminIotRoutes = require('./routes/admin-iot.routes');
+const adminFlowDesignsRoutes = require('./routes/admin-flow-designs.routes');
+const adminOrdersRoutes = require('./routes/admin-orders.routes');
 
 const app = express();
 
@@ -110,16 +118,24 @@ app.use('/api/v1/admin/types', adminTypesRoutes);
 app.use('/api/v1/admin/users', adminUsersRoutes);
 app.use('/api/v1/admin/stop-reasons', adminStopReasonsRoutes);
 app.use('/api/v1/admin/scrap-reasons', adminScrapReasonsRoutes);
+app.use('/api/v1/admin/stop-categories', adminStopCategoriesRoutes);
+app.use('/api/v1/admin/scrap-categories', adminScrapCategoriesRoutes);
 app.use('/api/v1/admin/parts', adminPartsRoutes);
 app.use('/api/v1/admin/work-shifts', adminWorkShiftsRoutes);
+app.use('/api/v1/admin/shift-schedules', adminShiftSchedulesRoutes);
+app.use('/api/v1/admin/results', adminResultsRoutes);
 app.use('/api/v1/admin/salary-groups', adminSalaryGroupsRoutes);
 app.use('/api/v1/admin/feedback', adminFeedbackRoutes);
+app.use('/api/v1/admin/boards', adminBoardsRoutes);
 app.use('/api/v1/admin/cms', cmsRoutes);
 app.use('/api/v1/admin/sliders', slidersRoutes);
 app.use('/api/v1/admin/testimonials', testimonialsRoutes);
 app.use('/api/v1/admin/social', socialRoutes);
 app.use('/api/v1/admin/history', recentHistoryRoutes);
 app.use('/api/v1/superadmin', superadminUsersRoutes);
+app.use('/api/v1/admin/iot', adminIotRoutes);
+app.use('/api/v1/admin/flow-designs', adminFlowDesignsRoutes);
+app.use('/api/v1/admin/orders', adminOrdersRoutes);
 
 // 404
 app.use((req, res) => {

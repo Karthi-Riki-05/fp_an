@@ -2,11 +2,10 @@
 
 const { Router } = require('express');
 const { tenantMiddleware } = require('../middleware/tenant');
-const { requirePermission } = require('../middleware/requirePermission');
-const svc = require('../services/admin-parts.service');
+const svc = require('../services/admin-flow-designs.service');
 
 const router = Router();
-router.use(tenantMiddleware, requirePermission('manage-parts'));
+router.use(tenantMiddleware);
 
 router.get('/', async (req, res, next) => {
   try {
@@ -14,12 +13,8 @@ router.get('/', async (req, res, next) => {
       page: req.query.page ? Number(req.query.page) : undefined,
       perPage: req.query.perPage ? Number(req.query.perPage) : undefined,
       search: req.query.search,
-      name: req.query.name,
-      partNo: req.query.partNo,
-      typeId: req.query.typeId !== undefined ? Number(req.query.typeId) : undefined,
-      equipmentId: req.query.equipmentId !== undefined ? Number(req.query.equipmentId) : undefined,
-      sort: req.query.sort,
-      order: req.query.order,
+      status: req.query.status,
+      equipmentId: req.query.equipmentId ? Number(req.query.equipmentId) : undefined,
     };
     res.json(await svc.list(req.tenant, q));
   } catch (err) { next(err); }
@@ -31,6 +26,10 @@ router.get('/:id', async (req, res, next) => {
 
 router.post('/', async (req, res, next) => {
   try { res.status(201).json(await svc.create(req.tenant, req.body)); } catch (err) { next(err); }
+});
+
+router.patch('/:id/status', async (req, res, next) => {
+  try { res.json(await svc.patchStatus(req.tenant, Number(req.params.id))); } catch (err) { next(err); }
 });
 
 router.patch('/:id', async (req, res, next) => {

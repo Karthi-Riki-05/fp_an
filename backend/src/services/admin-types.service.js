@@ -11,7 +11,8 @@ async function list(tenant, q) {
   const filters = [];
   if (q.search) filters.push({ column: 'name', op: 'ILIKE', value: q.search });
   if (q.name) filters.push({ column: 'name', op: 'ILIKE', value: q.name });
-  if (q.entity) filters.push({ column: 'entity', op: '=', value: q.entity });
+  if (q.entity) filters.push({ column: 'entity', op: '=', value: q.entity, cast: '"tenant_template"."TypeEntity"' });
+  if (q.isActive !== undefined) filters.push({ column: 'is_active', op: '=', value: Boolean(q.isActive) });
   return tenantListPaginated({
     withTenant, tenant, table: TABLE, selectMap: SELECT_MAP,
     page: q.page ?? 1, perPage: q.perPage ?? 10, filters,
@@ -24,7 +25,7 @@ function findOne(tenant, id) {
 }
 
 async function create(tenant, dto) {
-  const rows = await withTenant(tenant.schemaName, (tx) =>
+  const rows = await withTenant(tenant, (tx) =>
     tx.$queryRawUnsafe(
       `INSERT INTO types (name, type, entity, description, icon, sort_order, is_active, created_at, updated_at)
        VALUES ($1, $2::"tenant_template"."TypeKind", $3::"tenant_template"."TypeEntity", $4, $5, $6, $7, now(), now())
@@ -49,7 +50,7 @@ async function update(tenant, id, dto) {
   if (sets.length === 0) return findOne(tenant, id);
   sets.push('updated_at = now()');
   values.push(id);
-  const rows = await withTenant(tenant.schemaName, (tx) =>
+  const rows = await withTenant(tenant, (tx) =>
     tx.$queryRawUnsafe(
       `UPDATE types SET ${sets.join(', ')} WHERE id = $${values.length} AND deleted_at IS NULL
        RETURNING id, name, type AS "kind", entity, description, icon, sort_order AS "sortOrder", is_active AS "isActive", created_at AS "createdAt"`,

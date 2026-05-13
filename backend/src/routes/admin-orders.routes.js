@@ -2,11 +2,10 @@
 
 const { Router } = require('express');
 const { tenantMiddleware } = require('../middleware/tenant');
-const { requirePermission } = require('../middleware/requirePermission');
-const svc = require('../services/admin-parts.service');
+const svc = require('../services/admin-orders.service');
 
 const router = Router();
-router.use(tenantMiddleware, requirePermission('manage-parts'));
+router.use(tenantMiddleware);
 
 router.get('/', async (req, res, next) => {
   try {
@@ -14,11 +13,11 @@ router.get('/', async (req, res, next) => {
       page: req.query.page ? Number(req.query.page) : undefined,
       perPage: req.query.perPage ? Number(req.query.perPage) : undefined,
       search: req.query.search,
-      name: req.query.name,
-      partNo: req.query.partNo,
-      typeId: req.query.typeId !== undefined ? Number(req.query.typeId) : undefined,
-      equipmentId: req.query.equipmentId !== undefined ? Number(req.query.equipmentId) : undefined,
-      sort: req.query.sort,
+      equipmentId: req.query.equipmentId,
+      flowId: req.query.flowId,
+      typeId: req.query.typeId,
+      partId: req.query.partId,
+      status: req.query.status,
       order: req.query.order,
     };
     res.json(await svc.list(req.tenant, q));

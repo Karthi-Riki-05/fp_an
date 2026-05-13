@@ -10,7 +10,18 @@ router.use(tenantMiddleware, requirePermission('manage-types'));
 
 router.get('/', async (req, res, next) => {
   try {
-    const q = { page: req.query.page ? Number(req.query.page) : undefined, perPage: req.query.perPage ? Number(req.query.perPage) : undefined, search: req.query.search, name: req.query.name, entity: req.query.entity, sort: req.query.sort, order: req.query.order };
+    const q = {
+      page: req.query.page ? Number(req.query.page) : undefined,
+      perPage: req.query.perPage ? Number(req.query.perPage) : undefined,
+      search: req.query.search,
+      name: req.query.name,
+      entity: req.query.entity,
+      isActive: req.query.isActive !== undefined
+        ? (req.query.isActive === 'true' || req.query.isActive === '1' || req.query.isActive === true)
+        : undefined,
+      sort: req.query.sort,
+      order: req.query.order,
+    };
     res.json(await svc.list(req.tenant, q));
   } catch (err) { next(err); }
 });

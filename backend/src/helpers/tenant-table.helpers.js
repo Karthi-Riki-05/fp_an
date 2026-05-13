@@ -30,7 +30,17 @@ async function tenantListPaginated({ prismaClient, withTenant, tenant, table, se
       whereParts.push(`${col} ILIKE $${params.length}`);
     } else {
       params.push(f.value);
-      whereParts.push(`${col} = $${params.length}`);
+      // Optional explicit cast for enum-typed columns (`f.cast = '"tenant_template"."TypeEntity"'`).
+      // The cast string is validated as a Postgres identifier with optional schema-qualifier
+      // and quotes, so it cannot be injected.
+      let castSuffix = '';
+      if (f.cast) {
+        if (!/^"?[A-Za-z_][A-Za-z0-9_]*"?(\."?[A-Za-z_][A-Za-z0-9_]*"?)?$/.test(f.cast)) {
+          throw new Error(`Unsafe SQL cast: ${f.cast}`);
+        }
+        castSuffix = `::${f.cast}`;
+      }
+      whereParts.push(`${col} = $${params.length}${castSuffix}`);
     }
   }
 
@@ -38,7 +48,7 @@ async function tenantListPaginated({ prismaClient, withTenant, tenant, table, se
   const orderCol = orderBy ? safeIdent(orderBy.column) : 'id';
   const orderDir = orderBy?.dir === 'asc' ? 'ASC' : 'DESC';
 
-  return withTenant(tenant.schemaName, async (tx) => {
+  return withTenant(tenant, async (tx) => {
     const data = await tx.$queryRawUnsafe(
       `SELECT ${select} FROM ${t} ${whereSql} ORDER BY ${orderCol} ${orderDir}, id ${orderDir} LIMIT ${perPage} OFFSET ${skip}`,
       ...params,
@@ -57,7 +67,7 @@ async function tenantFindOne({ withTenant, tenant, table, selectMap, id, softDel
     .map(([alias, col]) => `${safeIdent(col)} AS "${alias}"`)
     .join(', ');
   const filter = softDelete ? 'WHERE id = $1 AND deleted_at IS NULL' : 'WHERE id = $1';
-  const rows = await withTenant(tenant.schemaName, (tx) =>
+  const rows = await withTenant(tenant, (tx) =>
     tx.$queryRawUnsafe(`SELECT ${select} FROM ${t} ${filter}`, id),
   );
   if (!rows[0]) throw new NotFoundError('not-found');
@@ -72,7 +82,7 @@ async function tenantInsert({ withTenant, tenant, table, values, selectMap }) {
   const select = Object.entries(selectMap)
     .map(([alias, col]) => `${safeIdent(col)} AS "${alias}"`)
     .join(', ');
-  const rows = await withTenant(tenant.schemaName, (tx) =>
+  const rows = await withTenant(tenant, (tx) =>
     tx.$queryRawUnsafe(
       `INSERT INTO ${t} (${cols.join(', ')}, created_at, updated_at) VALUES (${placeholders}, now(), now()) RETURNING ${select}`,
       ...params,
@@ -96,7 +106,7 @@ async function tenantUpdate({ withTenant, tenant, table, id, values, selectMap, 
   const filter = softDelete
     ? `WHERE id = $${params.length} AND deleted_at IS NULL`
     : `WHERE id = $${params.length}`;
-  const rows = await withTenant(tenant.schemaName, (tx) =>
+  const rows = await withTenant(tenant, (tx) =>
     tx.$queryRawUnsafe(
       `UPDATE ${t} SET ${sets}, updated_at = now() ${filter} RETURNING ${select}`,
       ...params,
@@ -108,7 +118,7 @@ async function tenantUpdate({ withTenant, tenant, table, id, values, selectMap, 
 
 async function tenantSoftDelete({ withTenant, tenant, table, id }) {
   const t = safeIdent(table);
-  const result = await withTenant(tenant.schemaName, (tx) =>
+  const result = await withTenant(tenant, (tx) =>
     tx.$executeRawUnsafe(`UPDATE ${t} SET deleted_at = now() WHERE id = $1 AND deleted_at IS NULL`, id),
   );
   if (result === 0) throw new NotFoundError('not-found');
