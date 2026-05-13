@@ -42,8 +42,8 @@ async function listProduction(tenant, q) {
   const params = [];
   const where = ['pd.deleted_at IS NULL'];
 
-  if (q.from) { params.push(q.from); where.push(`pd.date >= $${params.length}`); }
-  if (q.to)   { params.push(q.to);   where.push(`pd.date <= $${params.length}`); }
+  if (q.from) { params.push(q.from); where.push(`pd.date >= $${params.length}::date`); }
+  if (q.to)   { params.push(q.to);   where.push(`pd.date <= $${params.length}::date`); }
 
   const { parts: fParts, params: fParams } = buildColumnFilters(q.filters, params.length + 1);
   params.push(...fParams);
@@ -59,9 +59,11 @@ async function listProduction(tenant, q) {
 
   return withTenant(tenant, async (tx) => {
     const data = await tx.$queryRawUnsafe(
-      `SELECT pd.id, fd.name AS "flowName", e.name AS "equipmentName",
-              p.part_no AS "partNumber", p.name AS "partName",
-              pd.work_shift_name AS "shiftName", pd.order_no AS "orderNo",
+      `SELECT pd.id, fd.name AS "flowName",
+              pd.flow_object_key AS "equipmentId", e.name AS "equipmentName",
+              pd.part_id AS "partId", p.part_no AS "partNumber", p.name AS "partName",
+              pd.work_shift_id AS "workShiftId", pd.work_shift_name AS "shiftName",
+              pd.order_no AS "orderNo",
               pd.work_hours AS "workedHours", pd.part_qty AS "okPartsQty",
               pd.planned_qty AS "plannedQty", pd.comment,
               pd.date AS "selectedDate", pd.created_at AS "createdAt",
@@ -94,8 +96,8 @@ async function listScrap(tenant, q) {
   const params = [];
   const where = ['sd.deleted_at IS NULL'];
 
-  if (q.from) { params.push(q.from); where.push(`sd.date >= $${params.length}`); }
-  if (q.to)   { params.push(q.to);   where.push(`sd.date <= $${params.length}`); }
+  if (q.from) { params.push(q.from); where.push(`sd.date >= $${params.length}::date`); }
+  if (q.to)   { params.push(q.to);   where.push(`sd.date <= $${params.length}::date`); }
 
   const { parts: fParts, params: fParams } = buildColumnFilters(q.filters, params.length + 1);
   params.push(...fParams);
@@ -107,16 +109,20 @@ async function listScrap(tenant, q) {
     LEFT JOIN flow_designs fd ON fd.id = sd.flow_id
     LEFT JOIN equipment e ON e.id = sd.flow_object_key
     LEFT JOIN parts p ON p.id = sd.part_id
-    LEFT JOIN types t ON t.id = sd.reason_type
+    LEFT JOIN types t ON t.id = sd.scrap_type_id
     LEFT JOIN scrap_reasons sr ON sr.id = sd.reason
     LEFT JOIN users u ON u.id = sd.created_by`;
 
   return withTenant(tenant, async (tx) => {
     const data = await tx.$queryRawUnsafe(
-      `SELECT sd.id, fd.name AS "flowName", e.name AS "equipmentName",
-              p.part_no AS "partNumber", p.name AS "partName",
-              sd.work_shift_name AS "shiftName", sd.order_no AS "orderNo",
-              sd.quantity, t.name AS "scrapType", sr.name AS "scrapReason",
+      `SELECT sd.id, fd.name AS "flowName",
+              sd.flow_object_key AS "equipmentId", e.name AS "equipmentName",
+              sd.part_id AS "partId", p.part_no AS "partNumber", p.name AS "partName",
+              sd.work_shift_id AS "workShiftId", sd.work_shift_name AS "shiftName",
+              sd.order_no AS "orderNo",
+              sd.quantity,
+              sd.scrap_type_id AS "scrapTypeId", t.name AS "scrapType",
+              sd.reason AS "reasonId", sr.name AS "scrapReason",
               sd.comment, sd.date AS "selectedDate", sd.created_at AS "createdAt",
               u.name AS "createdBy", sd.picture AS "attachment"
        FROM scrap_data sd
@@ -150,8 +156,8 @@ async function listStop(tenant, q) {
 
   if (!q.includeExcluded) where.push(`(t.exclude_type = false OR t.exclude_type IS NULL)`);
 
-  if (q.from) { params.push(q.from); where.push(`sd.date >= $${params.length}`); }
-  if (q.to)   { params.push(q.to);   where.push(`sd.date <= $${params.length}`); }
+  if (q.from) { params.push(q.from); where.push(`sd.date >= $${params.length}::date`); }
+  if (q.to)   { params.push(q.to);   where.push(`sd.date <= $${params.length}::date`); }
 
   const { parts: fParts, params: fParams } = buildColumnFilters(q.filters, params.length + 1);
   params.push(...fParams);
@@ -163,18 +169,21 @@ async function listStop(tenant, q) {
     LEFT JOIN flow_designs fd ON fd.id = sd.flow_id
     LEFT JOIN equipment e ON e.id = sd.flow_object_key
     LEFT JOIN parts p ON p.id = sd.part_id
-    LEFT JOIN types t ON t.id = sd.reason_type
+    LEFT JOIN types t ON t.id = sd.stop_type_id
     LEFT JOIN stop_reasons sr ON sr.id = sd.reason
     LEFT JOIN users u ON u.id = sd.created_by`;
 
   return withTenant(tenant, async (tx) => {
     const data = await tx.$queryRawUnsafe(
-      `SELECT sd.id, fd.name AS "flowName", e.name AS "equipmentName",
-              p.part_no AS "partNumber", p.name AS "partName",
-              sd.work_shift_name AS "shiftName", sd.order_no AS "orderNo",
+      `SELECT sd.id, fd.name AS "flowName",
+              sd.flow_object_key AS "equipmentId", e.name AS "equipmentName",
+              sd.part_id AS "partId", p.part_no AS "partNumber", p.name AS "partName",
+              sd.work_shift_id AS "workShiftId", sd.work_shift_name AS "shiftName",
+              sd.order_no AS "orderNo",
               sd.quantity, sd.time, sd.sum_of_time AS "sumOfTime",
-              t.type AS "lossCategory", t.name AS "stopType",
-              sr.name AS "stopReason", sd.comment,
+              sd.hours, sd.minutes,
+              sd.stop_type_id AS "stopTypeId", t.type AS "lossCategory", t.name AS "stopType",
+              sd.reason AS "reasonId", sr.name AS "stopReason", sd.comment,
               sd.date AS "selectedDate",
               sd.stop_timestamp AS "stopTimestamp",
               sd.restart_timestamp AS "restartTimestamp",

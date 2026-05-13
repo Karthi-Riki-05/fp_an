@@ -10,7 +10,7 @@ router.use(tenantMiddleware, requirePermission('manage-scrap-reasons'));
 
 router.get('/', async (req, res, next) => {
   try {
-    const q = { page: req.query.page ? Number(req.query.page) : undefined, perPage: req.query.perPage ? Number(req.query.perPage) : undefined, search: req.query.search, name: req.query.name, sort: req.query.sort, order: req.query.order };
+    const q = { page: req.query.page ? Number(req.query.page) : undefined, perPage: req.query.perPage ? Number(req.query.perPage) : undefined, search: req.query.search, name: req.query.name, typeId: req.query.typeId !== undefined ? Number(req.query.typeId) : undefined, sort: req.query.sort, order: req.query.order };
     res.json(await svc.list(req.tenant, q));
   } catch (err) { next(err); }
 });

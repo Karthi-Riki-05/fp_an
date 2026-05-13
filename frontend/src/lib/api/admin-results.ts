@@ -26,18 +26,46 @@ export interface BaseListParams {
 export interface ProductionRow {
   id: number;
   flowName: string | null;
+  equipmentId: number | null;
   equipmentName: string | null;
+  partId: number | null;
   partNumber: string | null;
   partName: string | null;
+  workShiftId: number | null;
   shiftName: string | null;
   orderNo: string | null;
-  workedHours: number | null;
+  workedHours: string | number | null;
   okPartsQty: number | null;
   plannedQty: number | null;
   comment: string | null;
   selectedDate: string | null;
   createdAt: string | null;
   createdBy: string | null;
+}
+
+export interface UpdateProductionInput {
+  partId?: number;
+  workShiftId?: number;
+  workShiftName?: string;
+  orderNo?: string;
+  workHours?: string;
+  partQty?: number;
+  plannedQty?: number;
+  comment?: string;
+  date?: string;
+}
+
+export function useUpdateProduction(tenantId: number | null | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, input }: { id: number; input: UpdateProductionInput }) =>
+      (
+        await apiClient.patch<ProductionRow>(`/admin/results/production/${id}`, input, {
+          headers: tenantId ? { 'X-Tenant-Id': String(tenantId) } : {},
+        })
+      ).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'results', 'production', tenantId] }),
+  });
 }
 
 export function useProductionList(tenantId: number | null | undefined, params: BaseListParams) {
@@ -62,19 +90,49 @@ export function useProductionList(tenantId: number | null | undefined, params: B
 export interface ScrapRow {
   id: number;
   flowName: string | null;
+  equipmentId: number | null;
   equipmentName: string | null;
+  partId: number | null;
   partNumber: string | null;
   partName: string | null;
+  workShiftId: number | null;
   shiftName: string | null;
   orderNo: string | null;
   quantity: number | null;
+  scrapTypeId: number | null;
   scrapType: string | null;
+  reasonId: number | null;
   scrapReason: string | null;
   comment: string | null;
   selectedDate: string | null;
   createdAt: string | null;
   createdBy: string | null;
   attachment: string | null;
+}
+
+export interface UpdateScrapInput {
+  partId?: number;
+  workShiftId?: number;
+  workShiftName?: string;
+  scrapTypeId?: number;
+  reasonId?: number;
+  orderNo?: string;
+  quantity?: number;
+  comment?: string;
+  date?: string;
+}
+
+export function useUpdateScrap(tenantId: number | null | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, input }: { id: number; input: UpdateScrapInput }) =>
+      (
+        await apiClient.patch<ScrapRow>(`/admin/results/scrap/${id}`, input, {
+          headers: tenantId ? { 'X-Tenant-Id': String(tenantId) } : {},
+        })
+      ).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'results', 'scrap', tenantId] }),
+  });
 }
 
 export function useScrapList(tenantId: number | null | undefined, params: BaseListParams) {
@@ -99,16 +157,23 @@ export function useScrapList(tenantId: number | null | undefined, params: BaseLi
 export interface StopRow {
   id: number;
   flowName: string | null;
+  equipmentId: number | null;
   equipmentName: string | null;
+  partId: number | null;
   partNumber: string | null;
   partName: string | null;
+  workShiftId: number | null;
   shiftName: string | null;
   orderNo: string | null;
   quantity: number | null;
-  time: number | null;
+  time: string | null;
   sumOfTime: number | null;
+  hours: number | null;
+  minutes: number | null;
+  stopTypeId: number | null;
   lossCategory: string | null;
   stopType: string | null;
+  reasonId: number | null;
   stopReason: string | null;
   comment: string | null;
   selectedDate: string | null;
@@ -117,6 +182,33 @@ export interface StopRow {
   createdAt: string | null;
   createdBy: string | null;
   attachment: string | null;
+}
+
+export interface UpdateStopInput {
+  partId?: number;
+  workShiftId?: number;
+  workShiftName?: string;
+  stopTypeId?: number;
+  reasonId?: number;
+  orderNo?: string;
+  quantity?: number;
+  /** Total minutes — backend splits into hours/minutes/sum_of_time/time. */
+  timeMinutes?: number;
+  comment?: string;
+  date?: string;
+}
+
+export function useUpdateStop(tenantId: number | null | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, input }: { id: number; input: UpdateStopInput }) =>
+      (
+        await apiClient.patch<StopRow>(`/admin/results/stop/${id}`, input, {
+          headers: tenantId ? { 'X-Tenant-Id': String(tenantId) } : {},
+        })
+      ).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin', 'results', 'stop', tenantId] }),
+  });
 }
 
 export interface StopListParams extends BaseListParams {

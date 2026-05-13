@@ -475,6 +475,8 @@ export default function EquipmentListPage() {
                 {
                   key: 'properties',
                   label: 'Properties',
+                  // TODO Phase C1b: per-part properties editor — needs equipment_properties
+                  // bulk endpoint. See DROPDOWN_AUDIT.md C1 section.
                   children: (
                     <Alert
                       type="info"
