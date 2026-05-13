@@ -47,6 +47,7 @@ const adminFoldersRoutes = require('./routes/admin-folders.routes');
 const adminMachinesRoutes = require('./routes/admin-machines.routes');
 const adminMachineFilesRoutes = require('./routes/admin-machine-files.routes');
 const adminMachineProgrammesRoutes = require('./routes/admin-machine-programmes.routes');
+const adminWorkstationsRoutes = require('./routes/admin-workstations.routes');
 
 const app = express();
 
@@ -146,6 +147,7 @@ app.use('/api/v1/admin/folders', adminFoldersRoutes);
 app.use('/api/v1/admin/machines', adminMachinesRoutes);
 app.use('/api/v1/admin/machine-files', adminMachineFilesRoutes);
 app.use('/api/v1/admin/machine-programmes', adminMachineProgrammesRoutes);
+app.use('/api/v1/admin/workstations', adminWorkstationsRoutes);
 
 // 404
 app.use((req, res) => {
