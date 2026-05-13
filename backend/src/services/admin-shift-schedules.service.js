@@ -38,10 +38,12 @@ async function findOne(tenant, id) {
 }
 
 async function create(tenant, dto) {
+  // Note: DB column `shift_schedules.status` is BOOLEAN despite the Prisma
+  // schema declaring it `Int`. Cast literal accordingly to avoid 42804.
   const rows = await withTenant(tenant, (tx) =>
     tx.$queryRawUnsafe(
       `INSERT INTO shift_schedules (title, description, status, created_at, updated_at)
-       VALUES ($1, $2, 1, now(), now()) RETURNING ${SELECT}`,
+       VALUES ($1, $2, true, now(), now()) RETURNING ${SELECT}`,
       dto.name, dto.description ?? null,
     ),
   );
@@ -70,7 +72,7 @@ async function update(tenant, id, dto) {
 async function patchStatus(tenant, id) {
   const rows = await withTenant(tenant, (tx) =>
     tx.$queryRawUnsafe(
-      `UPDATE shift_schedules SET status = CASE WHEN status = 1 THEN 0 ELSE 1 END, updated_at = now()
+      `UPDATE shift_schedules SET status = NOT status, updated_at = now()
        WHERE id = $1 AND deleted_at IS NULL RETURNING id, status`,
       id,
     ),
@@ -93,21 +95,21 @@ async function getEvents(tenant, scheduleId, start, end) {
   return withTenant(tenant, async (tx) => {
     const nonRecurring = await tx.$queryRawUnsafe(
       `SELECT id, title, start::text AS start, "end"::text AS end,
-              "textColor", "backgroundColor", is_reccuring AS "isRecurring",
+              text_color AS "textColor", background_color AS "backgroundColor", is_recurring AS "isRecurring",
               parent_id AS "parentId", rc_data AS "rcData"
        FROM shift_schedule_data
-       WHERE schedule_id = $1 AND is_reccuring = false AND parent_id = 0
-         AND start >= $2 AND start <= $3`,
+       WHERE schedule_id = $1 AND is_recurring = false AND parent_id = 0
+         AND start >= $2::timestamptz AND start <= $3::timestamptz`,
       scheduleId, start, end,
     );
 
     const recurring = await tx.$queryRawUnsafe(
       `SELECT id, title, start::text AS start, "end"::text AS end,
-              "textColor", "backgroundColor", is_reccuring AS "isRecurring",
+              text_color AS "textColor", background_color AS "backgroundColor", is_recurring AS "isRecurring",
               parent_id AS "parentId", rc_data AS "rcData"
        FROM shift_schedule_data
-       WHERE schedule_id = $1 AND is_reccuring = true AND parent_id = 0
-         AND start <= $3`,
+       WHERE schedule_id = $1 AND is_recurring = true AND parent_id = 0
+         AND start <= $2::timestamptz`,
       scheduleId, end,
     );
 
@@ -157,7 +159,7 @@ async function getEvents(tenant, scheduleId, start, end) {
 async function createEvent(tenant, scheduleId, dto) {
   const rows = await withTenant(tenant, (tx) =>
     tx.$queryRawUnsafe(
-      `INSERT INTO shift_schedule_data (schedule_id, title, start, "end", "textColor", "backgroundColor", is_reccuring, parent_id, rc_data, created_at, updated_at)
+      `INSERT INTO shift_schedule_data (schedule_id, title, start, "end", text_color, background_color, is_recurring, parent_id, rc_data, created_at, updated_at)
        VALUES ($1, $2, $3::timestamp, $4::timestamp, $5, $6, $7, 0, $8, now(), now())
        RETURNING id, title, start::text, "end"::text`,
       scheduleId, dto.title, dto.start, dto.end,
@@ -200,7 +202,7 @@ async function getTitlesForEquipment(tenant, equipmentId, dateStr) {
       `SELECT id, title, start::text AS start, "end"::text AS end, schedule_id AS "scheduleId"
        FROM shift_schedule_data
        WHERE schedule_id = ANY($1::int[])
-         AND is_reccuring = false
+         AND is_recurring = false
          AND parent_id = 0
          AND start::date = $2::date`,
       scheduleIds, dateStr,
@@ -211,7 +213,7 @@ async function getTitlesForEquipment(tenant, equipmentId, dateStr) {
               schedule_id AS "scheduleId"
        FROM shift_schedule_data
        WHERE schedule_id = ANY($1::int[])
-         AND is_reccuring = true
+         AND is_recurring = true
          AND parent_id = 0
          AND start::date <= $2::date`,
       scheduleIds, dateStr,
