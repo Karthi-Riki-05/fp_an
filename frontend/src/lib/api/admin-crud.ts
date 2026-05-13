@@ -137,6 +137,9 @@ export type ScrapReasonUpdate = StopReasonUpdate;
 export type AdminTypeCreate = { name: string; kind?: string; entity?: string; description?: string; icon?: string; sortOrder?: number; isActive?: boolean; excludeType?: boolean };
 export type StopCategoryCreate = { name: string; kind?: string; description?: string; icon?: string; isActive?: boolean };
 export type StopCategoryUpdate = Partial<StopCategoryCreate>;
+export interface SymbolRow { id: number; name: string; image: string | null; status: number; sortOrder: number; createdAt: string | null }
+export type SymbolCreate = { name: string; image?: string; status?: number; sortOrder?: number };
+export type SymbolUpdate = Partial<SymbolCreate>;
 export type AdminTypeUpdate = Partial<AdminTypeCreate>;
 export type PartCreate = { name: string; partNo?: string; description?: string; typeId?: number; purchasePrice?: number; salesPrice?: number; sortOrder?: number };
 export type PartUpdate = Partial<PartCreate>;
@@ -159,4 +162,5 @@ export const typesApi        = makeAdminCrud<AdminTypeRow,   AdminTypeCreate,   
 export const partsApi        = makeAdminCrud<PartRow,        PartCreate,        PartUpdate,        BaseListParams & { partNo?: string }>('parts');
 export const workShiftsApi   = makeAdminCrud<WorkShiftRow,   WorkShiftCreate,   WorkShiftUpdate,   BaseListParams>('work-shifts');
 export const stopCategoriesApi = makeAdminCrud<StopCategoryRow, StopCategoryCreate, StopCategoryUpdate, BaseListParams>('stop-categories');
+export const symbolsApi        = makeAdminCrud<SymbolRow,        SymbolCreate,        SymbolUpdate,        BaseListParams>('symbols');
 // feedbackApi removed in Phase 4b — see lib/api/feedback.ts.
