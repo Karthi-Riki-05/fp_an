@@ -49,6 +49,35 @@ async function updateSettings(tenant, id, dto) {
   if (dto.filterTimeOn !== undefined) push('filter_time_on = $?', Number(dto.filterTimeOn));
   if (dto.customNotificationText !== undefined) push('custom_notification_text = $?', dto.customNotificationText);
   if (dto.notificationDefault !== undefined) push('notification_default = $?', Boolean(dto.notificationDefault));
+  if (dto.logWarning !== undefined) push('log_warning = $?', Boolean(dto.logWarning));
+  if (dto.isAutoRegistered !== undefined) {
+    // Schema stores 'yes' / 'no' in a VARCHAR(3). Accept booleans for callers.
+    const v = typeof dto.isAutoRegistered === 'boolean'
+      ? (dto.isAutoRegistered ? 'yes' : 'no')
+      : String(dto.isAutoRegistered);
+    push('is_auto_registered = $?', v);
+  }
+
+  // `auto_registered_data` is a JSON blob; we merge a single key
+  // (`time_limit`) without disturbing other producers writing to it.
+  if (dto.autoStopTimeLimit !== undefined) {
+    await withTenant(tenant, async (tx) => {
+      const cur = await tx.$queryRawUnsafe(
+        `SELECT auto_registered_data FROM machines WHERE id = $1`, id,
+      );
+      let parsed = {};
+      const raw = cur[0]?.auto_registered_data;
+      if (raw) {
+        try { parsed = typeof raw === 'string' ? JSON.parse(raw) : raw; } catch { parsed = {}; }
+      }
+      const merged = { ...parsed, time_limit: Number(dto.autoStopTimeLimit) };
+      await tx.$executeRawUnsafe(
+        `UPDATE machines SET auto_registered_data = $1, updated_at = now() WHERE id = $2`,
+        JSON.stringify(merged), id,
+      );
+    });
+  }
+
   if (sets.length === 0) return;
   sets.push('updated_at = now()');
   vals.push(id);
