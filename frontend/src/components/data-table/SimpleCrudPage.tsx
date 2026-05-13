@@ -1,7 +1,7 @@
 'use client';
 
 import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined } from '@ant-design/icons';
-import { App, Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Switch, Tooltip } from 'antd';
+import { App, Button, Checkbox, Form, Input, InputNumber, Modal, Popconfirm, Select, Switch, Tooltip } from 'antd';
 import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { toApiError } from '../../lib/api-client';
 import {
@@ -23,6 +23,25 @@ export type SimpleField =
       type: 'select';
       required?: boolean;
       options: Array<{ value: string | number; label: string }>;
+    }
+  | {
+      /**
+       * Multi-select rendered as a Checkbox.Group. The form value is an
+       * array of option values on the wire; `toFormValues`/submit handlers
+       * may serialise to/from a CSV string when the backend column requires
+       * one (e.g. `work_shifts.working_days` stores "1,2,3,4,5").
+       */
+      name: string;
+      label: string;
+      type: 'checkbox-group';
+      required?: boolean;
+      options: Array<{ value: string | number; label: string }>;
+      /**
+       * Optional: when present, the field value is serialised to/from a
+       * delimited string on submit/load. Used for backends that store the
+       * selection in a single text column.
+       */
+      csv?: { separator?: string };
     };
 
 export interface SimpleCrudPageProps<TRow extends { id: number }> {
@@ -98,12 +117,23 @@ export function SimpleCrudPage<TRow extends { id: number }>(props: SimpleCrudPag
   const onSubmit = async () => {
     try {
       const values = await form.validateFields();
+      // Serialise CSV-backed checkbox-group fields into a single string,
+      // matching the backend column shape.
+      const payload: Record<string, unknown> = { ...values };
+      for (const f of fields) {
+        if (f.type === 'checkbox-group' && f.csv) {
+          const arr = payload[f.name];
+          if (Array.isArray(arr)) {
+            payload[f.name] = arr.join(f.csv.separator ?? ',');
+          }
+        }
+      }
       setSubmitting(true);
       if (isEdit && editing) {
-        await update.mutateAsync({ id: editing.id, input: values });
+        await update.mutateAsync({ id: editing.id, input: payload });
         message.success(`${resourceLabel} updated.`);
       } else {
-        await create.mutateAsync(values);
+        await create.mutateAsync(payload);
         message.success(`${resourceLabel} created.`);
       }
       closeModal();
@@ -239,6 +269,8 @@ function renderField(f: SimpleField): ReactNode {
       return <Switch />;
     case 'select':
       return <Select options={f.options} allowClear />;
+    case 'checkbox-group':
+      return <Checkbox.Group options={f.options} />;
   }
 }
 
@@ -251,6 +283,14 @@ function fieldRules(f: SimpleField) {
     rules.push({
       pattern: /^([01]\d|2[0-3]):[0-5]\d$/,
       message: 'Use HH:MM (24-hour)',
+    });
+  }
+  if (f.type === 'checkbox-group' && f.required) {
+    rules.push({
+      validator: (_: unknown, value: unknown) =>
+        Array.isArray(value) && value.length > 0
+          ? Promise.resolve()
+          : Promise.reject(new Error(`${f.label} is required`)),
     });
   }
   return rules;
