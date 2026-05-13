@@ -337,7 +337,11 @@ model Tenant {
   id          Int          @id @default(autoincrement())
   slug        String       @unique @db.VarChar(255)
   name        String       @db.VarChar(255)
+  // schemaName: used when the company data lives as a schema inside fp_analyzer (legacy approach).
+  // dbName: used when the company has its own separate PostgreSQL database on the same server.
+  // One of these will be set depending on how the company was provisioned.
   schemaName  String       @unique @map("schema_name") @db.VarChar(63)
+  dbName      String?      @unique @map("db_name") @db.VarChar(63)
   timezone    String       @default("Europe/Stockholm") @db.VarChar(64)
   status      TenantStatus @default(active)
   primaryUserId Int?       @map("primary_user_id")
@@ -1509,14 +1513,20 @@ model SalaryGroup {
 // (Per Gap 5 of SUPER_ADMIN_PORT.md.)
 
 model Symbol {
-  id        Int      @id @default(autoincrement())
-  name      String   @db.VarChar(255)
-  image     String?  @db.VarChar(255)
-  status    Int      @default(1) @db.SmallInt
-  sortOrder Int      @default(0) @map("sort_order")
-  legacyId  BigInt?  @unique @map("legacy_id")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(255)
+  // Legacy `type` Select: 13 hardcoded values (Company/Department/Machining/
+  // Line/LinePosition/Machine/Assembly/MachineStation/BackupFiles/Folder/
+  // Manuals/Drawings/Programs). Kept as VarChar(100) rather than an enum
+  // so legacy data can round-trip without a value mapping pass.
+  kind        String?  @db.VarChar(100)
+  description String?  @db.Text
+  image       String?  @db.VarChar(255)
+  status      Int      @default(1) @db.SmallInt
+  sortOrder   Int      @default(0) @map("sort_order")
+  legacyId    BigInt?  @unique @map("legacy_id")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   @@map("symbols")
   @@schema("tenant_template")
