@@ -112,6 +112,9 @@ export interface AdminTypeRow {
   excludeType: boolean;
   createdAt: string;
 }
+export interface StopCategoryRow {
+  id: number; name: string | null; kind: string; description: string | null; icon: string | null; isActive: boolean; createdAt: string | null;
+}
 export interface PartRow {
   id: number; name: string; partNo: string; description: string | null;
   typeId: number; purchasePrice: string; salesPrice: string; sortOrder: number; createdAt: string;
@@ -132,6 +135,8 @@ export type StopReasonUpdate = Partial<StopReasonCreate>;
 export type ScrapReasonCreate = StopReasonCreate;
 export type ScrapReasonUpdate = StopReasonUpdate;
 export type AdminTypeCreate = { name: string; kind?: string; entity?: string; description?: string; icon?: string; sortOrder?: number; isActive?: boolean; excludeType?: boolean };
+export type StopCategoryCreate = { name: string; kind?: string; description?: string; icon?: string; isActive?: boolean };
+export type StopCategoryUpdate = Partial<StopCategoryCreate>;
 export type AdminTypeUpdate = Partial<AdminTypeCreate>;
 export type PartCreate = { name: string; partNo?: string; description?: string; typeId?: number; purchasePrice?: number; salesPrice?: number; sortOrder?: number };
 export type PartUpdate = Partial<PartCreate>;
@@ -153,4 +158,5 @@ export const scrapReasonsApi = makeAdminCrud<ScrapReasonRow, ScrapReasonCreate, 
 export const typesApi        = makeAdminCrud<AdminTypeRow,   AdminTypeCreate,   AdminTypeUpdate,   BaseListParams & { entity?: string }>('types');
 export const partsApi        = makeAdminCrud<PartRow,        PartCreate,        PartUpdate,        BaseListParams & { partNo?: string }>('parts');
 export const workShiftsApi   = makeAdminCrud<WorkShiftRow,   WorkShiftCreate,   WorkShiftUpdate,   BaseListParams>('work-shifts');
+export const stopCategoriesApi = makeAdminCrud<StopCategoryRow, StopCategoryCreate, StopCategoryUpdate, BaseListParams>('stop-categories');
 // feedbackApi removed in Phase 4b — see lib/api/feedback.ts.
