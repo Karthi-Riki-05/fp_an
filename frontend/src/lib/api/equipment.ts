@@ -136,6 +136,32 @@ export function useEquipmentTree(tenantId: number | null) {
   });
 }
 
+// ─── Tree reorder ──────────────────────────────────────────────────────────
+
+export interface ReorderItem {
+  id: number;
+  parentId: number | null;
+  sortOrder: number;
+}
+
+export function useReorderEquipment(tenantId: number | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (items: ReorderItem[]) => {
+      const { data } = await apiClient.post<{ updated: number }>(
+        '/equipment/reorder',
+        { items },
+        { headers: tenantHeaders(tenantId) },
+      );
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: EQUIPMENT_TREE_KEY(tenantId) });
+      qc.invalidateQueries({ queryKey: EQUIPMENT_KEY(tenantId) });
+    },
+  });
+}
+
 // ─── Equipment Properties (per-Part-Type) ──────────────────────────────────
 
 export interface EquipmentPropertyRow {

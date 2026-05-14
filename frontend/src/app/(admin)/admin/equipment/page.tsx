@@ -32,7 +32,8 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 import { apiClient, toApiError } from '../../../../lib/api-client';
 import { useMe } from '../../../../lib/api/auth';
 import {
@@ -96,6 +97,37 @@ export default function EquipmentListPage() {
   const [viewMode, setViewMode] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form] = Form.useForm<EquipmentFormValues>();
+
+  // Honor ?openEdit=<id> and ?openAdd=<parentId> deep links from the tree page.
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  useEffect(() => {
+    const editId = searchParams.get('openEdit');
+    const addParent = searchParams.get('openAdd');
+    if (editId) {
+      setEditingId(Number(editId));
+      setViewMode(false);
+      setModalOpen(true);
+    } else if (addParent !== null) {
+      // Open Add with parentId preloaded via the form's initialValues by
+      // briefly stashing it. The form's parentId Form.Item picks it up
+      // because the Add modal renders with editingId=null + DEFAULT_VALUES.
+      setEditingId(null);
+      setViewMode(false);
+      setModalOpen(true);
+      // After the modal opens, set parentId; safe because the Equipment tab
+      // form is mounted by then.
+      const pid = Number(addParent);
+      setTimeout(() => {
+        form.setFieldValue('parentId', pid > 0 ? pid : undefined);
+      }, 0);
+    }
+    if (editId || addParent !== null) {
+      // Strip the query params so a refresh doesn't re-open the modal.
+      router.replace('/admin/equipment');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Data ───────────────────────────────────────────────────────────────────
   const { data: equipmentRows, isLoading: rowsLoading } = useEquipmentList(tenantId);
