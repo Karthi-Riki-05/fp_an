@@ -1,7 +1,7 @@
 'use client';
 
 import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined } from '@ant-design/icons';
-import { App, Button, Checkbox, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Tooltip, Upload } from 'antd';
+import { App, Button, Checkbox, Descriptions, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Tag, Tooltip, Typography, Upload } from 'antd';
 import { ReactNode, useMemo, useState } from 'react';
 import IconLibraryModal from '../shared/IconLibraryModal';
 import { uploadIcon } from '../../lib/api/icons';
@@ -254,7 +254,7 @@ export function SimpleCrudPage<TRow extends { id: number }>(props: SimpleCrudPag
       <Modal
         open={modalOpen}
         title={
-          isView ? `View ${resourceLabel}` : isEdit ? `Edit ${resourceLabel}` : `Add ${resourceLabel}`
+          isView ? `${resourceLabel} details` : isEdit ? `Edit ${resourceLabel}` : `Add ${resourceLabel}`
         }
         onCancel={closeModal}
         onOk={isView ? closeModal : onSubmit}
@@ -263,17 +263,20 @@ export function SimpleCrudPage<TRow extends { id: number }>(props: SimpleCrudPag
         confirmLoading={submitting}
         destroyOnClose
         maskClosable={false}
-        width={520}
+        width={isView ? 560 : 520}
       >
-        <Form
-          form={form}
-          layout="vertical"
-          preserve={false}
-          initialValues={initialValues}
-          disabled={isView}
-        >
-          <ConditionalFields form={form} fields={fields} />
-        </Form>
+        {isView && viewing ? (
+          <DetailsView row={viewing} fields={fields} toFormValues={props.toFormValues} />
+        ) : (
+          <Form
+            form={form}
+            layout="vertical"
+            preserve={false}
+            initialValues={initialValues}
+          >
+            <ConditionalFields form={form} fields={fields} />
+          </Form>
+        )}
       </Modal>
     </>
   );
@@ -397,6 +400,94 @@ function IconPickerInput({ value, onChange }: { value?: string; onChange?: (v: s
       />
     </>
   );
+}
+
+/**
+ * Read-only details panel rendered by the View action. Uses AntD
+ * `Descriptions` for a clean label/value layout instead of disabled form
+ * inputs. Honors `visibleWhen` so conditional fields (e.g. kind for
+ * Stop/Scrap) don't display blank rows on entities that don't use them.
+ */
+function DetailsView<TRow extends { id: number }>({
+  row,
+  fields,
+  toFormValues,
+}: {
+  row: TRow;
+  fields: SimpleField[];
+  toFormValues?: (row: TRow) => Record<string, unknown>;
+}) {
+  const values = toFormValues ? toFormValues(row) : (row as unknown as Record<string, unknown>);
+  const visibleFields = fields.filter((f) => !f.visibleWhen || f.visibleWhen(values));
+
+  return (
+    <Descriptions
+      bordered
+      column={1}
+      size="small"
+      labelStyle={{ width: 160, background: '#fafafa', fontWeight: 500 }}
+    >
+      {visibleFields.map((f) => (
+        <Descriptions.Item key={f.name} label={f.label}>
+          {renderDetailValue(f, values[f.name], values)}
+        </Descriptions.Item>
+      ))}
+    </Descriptions>
+  );
+}
+
+function renderDetailValue(
+  field: SimpleField,
+  value: unknown,
+  allValues: Record<string, unknown>,
+): ReactNode {
+  if (value === null || value === undefined || value === '') {
+    return <Typography.Text type="secondary">—</Typography.Text>;
+  }
+  switch (field.type) {
+    case 'switch':
+      return <Tag color={value ? 'green' : 'default'}>{value ? 'Yes' : 'No'}</Tag>;
+    case 'select': {
+      const options = field.optionsWhen ? field.optionsWhen(allValues) : field.options;
+      const match = options.find((o) => o.value === value);
+      return match ? <Tag color="blue">{match.label}</Tag> : <span>{String(value)}</span>;
+    }
+    case 'checkbox-group': {
+      const arr = Array.isArray(value)
+        ? value
+        : typeof value === 'string'
+          ? value.split(field.csv?.separator ?? ',')
+          : [];
+      return (
+        <Space wrap size={4}>
+          {arr.map((v) => {
+            const match = field.options.find((o) => String(o.value) === String(v));
+            return <Tag key={String(v)}>{match?.label ?? String(v)}</Tag>;
+          })}
+        </Space>
+      );
+    }
+    case 'icon-picker':
+      return (
+        <Space size={8}>
+          <img
+            src={`/equipment-icons/${value}`}
+            alt={String(value)}
+            width={32}
+            height={32}
+            style={{ objectFit: 'contain' }}
+          />
+          <Typography.Text>{String(value)}</Typography.Text>
+        </Space>
+      );
+    case 'textarea':
+      return <Typography.Paragraph style={{ marginBottom: 0, whiteSpace: 'pre-wrap' }}>{String(value)}</Typography.Paragraph>;
+    case 'number':
+    case 'text':
+    case 'time':
+    default:
+      return <Typography.Text>{String(value)}</Typography.Text>;
+  }
 }
 
 function fieldRules(f: SimpleField) {

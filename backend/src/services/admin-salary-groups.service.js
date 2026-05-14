@@ -21,14 +21,26 @@ function findOne(tenant, id) {
   return tenantFindOne({ withTenant, tenant, table: TABLE, selectMap: SELECT_MAP, id });
 }
 
+// hourly_rate is numeric(10,0) in Postgres — coerce strings to numbers so a
+// JSON body of {"hourlyRate":"12"} doesn't blow up with "expression is of
+// type text".
+function toNumberOrZero(v) {
+  if (v === '' || v === null || v === undefined) return 0;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
 function create(tenant, dto) {
-  return tenantInsert({ withTenant, tenant, table: TABLE, selectMap: SELECT_MAP, values: { name: dto.name, hourly_rate: dto.hourlyRate, info: dto.info ?? '' } });
+  return tenantInsert({
+    withTenant, tenant, table: TABLE, selectMap: SELECT_MAP,
+    values: { name: dto.name, hourly_rate: toNumberOrZero(dto.hourlyRate), info: dto.info ?? '' },
+  });
 }
 
 function update(tenant, id, dto) {
   const values = {};
   if (dto.name !== undefined) values.name = dto.name;
-  if (dto.hourlyRate !== undefined) values.hourly_rate = dto.hourlyRate;
+  if (dto.hourlyRate !== undefined) values.hourly_rate = toNumberOrZero(dto.hourlyRate);
   if (dto.info !== undefined) values.info = dto.info;
   return tenantUpdate({ withTenant, tenant, table: TABLE, selectMap: SELECT_MAP, id, values });
 }
