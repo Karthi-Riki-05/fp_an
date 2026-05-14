@@ -131,6 +131,30 @@ export function useCreateAdminUser(scope: TenantScope) {
   });
 }
 
+/** Company-Admin sub-user create. POSTs /api/v1/company/users — no X-Tenant-Id needed. */
+export function useCreateCompanyUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: CreateAdminUserInput) => {
+      const { data } = await apiClient.post<AdminUser>('/company/users', input);
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-users'] }),
+  });
+}
+
+/** Company-Admin sub-user update. PATCHes /api/v1/company/users/:id. */
+export function useUpdateCompanyUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, input }: { id: number; input: UpdateAdminUserInput }) => {
+      const { data } = await apiClient.patch<AdminUser>(`/company/users/${id}`, input);
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-users'] }),
+  });
+}
+
 export function useUpdateAdminUser(scope: TenantScope) {
   const qc = useQueryClient();
   return useMutation({

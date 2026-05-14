@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { App, Checkbox, Input, Modal, Space } from 'antd';
+import { App, Checkbox, Input, InputNumber, Modal, Radio, Space } from 'antd';
 import { useEffect } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -11,8 +11,11 @@ import {
   TenantScope,
   UpdateAdminUserInput,
   useCreateAdminUser,
+  useCreateCompanyUser,
   useUpdateAdminUser,
+  useUpdateCompanyUser,
 } from '../../../../../lib/api/admin-users';
+import { useMe } from '../../../../../lib/api/auth';
 import type { AdminUser } from '../../../../../lib/api/types';
 
 interface Props {
@@ -31,6 +34,8 @@ const baseSchema = {
   lastName: z.string().trim().max(255).optional(),
   confirmed: z.boolean().optional(),
   active: z.boolean().optional(),
+  role: z.enum(['User', 'Admin']).optional(),
+  sessionTimeout: z.number().int().min(1).max(1440).optional(),
 };
 
 const createSchema = z.object({
@@ -52,8 +57,18 @@ type FormValues = z.infer<typeof createSchema>;
 export function UserFormModal({ open, onClose, user, scope }: Props) {
   const isEdit = Boolean(user);
   const { message } = App.useApp();
-  const create = useCreateAdminUser(scope);
-  const update = useUpdateAdminUser(scope);
+  const { data: me } = useMe();
+  const isCompanyAdmin = Boolean(me?.roles.includes('Company') && !me.isAdmin);
+
+  const adminCreate = useCreateAdminUser(scope);
+  const adminUpdate = useUpdateAdminUser(scope);
+  const companyCreate = useCreateCompanyUser();
+  const companyUpdate = useUpdateCompanyUser();
+
+  const create = isCompanyAdmin ? companyCreate : adminCreate;
+  const update = isCompanyAdmin ? companyUpdate : adminUpdate;
+
+  const initialRole: 'User' | 'Admin' = user?.roles.includes('Admin') ? 'Admin' : 'User';
 
   const { control, handleSubmit, reset, setError, formState: { errors, isSubmitting } } =
     useForm<FormValues>({
@@ -66,6 +81,8 @@ export function UserFormModal({ open, onClose, user, scope }: Props) {
         lastName: '',
         confirmed: true,
         active: true,
+        role: initialRole,
+        sessionTimeout: 5,
       },
       mode: 'onBlur',
     });
@@ -80,6 +97,8 @@ export function UserFormModal({ open, onClose, user, scope }: Props) {
         lastName: user?.lastName ?? '',
         confirmed: user?.confirmed ?? true,
         active: user?.active ?? true,
+        role: (user?.roles.includes('Admin') ? 'Admin' : 'User'),
+        sessionTimeout: 5,
       });
     }
   }, [open, user, reset]);
@@ -96,6 +115,7 @@ export function UserFormModal({ open, onClose, user, scope }: Props) {
           active: values.active,
         };
         if (values.password && values.password.length > 0) input.password = values.password;
+        if (isCompanyAdmin && values.role) input.roles = [values.role];
         await update.mutateAsync({ id: user.id, input });
         message.success('User updated.');
       } else {
@@ -108,6 +128,8 @@ export function UserFormModal({ open, onClose, user, scope }: Props) {
           confirmed: values.confirmed,
           active: values.active,
         };
+        if (isCompanyAdmin && values.role) input.roles = [values.role];
+        if (isCompanyAdmin && values.sessionTimeout) input.sessionTimeout = values.sessionTimeout;
         await create.mutateAsync(input);
         message.success('User created.');
       }
@@ -189,6 +211,23 @@ export function UserFormModal({ open, onClose, user, scope }: Props) {
               )}
             />
           </Field>
+          {isCompanyAdmin && (
+            <Field label="Time until automatic logout (min)">
+              <Controller
+                control={control}
+                name="sessionTimeout"
+                render={({ field }) => (
+                  <InputNumber
+                    min={1}
+                    max={1440}
+                    value={field.value}
+                    onChange={(v) => field.onChange(typeof v === 'number' ? v : 5)}
+                    style={{ width: 120 }}
+                  />
+                )}
+              />
+            </Field>
+          )}
           <div style={{ display: 'flex', gap: 24 }}>
             <Controller
               control={control}
@@ -209,6 +248,20 @@ export function UserFormModal({ open, onClose, user, scope }: Props) {
               )}
             />
           </div>
+          {isCompanyAdmin && (
+            <Field label="Role">
+              <Controller
+                control={control}
+                name="role"
+                render={({ field }) => (
+                  <Radio.Group value={field.value} onChange={(e) => field.onChange(e.target.value)}>
+                    <Radio value="User">User</Radio>
+                    <Radio value="Admin">Admin</Radio>
+                  </Radio.Group>
+                )}
+              />
+            </Field>
+          )}
         </Space>
       </form>
     </Modal>

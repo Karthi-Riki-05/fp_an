@@ -17,11 +17,12 @@ const { errorHandler } = require('./middleware/errorHandler');
 const authRoutes = require('./routes/auth.routes');
 const healthRoutes = require('./routes/health.routes');
 const meRoutes = require('./routes/me.routes');
-const tenantsRoutes = require('./routes/tenants.routes');
+// tenants.routes.js removed — see MIGRATION_NOTES §13 (Company user IS the company).
 const rolesRoutes = require('./routes/roles.routes');
 const equipmentRoutes = require('./routes/equipment.routes');
 const adminTypesRoutes = require('./routes/admin-types.routes');
 const adminUsersRoutes = require('./routes/admin-users.routes');
+const companyUsersRoutes = require('./routes/company-users.routes');
 const adminStopReasonsRoutes = require('./routes/admin-stop-reasons.routes');
 const adminScrapReasonsRoutes = require('./routes/admin-scrap-reasons.routes');
 const adminStopCategoriesRoutes = require('./routes/admin-stop-categories.routes');
@@ -48,6 +49,8 @@ const adminMachinesRoutes = require('./routes/admin-machines.routes');
 const adminMachineFilesRoutes = require('./routes/admin-machine-files.routes');
 const adminMachineProgrammesRoutes = require('./routes/admin-machine-programmes.routes');
 const adminWorkstationsRoutes = require('./routes/admin-workstations.routes');
+const resultsRoutes = require('./routes/results.routes');
+const unitsRoutes = require('./routes/units.routes');
 
 const app = express();
 
@@ -117,11 +120,13 @@ app.use(authMiddleware);
 
 // Protected routes
 app.use('/api/v1/me', meRoutes);
-app.use('/api/v1/admin/tenants', tenantsRoutes);
+// /api/v1/admin/tenants endpoint removed — Company users replace Tenant rows.
+// To list companies, use GET /api/v1/admin/users?roles=Company.
 app.use('/api/v1/admin/roles', rolesRoutes);
 app.use('/api/v1/equipment', equipmentRoutes);
 app.use('/api/v1/admin/types', adminTypesRoutes);
 app.use('/api/v1/admin/users', adminUsersRoutes);
+app.use('/api/v1/company/users', companyUsersRoutes);
 app.use('/api/v1/admin/stop-reasons', adminStopReasonsRoutes);
 app.use('/api/v1/admin/scrap-reasons', adminScrapReasonsRoutes);
 app.use('/api/v1/admin/stop-categories', adminStopCategoriesRoutes);
@@ -148,6 +153,10 @@ app.use('/api/v1/admin/machines', adminMachinesRoutes);
 app.use('/api/v1/admin/machine-files', adminMachineFilesRoutes);
 app.use('/api/v1/admin/machine-programmes', adminMachineProgrammesRoutes);
 app.use('/api/v1/admin/workstations', adminWorkstationsRoutes);
+// User-scoped result endpoints (E1): list & PATCH the caller's own rows only.
+app.use('/api/v1/results', resultsRoutes);
+// Operator units page (E2): list units, list unregistered buckets, batch register stops.
+app.use('/api/v1/units', unitsRoutes);
 
 // 404
 app.use((req, res) => {
