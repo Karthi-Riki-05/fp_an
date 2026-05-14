@@ -31,6 +31,12 @@ export const metadata: Metadata = {
     apple: '/apple-touch-icon.png',
   },
   manifest: '/manifest.webmanifest',
+  // Disable Google Translate page-wide. The browser extension rewrites
+  // text nodes in place, which races React's reconciler and triggers
+  // "Failed to execute 'insertBefore' on 'Node'" crashes (especially on
+  // pages with AntD Table/Modal/Tabs). The `translate=no` body attribute
+  // below is the modern equivalent; meta is the legacy fallback.
+  other: { google: 'notranslate' },
 };
 
 export default async function RootLayout({
@@ -46,7 +52,12 @@ export default async function RootLayout({
   const locale = 'sv';
 
   return (
-    <html lang={locale} className={`${lato.variable} ${poppins.variable}`}>
+    <html
+      lang={locale}
+      className={`${lato.variable} ${poppins.variable} notranslate`}
+      translate="no"
+      suppressHydrationWarning
+    >
       <body>
         <NextIntlClientProvider locale={locale} messages={messages}>
           <Providers>{children}</Providers>
