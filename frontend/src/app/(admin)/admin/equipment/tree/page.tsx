@@ -1,6 +1,6 @@
 'use client';
 
-import { ApartmentOutlined, ArrowRightOutlined } from '@ant-design/icons';
+import { ApartmentOutlined, ArrowRightOutlined, EditOutlined } from '@ant-design/icons';
 import { Alert, Button, Modal, Skeleton, Space, Tree, Typography } from 'antd';
 import type { DataNode } from 'antd/es/tree';
 import { useQueryClient } from '@tanstack/react-query';
@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import DraggableEquipmentTree from '@/components/equipment/DraggableEquipmentTree';
 import EquipmentDetailsView from '@/components/equipment/EquipmentDetailsView';
-import EquipmentQuickEditModal from '@/components/equipment/EquipmentQuickEditModal';
+import EquipmentFullEditModal from '@/components/equipment/EquipmentFullEditModal';
 import { useEquipmentDetail, useEquipmentTree, type EquipmentTreeNode } from '@/lib/api/equipment';
 import { useMe } from '@/lib/api/auth';
 
@@ -155,16 +155,29 @@ export default function EquipmentStructurePage() {
         open={viewId !== null}
         title={viewDetail ? `Equipment details — ${viewDetail.name}` : 'Equipment details'}
         onCancel={() => setViewId(null)}
-        onOk={() => setViewId(null)}
-        okText="Close"
-        cancelButtonProps={{ style: { display: 'none' } }}
+        footer={[
+          <Button
+            key="edit"
+            type="primary"
+            icon={<EditOutlined />}
+            onClick={() => {
+              // Hand the same id off to the full edit modal, close the view.
+              const id = viewId;
+              setViewId(null);
+              if (id !== null) setEditId(id);
+            }}
+          >
+            Edit
+          </Button>,
+          <Button key="close" onClick={() => setViewId(null)}>Close</Button>,
+        ]}
         destroyOnClose
         width={680}
       >
         {viewLoading || !viewDetail ? <Skeleton active /> : <EquipmentDetailsView detail={viewDetail} scope={scope} />}
       </Modal>
 
-      <EquipmentQuickEditModal
+      <EquipmentFullEditModal
         open={editOpen}
         editingId={editId}
         addUnderParentId={addUnderParent}
