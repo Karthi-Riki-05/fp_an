@@ -100,6 +100,7 @@ export function SimpleCrudPage<TRow extends { id: number }>(props: SimpleCrudPag
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<TRow | null>(null);
+  const [viewing, setViewing] = useState<TRow | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [form] = Form.useForm();
 
@@ -116,22 +117,25 @@ export function SimpleCrudPage<TRow extends { id: number }>(props: SimpleCrudPag
   const remove = hooks.useRemove(scope);
 
   const isEdit = editing !== null;
-  const modalOpen = createOpen || isEdit;
+  const isView = viewing !== null;
+  const modalOpen = createOpen || isEdit || isView;
+  const activeRow = editing ?? viewing;
 
   // Modal destroyOnClose + Form preserve=false remounts the form each open,
   // so passing initialValues to the Form is the only reliable way to pre-fill
   // it — setFieldsValue from a useEffect fires before Form.Item children
   // register and is silently dropped.
   const initialValues = useMemo<Record<string, unknown>>(() => {
-    if (isEdit && editing) {
-      return props.toFormValues ? props.toFormValues(editing) : (editing as unknown as Record<string, unknown>);
+    if (activeRow) {
+      return props.toFormValues ? props.toFormValues(activeRow) : (activeRow as unknown as Record<string, unknown>);
     }
     return props.defaultValues ?? {};
-  }, [isEdit, editing, props]);
+  }, [activeRow, props]);
 
   const closeModal = () => {
     setCreateOpen(false);
     setEditing(null);
+    setViewing(null);
     form.resetFields();
   };
 
@@ -185,7 +189,7 @@ export function SimpleCrudPage<TRow extends { id: number }>(props: SimpleCrudPag
       <span style={{ display: 'inline-flex', gap: 4 }}>
         <Tooltip title="View">
           <Button type="text" size="small" icon={<EyeOutlined style={{ color: '#01b9d0' }} />}
-            onClick={() => setEditing(row)} />
+            onClick={() => setViewing(row)} />
         </Tooltip>
         <Tooltip title="Edit">
           <Button type="text" size="small" icon={<EditOutlined style={{ color: '#01b9d0' }} />}
@@ -249,16 +253,25 @@ export function SimpleCrudPage<TRow extends { id: number }>(props: SimpleCrudPag
 
       <Modal
         open={modalOpen}
-        title={isEdit ? `Edit ${resourceLabel}` : `Add ${resourceLabel}`}
+        title={
+          isView ? `View ${resourceLabel}` : isEdit ? `Edit ${resourceLabel}` : `Add ${resourceLabel}`
+        }
         onCancel={closeModal}
-        onOk={onSubmit}
-        okText={isEdit ? 'Save changes' : 'Create'}
+        onOk={isView ? closeModal : onSubmit}
+        okText={isView ? 'Close' : isEdit ? 'Save changes' : 'Create'}
+        cancelButtonProps={isView ? { style: { display: 'none' } } : undefined}
         confirmLoading={submitting}
         destroyOnClose
         maskClosable={false}
         width={520}
       >
-        <Form form={form} layout="vertical" preserve={false} initialValues={initialValues}>
+        <Form
+          form={form}
+          layout="vertical"
+          preserve={false}
+          initialValues={initialValues}
+          disabled={isView}
+        >
           <ConditionalFields form={form} fields={fields} />
         </Form>
       </Modal>
