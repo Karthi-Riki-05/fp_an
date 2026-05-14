@@ -47,26 +47,30 @@
     var equipmentId = String(msg.equipmentId || '');
     var width = Number(msg.width) || 120;
     var height = Number(msg.height) || 60;
-    var style = msg.style || 'rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;';
+    // Default style — explicit shape=rectangle so drawio renders a filled
+    // box even on themes where the default vertex shape isn't rectangle.
+    var style = msg.style
+      || 'rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;';
 
     graph.model.beginUpdate();
     try {
-      // mxCell.value as an XML <object> preserves custom attributes through
-      // serialization — plain string values would lose `equipment-id`.
-      var doc = mxUtils.createXmlDocument();
-      var obj = doc.createElement('object');
-      obj.setAttribute('label', label);
-      if (equipmentId) obj.setAttribute('equipment-id', equipmentId);
+      // Step 1: insert as a normal string-valued vertex so drawio renders
+      // the rectangle + label using its standard path. (Passing an XML
+      // <object> as value short-circuits that path and produces a
+      // label-only render — which is what S5 originally hit.)
       var vertex = graph.insertVertex(
         graph.getDefaultParent(),
         null,
-        obj,
+        label,
         x, y, width, height,
         style
       );
+      // Step 2: promote the value to a UserObject and stamp the custom
+      // attribute. setAttributeForCell handles the upgrade transparently.
+      if (equipmentId) {
+        graph.setAttributeForCell(vertex, 'equipment-id', equipmentId);
+      }
       graph.setSelectionCell(vertex);
-      // Tell the parent the cell was placed (useful for tests + future
-      // toast feedback; ignored if the parent doesn't subscribe).
       try {
         (window.opener || window.parent).postMessage(
           JSON.stringify({ event: 'insertNode', success: true, equipmentId: equipmentId }),
