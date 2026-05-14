@@ -1,7 +1,6 @@
 'use client';
 
 import { Button, Input, Modal, Spin, Typography } from 'antd';
-import Image from 'next/image';
 import { useMemo, useState } from 'react';
 import { useIcons } from '../../lib/api/icons';
 
@@ -67,7 +66,9 @@ export default function IconLibraryModal({ open, onSelect, onClose }: Props) {
               onMouseEnter={(e) => { e.currentTarget.style.background = '#f5f5f5'; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
             >
-              <Image src={icon.url} alt={icon.name} width={32} height={32} style={{ objectFit: 'contain' }} unoptimized />
+              {/* Plain <img> — next/image with unoptimized still gates rendering
+                  on width/height props in ways that hid these icons. */}
+              <img src={icon.url} alt={icon.name} width={32} height={32} style={{ objectFit: 'contain' }} />
               <Text>{icon.name}</Text>
             </div>
           ))

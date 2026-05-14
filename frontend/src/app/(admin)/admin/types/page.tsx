@@ -92,13 +92,19 @@ export default function TypesPage() {
         { name: 'name', label: 'Name', type: 'text', required: true, maxLength: 255 },
         { name: 'entity', label: 'Entity', type: 'select', required: true, options: ENTITY_OPTIONS },
         {
+          // Always rendered (matches legacy form layout). When entity is not
+          // Stop/Scrap the options are limited to NotApplicable so it doesn't
+          // block submit — required only when entity = Stop/Scrap.
           name: 'kind',
-          label: 'Loss category',
+          label: 'Loss model category',
           type: 'select',
-          required: true,
+          required: false,
           options: KIND_OPTIONS_STOP,
-          visibleWhen: (v) => ENTITIES_WITH_KIND.has(String(v.entity ?? '')),
-          optionsWhen: (v) => v.entity === 'ScrapReason' ? KIND_OPTIONS_SCRAP : KIND_OPTIONS_STOP,
+          optionsWhen: (v) => {
+            if (v.entity === 'StopReason')  return KIND_OPTIONS_STOP;
+            if (v.entity === 'ScrapReason') return KIND_OPTIONS_SCRAP;
+            return [{ value: 'NotApplicable', label: 'Not applicable' }];
+          },
         },
         {
           name: 'excludeType',
