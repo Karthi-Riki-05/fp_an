@@ -16,15 +16,16 @@ const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 
-const ICONS_DIR = path.resolve(
-  __dirname,
-  '..',
-  '..',
-  '..',
-  'frontend',
-  'public',
-  'equipment-icons',
-);
+/**
+ * In docker dev, the backend container does NOT mount the frontend/ tree —
+ * so we let docker-compose bind ./frontend/public/equipment-icons to a known
+ * path inside the container (default /icons). The fallback resolves to
+ * ../../frontend/public/equipment-icons relative to the source file, which
+ * works for local-no-docker runs.
+ */
+const ICONS_DIR = process.env.ICONS_DIR
+  ? path.resolve(process.env.ICONS_DIR)
+  : path.resolve(__dirname, '..', '..', '..', 'frontend', 'public', 'equipment-icons');
 const PUBLIC_PREFIX = '/equipment-icons';
 const ALLOWED = /\.(png|jpe?g|svg|gif|webp)$/i;
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });

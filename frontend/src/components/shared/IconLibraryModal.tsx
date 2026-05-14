@@ -1,7 +1,8 @@
 'use client';
 
-import { Button, Input, Modal, Spin, Typography } from 'antd';
+import { Alert, Button, Input, Modal, Spin, Typography } from 'antd';
 import { useMemo, useState } from 'react';
+import { toApiError } from '../../lib/api-client';
 import { useIcons } from '../../lib/api/icons';
 
 const { Text } = Typography;
@@ -13,7 +14,7 @@ interface Props {
 }
 
 export default function IconLibraryModal({ open, onSelect, onClose }: Props) {
-  const { data: icons, isLoading } = useIcons();
+  const { data: icons, isLoading, isError, error } = useIcons();
   const [search, setSearch] = useState('');
 
   const filtered = useMemo(() => {
@@ -46,9 +47,21 @@ export default function IconLibraryModal({ open, onSelect, onClose }: Props) {
       <div style={{ maxHeight: 400, overflowY: 'auto', borderTop: '1px solid #eee' }}>
         {isLoading ? (
           <div style={{ textAlign: 'center', padding: 40 }}><Spin /></div>
+        ) : isError ? (
+          <Alert
+            type="error"
+            showIcon
+            message="Failed to load icons"
+            description={toApiError(error).message}
+            style={{ margin: 12 }}
+          />
+        ) : (icons?.length ?? 0) === 0 ? (
+          <Text type="secondary" style={{ display: 'block', textAlign: 'center', padding: 40 }}>
+            Library is empty.
+          </Text>
         ) : filtered.length === 0 ? (
           <Text type="secondary" style={{ display: 'block', textAlign: 'center', padding: 40 }}>
-            No icons match.
+            No icons match &quot;{search}&quot;.
           </Text>
         ) : (
           filtered.map((icon) => (

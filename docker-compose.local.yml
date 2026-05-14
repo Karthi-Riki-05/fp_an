@@ -67,11 +67,15 @@ services:
       REDIS_URL: redis://redis:6379
       MAIL_HOST: mailhog
       MAIL_PORT: 1025
+      # Mount the frontend's icon library read/write so the backend's
+      # /admin/icons listing and /admin/icons/upload endpoints can see it.
+      ICONS_DIR: /icons
     ports:
       - '${BACKEND_PORT:-4000}:4000'
     volumes:
       - ./backend:/app
       - backend-node-modules:/app/node_modules
+      - ./frontend/public/equipment-icons:/icons
     depends_on:
       postgres:
         condition: service_healthy
