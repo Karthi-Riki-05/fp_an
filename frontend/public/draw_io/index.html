@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<title>ValueChart - Diagram Editor</title>
+	<meta charset="utf-8">
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<meta name="Description" content="ValueChart diagram editor for creating flowcharts, process diagrams, and business charts">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<meta name="mobile-web-app-capable" content="yes">
+	<meta name="theme-color" content="#3CB371">
+	<link rel="stylesheet" type="text/css" href="styles/grapheditor.css">
+	<link rel="stylesheet" media="(forced-colors: active)" href="styles/high-contrast.css"
+		id="high-contrast-stylesheet">
+	<script src="js/bootstrap.js"></script>
+	<style type="text/css">
+		.geBlock {
+			z-index: -3;
+			margin: 40px auto;
+			padding: 40px 20px;
+			text-align: center;
+			max-width: 480px;
+		}
+
+		.geBlock h1 {
+			margin: 16px 0 8px;
+			padding: 0;
+			font-size: 22px;
+			font-weight: 700;
+			color: #1A1A2E;
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+		}
+
+		.geBlock p {
+			color: #666;
+			font-size: 14px;
+			line-height: 1.5;
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+		}
+
+		.geBlock h2 {
+			margin-top: 24px;
+			padding: 0;
+			font-size: 14px;
+			font-weight: 500;
+			color: #3CB371;
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+		}
+
+		.geBlock .vc-logo {
+			height: 40px;
+			width: auto;
+		}
+	</style>
+</head>
+
+<body class="geEditor geClassic">
+	<div id="geInfo">
+		<div class="geBlock">
+			<img src="/images/image.png" alt="ValueChart" class="vc-logo" />
+			<h1>ValueChart Diagram Editor</h1>
+			<p>
+				Create flowcharts, process diagrams, org charts, and business visualizations with our powerful editor.
+			</p>
+			<h2 id="geStatus">Loading editor... <img src="images/spin.gif" /></h2>
+			<p>
+				Please ensure JavaScript is enabled.
+			</p>
+		</div>
+	</div>
+	<script src="js/main.js"></script>
+	<script src="./../custom/chart/js/over-ride.js"></script>
+	<!-- FP Analyzer integration — insertNode (equipment drop) + paintStatus
+	     (live monitor overlay). See FLOW_MANAGEMENT_ANALYSIS.md §11.4/§11.6. -->
+	<script src="./../custom/chart/js/fp-embed.js"></script>
+
+	
+</body>
+
+</html>

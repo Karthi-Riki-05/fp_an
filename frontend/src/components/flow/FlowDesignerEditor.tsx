@@ -387,8 +387,54 @@ export default function FlowDesignerEditor({ flowId, scope, readOnly = false, on
     ? '/draw_io/index.html?embed=1&proto=json&spin=1&noExitBtn=1&noSaveBtn=1&sketch=1&ui=sketch&lightbox=1&chrome=0&edit=_blank&toolbar=0&nav=1'
     : '/draw_io/index.html?embed=1&proto=json&spin=1&noExitBtn=1&noSaveBtn=1&sketch=1&ui=sketch';
 
+  /**
+   * Drop handler for the iframe wrapper. The Designer page renders the
+   * equipment tree as native HTML5 draggables; on drop here we read the
+   * JSON payload, compute the canvas-relative position, and post
+   * `insertNode` to the drawio iframe. fp-embed.js inside the iframe
+   * does the actual graph.insertVertex().
+   */
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    // The drop is only valid if the source set our payload.
+    const types = e.dataTransfer.types;
+    if (types && types.indexOf('application/fp-equipment') !== -1) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    if (readOnly) return;
+    const raw = e.dataTransfer.getData('application/fp-equipment');
+    if (!raw) return;
+    e.preventDefault();
+    let payload: { equipmentId?: number; equipmentName?: string };
+    try { payload = JSON.parse(raw); } catch { return; }
+    if (!payload || !payload.equipmentId) return;
+
+    // Coordinates relative to the iframe wrapper. fp-embed.js inserts
+    // the cell at these graph-document coordinates — close enough for
+    // v1 (drawio's own toolbar-drag uses transformViewToDoc for pixel-
+    // perfect placement; we can polish later if it bothers users).
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = Math.max(0, e.clientX - rect.left);
+    const y = Math.max(0, e.clientY - rect.top);
+
+    postToIframe({
+      action: 'insertNode',
+      equipmentId: payload.equipmentId,
+      label: payload.equipmentName || `Equipment #${payload.equipmentId}`,
+      x, y,
+    });
+  };
+
   return (
-    <div data-testid="flow-designer-editor" style={{ position: 'relative', width: '100%', height: '100%' }}>
+    <div
+      data-testid="flow-designer-editor"
+      style={{ position: 'relative', width: '100%', height: '100%' }}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
       {loading && (
         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 1 }}>
           <Spin size="large" tip="Loading Editor…" />

@@ -1,8 +1,7 @@
 'use client';
 
-import { ApartmentOutlined, ArrowLeftOutlined } from '@ant-design/icons';
-import { App, Button, Input, Skeleton, Space, Spin, Tag, Tree, Typography } from 'antd';
-import type { DataNode } from 'antd/es/tree';
+import { ApartmentOutlined, ArrowLeftOutlined, CaretDownOutlined, CaretRightOutlined } from '@ant-design/icons';
+import { App, Button, Input, Skeleton, Space, Spin, Tag, Typography } from 'antd';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -35,26 +34,95 @@ function EquipmentIcon({ icon }: { icon: string | null }) {
 }
 
 /**
- * Render the equipment tree as draggable nodes. S5 wires the actual
- * dragstart payload + iframe drop target → for S4 we render the tree
- * (read-only, AntD <Tree>) so the layout is correct ahead of time.
+ * Equipment row inside the Designer's left tree panel.
+ *
+ * Native HTML5 dragstart — AntD `<Tree draggable>` has its own internal
+ * drag handler that does NOT fire HTML5 events the iframe can receive,
+ * so we render a flat indented list instead. dataTransfer carries the
+ * JSON payload `FlowDesignerEditor` listens for in its drop handler.
  */
-function toTreeData(nodes: EquipmentTreeNode[]): DataNode[] {
-  return nodes.map((n) => ({
-    key: String(n.id),
-    title: (
-      <span
-        // S5 will attach onDragStart here. For now the row is just visible.
-        data-equipment-id={n.id}
-        data-equipment-name={n.name}
-        style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-      >
-        <EquipmentIcon icon={n.icon} />
-        {n.name}
-      </span>
-    ),
-    children: n.children?.length ? toTreeData(n.children) : undefined,
-  }));
+function EquipmentRow({
+  node,
+  depth,
+  expanded,
+  onToggle,
+}: {
+  node: EquipmentTreeNode;
+  depth: number;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const hasChildren = (node.children?.length ?? 0) > 0;
+  return (
+    <div
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData(
+          'application/fp-equipment',
+          JSON.stringify({ equipmentId: node.id, equipmentName: node.name }),
+        );
+        // Show the same payload as text/plain so OS-level drag previews
+        // are sensible (no functional impact — we read the json type).
+        e.dataTransfer.setData('text/plain', node.name);
+        e.dataTransfer.effectAllowed = 'copy';
+      }}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '4px 6px',
+        paddingLeft: 6 + depth * 16,
+        cursor: 'grab',
+        userSelect: 'none',
+        borderRadius: 3,
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = '#f5f5f5'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+    >
+      {hasChildren ? (
+        <span
+          onClick={(e) => { e.stopPropagation(); onToggle(); }}
+          style={{ width: 14, display: 'inline-flex', color: '#999', cursor: 'pointer' }}
+        >
+          {expanded ? <CaretDownOutlined /> : <CaretRightOutlined />}
+        </span>
+      ) : (
+        <span style={{ width: 14, display: 'inline-block' }} />
+      )}
+      <EquipmentIcon icon={node.icon} />
+      <span style={{ fontSize: 13 }}>{node.name}</span>
+    </div>
+  );
+}
+
+function EquipmentTreePanel({ nodes }: { nodes: EquipmentTreeNode[] }) {
+  // Each node tracks expanded state by id. Default: all expanded.
+  const collectIds = (ns: EquipmentTreeNode[], acc: number[] = []): number[] => {
+    for (const n of ns) { acc.push(n.id); if (n.children?.length) collectIds(n.children, acc); }
+    return acc;
+  };
+  const [expanded, setExpanded] = useState<Set<number>>(() => new Set(collectIds(nodes)));
+  const toggle = (id: number) => setExpanded((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    return next;
+  });
+
+  const renderNodes = (ns: EquipmentTreeNode[], depth = 0): React.ReactNode =>
+    ns.map((n) => (
+      <div key={n.id}>
+        <EquipmentRow
+          node={n}
+          depth={depth}
+          expanded={expanded.has(n.id)}
+          onToggle={() => toggle(n.id)}
+        />
+        {expanded.has(n.id) && n.children?.length ? renderNodes(n.children, depth + 1) : null}
+      </div>
+    ));
+
+  return <div>{renderNodes(nodes)}</div>;
 }
 
 /**
@@ -155,6 +223,9 @@ export default function FlowDesignerPage() {
           }}
         >
           <Text strong style={{ fontSize: 13 }}>Equipment</Text>
+          <div style={{ fontSize: 11, color: '#999', marginBottom: 6, marginTop: 2 }}>
+            Drag a row onto the canvas to add it as a node.
+          </div>
           {treeQ.isLoading ? (
             <div style={{ padding: 16, textAlign: 'center' }}><Spin size="small" /></div>
           ) : (treeQ.data ?? []).length === 0 ? (
@@ -162,13 +233,7 @@ export default function FlowDesignerPage() {
               No equipment yet.
             </Text>
           ) : (
-            <Tree
-              showIcon={false}
-              defaultExpandAll
-              blockNode
-              treeData={toTreeData(treeQ.data ?? [])}
-              style={{ marginTop: 8, background: 'transparent' }}
-            />
+            <EquipmentTreePanel nodes={treeQ.data ?? []} />
           )}
         </div>
 
