@@ -75,7 +75,7 @@ When you answer, update this file in-place: replace `__answer pending__` with th
 - If **PAID, key exists** → store the key in the secrets vault as `GOJS_LICENSE_KEY`; add it to `.env.example` (with placeholder); Phase 4 proceeds with `gojs` from npm.
 - If **EVAL or UNCLEAR** → escalate to procurement for a license purchase decision, OR pick an alternative library and update §1 (`gojs` row in the stack mapping table) and §10 (public assets — the in-tree `google.js` decision).
 
-- [ ] **Resolution:** __answer pending__
+- [x] **Resolution:** **RESOLVED 2026-05-14 — switched to draw.io (Apache 2.0).** No license purchase needed. The operator's other project (ValueChart) already had a complete draw.io editor (~178 MB vendored draw.io v29.3.6 webapp + 7 React integration components in `frontend/src/components/flows/`). That code is being adopted as the Flow Designer / Monitor / Analyzer canvas. Legacy `flow_designs.flow_data` rows (GoJS JSON) are not preserved — production tenants start with blank canvases. See `FLOW_MANAGEMENT_ANALYSIS.md` §11 for the replacement plan.
 
 ---
 

@@ -381,3 +381,177 @@ Background image storage path: `flow-bg/<flowId>/<filename>` via `FileStorageSer
 - `getQuantTimeGraph` (`CompanyUserController.php:2090-2148`) returns `{ stop_count, stop_data }` with stop-reason aggregations.
 - `getFlowAnalyzer → getFlowData` (`CompanyUserController.php:1692-…`) returns per-equipment stop/scrap/production aggregations. Translated below as `/analyzer-data`.
 
+---
+
+## 11. draw.io replacement plan (Plan B — supersedes the GoJS path)
+
+> **Status:** Q2 RESOLVED — draw.io adopted (Apache 2.0). GoJS plan retired.
+> **Source code being adopted:** the operator's ValueChart project — already pasted into `new_fp/frontend/public/draw_io/` (178 MB vendored draw.io v29.3.6 webapp) and `new_fp/frontend/src/components/flows/` (7 React integration files, ~116 KB).
+> **Awaiting operator approval of §11 before any code is written.** §11-S1 (schema patch) begins after approval.
+
+### 11.1 What's pasted in
+
+| Path | Size | Source | Status |
+|---|---|---|---|
+| `frontend/public/draw_io/` | 178 MB | ValueChart vendored draw.io v29.3.6 — full webapp (index.html, mxgraph/, shapes/, plugins/, js/, etc.) | Keep as-is. Next.js serves it from `/draw_io/index.html`. |
+| `frontend/src/components/flows/EditorView.tsx` | 1924 lines | ValueChart main editor wrapper | Port to `components/flow/FlowDesignerEditor.tsx`. |
+| `frontend/src/components/flows/CustomShapesPanel.tsx` | 405 lines | Custom shape palette sidebar | Defer to v1.1 — Designer can ship without it. |
+| `frontend/src/components/flows/FlowCard.tsx` | 237 lines | Card-grid card with favorite/share/lock | We already have `components/flow/FlowCard.tsx` (Plan A). Take only the thumbnail/SVG rendering bits; keep our card. |
+| `frontend/src/components/flows/FlowPickerModal.tsx` | 313 lines | "Open a flow" modal | **Skip** — our card grid is the picker. |
+| `frontend/src/components/flows/ShareFlowModal.tsx` | 326 lines | Team-sharing modal | **Strip** — no team sharing concept in new_fp. |
+| `frontend/src/components/flows/AssignProjectModal.tsx` | 184 lines | Assign-to-project modal | **Strip** — no project concept in new_fp. |
+| `frontend/src/components/flows/FlowPackBanner.tsx` | 197 lines | Template-pack promo banner | **Strip** — ValueChart-only feature. |
+
+After porting, **`components/flows/` (plural) gets deleted**. The new `components/flow/` (singular, our Plan A folder) keeps `FlowCard`, `FlowCardGrid`, `FlowAnalyzerCharts`, and the placeholder gets replaced by `FlowDesignerEditor`.
+
+### 11.2 ValueChart imports → new_fp mapping
+
+| ValueChart import | What it exports | new_fp replacement |
+|---|---|---|
+| `@/lib/flow` → `getFlowById(flowId)` returns `{ name, permission, xml, diagramData, … }` | Initial-load fetch for the editor | `useFlowDesign(scope, id)` from `lib/api/flow-designs.ts` (Plan A built it) → returns `{ id, name, flowData }`. `flowData` IS the XML string (we agreed to overload the existing column). Skip `permission` — new_fp gates at the page level via `manage-flow-designs`. |
+| `@/components/templates/TemplateBrowser` | Modal that shows shape pack templates | **Strip.** The `init` handler in EditorView opens this when the diagram is empty. We replace that with no-op (just leave the blank canvas). Template chooser is a future enhancement. |
+| `@/components/ai/AiCreditsDisplay` | AI feature widget showing remaining credits | **Strip.** Whole AI integration removed. |
+| `@/api/notifications.api` → `flowPackApi` | Used only by `FlowPickerModal` | **Strip** (file dropped). |
+| `@/lib/axios` → `api` | Axios instance used by `CustomShapesPanel` | If we port the shapes panel later, use new_fp's `apiClient` from `lib/api-client.ts`. |
+| `sessionStorage.getItem('ai_generated_xml')` / `ai_generated_name` | AI handoff between Generator page and Editor | **Strip.** No AI flow in new_fp. |
+
+### 11.3 ValueChart API endpoints → new_fp endpoints
+
+| ValueChart call | Body / params | new_fp endpoint | Notes |
+|---|---|---|---|
+| `getFlowById(flowId)` (`GET /api/flows/:id`) | none | `GET /api/v1/admin/flow-designs/:id/diagram` (built in Plan A Step 1) | Response: `{ id, name, flowData }`. `flowData` = XML string OR null (blank). |
+| `POST /api/save-diagram` | `{ flowId, name, xml, thumbnail }` | `PUT /api/v1/admin/flow-designs/:id/diagram` (built) | new_fp body shape: `{ flowData, asNewName? }`. Existing endpoint accepts ANY string — drawio XML fits. **NEW WORK (§11-S2):** extend the endpoint to also accept a `svgCache` field for the thumbnail. |
+| `GET /api/flows/:id/versions` | none | **DEFER** — no version history endpoint exists yet in new_fp | Skip the version-history UI in the port. Add as a follow-up if needed. |
+| `POST /api/flows/:id/versions/restore/:vId` | none | **DEFER** | Same as above. |
+| `DELETE /api/flows/:id` | none | `DELETE /api/v1/admin/flow-designs/:id` (built) | Already wired. |
+| `api.get('/shapes')` | none | **DEFER** — custom shape library is its own subsystem | Drop the `CustomShapesPanel` from v1. drawio ships hundreds of stock shapes already. |
+| `api.get('/shape-groups')` | none | **DEFER** | Same. |
+
+### 11.4 postMessage protocol — full event shape
+
+Parent React component ↔ drawio iframe communicate via `window.postMessage(JSON.stringify(...))`.
+
+**Incoming events (iframe → parent), handled in `EditorView.tsx:409+`:**
+
+| `msg.event` | Fired when | Payload | Parent response |
+|---|---|---|---|
+| `init` | drawio iframe finished mounting and is ready for content | `{ event: 'init' }` | Parent fetches `{ name, flowData }` from `GET /:id/diagram`, then posts `action: 'load'` back with the XML + `autosave: 1`. Empty diagrams default to `<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/></root></mxGraphModel>`. |
+| `save` | User clicked Save button inside drawio | `{ event: 'save', xml: string }` | Parent triggers internal "export SVG" then calls `PUT /:id/diagram { flowData: xml, svgCache: svg }`; then posts `action: 'status'` with empty message + `modified: false` to clear drawio's dirty indicator. |
+| `autosave` | drawio's internal autosave timer fired | `{ event: 'autosave', xml: string }` | Same as `save` — silent persist. Debounced by drawio. |
+| `export` | Response to a parent-initiated export request (PNG/SVG/.drawio download or internal thumbnail capture) | `{ event: 'export', format: 'png'\|'svg'\|'xml', data: <base64 or string>, xml?: string }` | Parent either downloads it (user-clicked Export) OR sends the SVG to the server as `svgCache` (internal thumbnail capture, §11-S6). |
+| `showSaveDialog` | User triggered "Save As" inside drawio | `{ event: 'showSaveDialog', xml: string, currentName: string }` | Parent opens an AntD modal asking for the new name → `PUT /:id/diagram { flowData, asNewName }`. **Save As already supported in Plan A backend.** |
+| `showShareDialog` | User clicked Share | — | **Strip.** new_fp has no sharing. Either swallow silently or hide the Share button via the existing AI-hiding CSS. |
+| `showImportDialog` | User triggered Import | — | Open an AntD file-picker → read file → post `action: 'load'` with the file contents. |
+| `exit` | User clicked the (hidden) Exit button | — | Navigate back to `/admin/flow-designs`. |
+
+**Outgoing events (parent → iframe), via `iframeRef.current.contentWindow.postMessage(JSON.stringify({...}))`:**
+
+| `action` | Purpose | Payload |
+|---|---|---|
+| `load` | Initial-load + autosave setup. Sent in response to `init`. | `{ action: 'load', xml: string, autosave: 1, titles?: string[], allEntries?: [{ title, xml, aspect }] }` — `titles`/`allEntries` are optional custom shape categories. |
+| `status` | Update drawio's chrome status line (e.g. "Saved", "Saving…") | `{ action: 'status', message: string, modified: boolean }` |
+| `export` | Ask drawio to export the current diagram (response comes back as `export` event) | `{ action: 'export', format: 'png'\|'svg'\|'xml', xml?: boolean, ... }` |
+| `mergeAiXml` | (ValueChart-only — STRIP) | — |
+| `print` | Trigger drawio's print dialog | `{ action: 'print' }` |
+| `insertNode` (**NEW custom action — see §11.4.5**) | Add an equipment-bound node at a canvas position | `{ action: 'insertNode', label: string, equipmentId: number, x: number, y: number, style?: string }` |
+| `paintStatus` (**NEW custom action — see §11.6**) | Repaint cells with `equipment-id` attributes using current Machine status | `{ action: 'paintStatus', statuses: [{ equipmentId, status, lastOnline }, ...] }` |
+
+#### 11.4.5 Custom equipment-drop event
+
+The legacy fpanalyzer Designer lets users drag equipment from the left tree onto the canvas; each dropped node carries the equipment id. drawio doesn't natively understand this. Two viable patterns:
+
+1. **HTML5 drag-drop on the iframe wrapper div** (recommended). The equipment tree's grip element is `draggable`; on `drop`, the wrapper's handler intercepts (drawio's iframe doesn't receive HTML5 drag events from outside its own document). We then post `insertNode`. drawio's webapp doesn't ship this handler natively — we add a tiny custom plugin in `frontend/public/draw_io/js/diagramly/` (or as an "embed plugin" path) that listens for `insertNode` and calls `editorUi.editor.graph.addCell(...)` with the right `mxCell` shape including `equipment-id="42"` as a custom attribute.
+
+2. **Use drawio's existing "library" drop pattern** — define each equipment as a stencil entry in the `allEntries` payload of the `load` message. Less flexible (have to know all equipment up front) and pollutes the shape sidebar. **Skip.**
+
+The custom plugin in option 1 is the minimum-glue solution.
+
+### 11.5 `flow_designs.flow_data` content semantics after §11
+
+| State | `flow_format` | `flow_data` | `svg_cache` | Meaning |
+|---|---|---|---|---|
+| New row created via `POST /flow-designs` | `'drawio'` (default) | `NULL` | `NULL` | Blank canvas. drawio loads with the default empty XML. |
+| Saved at least once via Designer | `'drawio'` | `<mxGraphModel>…</mxGraphModel>` | `<svg>…</svg>` | Real drawio XML + thumbnail SVG. |
+| Legacy row (pre-§11) | `'gojs'` (set by migration SQL) | `NULL` (also set by migration) | `NULL` | Blanked out. Designer shows blank canvas and writes a fresh drawio diagram on first save. After first save, `flow_format` updates to `'drawio'`. |
+
+### 11.6 Live status overlay design
+
+Core value of Flow Monitor — operators see which machines are running/stopped/idle/warning. drawio doesn't have first-class "live data binding" like GoJS, so we drive it via the custom plugin:
+
+- Each equipment-bound node carries `equipment-id="N"` as a custom mxCell attribute (set at drop time per §11.4.5).
+- Monitor detail page polls `GET /:id/monitor-status` every 10s (already wired in Plan A via `useFlowMonitorStatus`).
+- On every response, post:
+    ```
+    { action: 'paintStatus',
+      statuses: [{ equipmentId: 42, status: 'running'|'stopped'|'warning'|'idle'|'offline',
+                   lastOnline: '...' }, ...] }
+    ```
+- The custom plugin walks all cells via `graph.model.cells`, finds ones with matching `equipment-id`, updates their `style` (fill color) and optionally injects a small SVG badge as a child cell.
+- Status → color (legacy-matched):
+  - `running` → `#52c41a` (green)
+  - `warning` → `#faad14` (amber)
+  - `stopped` → `#f5222d` (red)
+  - `idle` → `#bfbfbf` (grey)
+  - `offline` → `#8c8c8c` (dark grey)
+- The plugin also makes Monitor view-mode read-only (`graph.setEnabled(false)`) so operators can't accidentally edit.
+
+### 11.7 Thumbnail strategy
+
+Per the operator decision: save SVG at save-time (avoids per-card iframe explosion).
+
+- Add `svgCache String?` to `FlowDesign` model alongside `flowFormat` (§11-S1).
+- Backend: extend `PUT /:id/diagram` to also accept `svgCache` field. If present, store it. Return it in `GET /list-with-data` (§11-S2).
+- Frontend save flow: after the user saves, the parent posts `{ action: 'export', format: 'svg' }` to the iframe, awaits the `export` response, sends the SVG as part of the save payload.
+- Card grid: `FlowCard` renders the inline SVG when `flow.svgCache` exists, falls back to `EmptyDiagramPlaceholder` when not.
+
+### 11.8 Files to delete / rename after porting
+
+- `frontend/src/components/flow/GoJsLicensePlaceholder.tsx` → **rename** to `EmptyDiagramPlaceholder.tsx`. Content updates: no more "GoJS license required" copy; shows "No diagram yet" + a "Open in Designer" link.
+- `frontend/src/components/flow/FlowCanvasPlaceholder.tsx` (legacy mock canvas from Phase 4b) → **delete**.
+- `frontend/src/components/flows/` (the ValueChart-pasted folder, plural) → **delete** after porting `EditorView.tsx` content into `flow/FlowDesignerEditor.tsx`.
+- The `if (process.env.NEXT_PUBLIC_GOJS_LICENSE_KEY)` conditional in the placeholder → remove.
+- All GoJS / `NEXT_PUBLIC_GOJS_LICENSE_KEY` references in earlier §§ — leave as historical record (still accurate for that point in time); §11 is now the authoritative direction.
+
+### 11.9 Step-by-step implementation (locked plan)
+
+| Step | Scope | Files touched | Stop point |
+|------|------|---------------|-----------|
+| **§11-S1** | Schema patch | `prisma/schema.prisma` (add `flowFormat`, `svgCache`); `prisma db push`; SQL to blank legacy GoJS rows in `tenant_2`, `tenant_66` | Verify columns exist + legacy rows blanked. Commit. |
+| **§11-S2** | Backend `PUT /:id/diagram` accepts `svgCache` + returns `flowFormat` + `svgCache` in `GET /list-with-data` + Designer always sends `flow_format = 'drawio'` on save | `backend/src/services/admin-flow-designs.service.js` | curl smoke. Commit. |
+| **§11-S3** | Port `FlowDesignerEditor` from `EditorView.tsx`. Strip AI/share/project/templates/version-history; rewire API calls; replace `getFlowById` with `useFlowDesign`. | `components/flow/FlowDesignerEditor.tsx` (new) | Designer opens, loads diagram, saves XML. Commit. |
+| **§11-S4** | Wire Designer page — drop `GoJsLicensePlaceholder`, mount `<FlowDesignerEditor>` | `(admin)/admin/flow-designs/[id]/edit/page.tsx` | Browser smoke: open, edit, save, reload, persists. Commit. |
+| **§11-S5** | Equipment tree → canvas drop. Add the small custom plugin to `public/draw_io/js/diagramly/` for `insertNode` handling. Wire the drop handler on the iframe wrapper. | `public/draw_io/js/diagramly/EmbedActions.js` (new tiny plugin); `FlowDesignerEditor.tsx` (drop handler) | Drag equipment, see it appear with `equipment-id` attribute. Commit. |
+| **§11-S6** | Thumbnail SVG: capture on save → store in `svgCache` → render in `FlowCard`. Rename placeholder → `EmptyDiagramPlaceholder`. | `FlowDesignerEditor.tsx`, `FlowCard.tsx`, `lib/api/flow-designs.ts` | Save a flow → card grid shows the SVG. Commit. |
+| **§11-S7** | Monitor: read-only canvas + live status overlay. Extend `EmbedActions.js` for `paintStatus`. Wire the polling output to the iframe. | `public/draw_io/js/diagramly/EmbedActions.js` (extend); `(user)/monitor/[[...id]]/page.tsx` | Open a flow with machines, see colour-coded status badges that update every 10s. Commit. |
+| **§11-S8** | Analyzer: read-only canvas + click-a-node-to-filter. Re-wire `flowKey` query param into `analyzer-data`/`line-chart`/`quant-time` requests when a node is clicked. | `(user)/analyzer/[[...id]]/page.tsx` | Click a node, charts refilter. Commit. |
+| **§11-S9** | Playwright updates: un-skip the 3 Plan B tests (`drag equipment from tree to canvas`, `save flow preserves diagram on reload`, `background image upload appears on canvas`). Add new tests for status overlay + thumbnail capture. | `tests/flow-management.spec.ts` | All tests green. Commit. |
+
+### 11.10 Open questions resolved by this plan
+
+- ~~Q1 license decision~~ → **resolved** (drawio, Apache 2.0).
+- ~~Q2 Save As semantics~~ → keep as Plan A: `asNewName` field on existing `PUT /:id/diagram`.
+- ~~Q3 flow_design_attributes stale~~ → unchanged. Still read-only. drawio's mxCell `equipment-id` attribute is the new authoritative binding (lives inside the XML), not the legacy attributes table.
+- ~~Q4 thumbnail caching~~ → **flipped**. We now DO cache. `svg_cache` column added; populated at save time. Per-tenant size impact: ~10-50 KB per flow × ~50 flows max = ~2.5 MB. Acceptable.
+- ~~Q5 polling cadence~~ → still 10s.
+- ~~Q6 permissions~~ → unchanged. Designer requires `manage-flow-designs`. Monitor/Analyzer read endpoints already split (Step 2 pre-check).
+- **NEW: drawio AI/Share/SaveAndExit buttons** — the ValueChart code already injects CSS to hide these (`HIDE_AI_CSS` constant in `EditorView.tsx`). Keep that CSS verbatim.
+- **NEW: 178 MB of `public/draw_io/` static assets** — increases the production image size. Acceptable for a self-hosted manufacturing app; flag for review if we ever want a separate CDN.
+
+### 11.11 What's NOT being done in Plan B v1
+
+Explicitly deferred:
+- Template browser (the "what kind of flow do you want?" modal at first open).
+- Custom shape library (`CustomShapesPanel` — drawio's built-in shapes are enough for v1).
+- Team sharing (`ShareFlowModal`).
+- Project assignment (`AssignProjectModal`).
+- Version history (`GET /api/flows/:id/versions` + restore endpoints).
+- Template pack banners (`FlowPackBanner`).
+- AI-generated diagrams (`mergeAiXml` postMessage path).
+
+All can land later without re-doing the Designer foundation.
+
+### 11.12 Stop point
+
+**§11 written. Awaiting operator approval. After approval → §11-S1 (schema patch) starts.**
+
+

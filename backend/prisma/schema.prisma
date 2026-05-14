@@ -49,18 +49,12 @@ enum FcmDevice {
   @@schema("public")
 }
 
-enum TenantStatus {
-  active
-  suspended
-  archived
-
-  @@schema("public")
-}
-
 model User {
   id                Int       @id @default(autoincrement())
-  // companyId is kept for legacy data-migration compatibility; the new
-  // source of truth for tenant membership is the TenantUser join table.
+  /// For role=User rows: points at the parent Company user's id. The
+  /// derived schema name is `tenant_${companyId}` (or `tenant_${id}` when
+  /// the user IS the Company). Replaces the old TenantUser join table —
+  /// the decision is documented in MIGRATION_NOTES §13.
   companyId         Int       @default(0) @map("company_id")
   name              String    @db.VarChar(255)
   firstName         String    @default("") @map("first_name") @db.VarChar(255)
@@ -73,7 +67,8 @@ model User {
   confirmed         Boolean   @default(false)
   rememberToken     String?   @map("remember_token") @db.VarChar(100)
   emailVerifiedAt   DateTime? @map("email_verified_at") @db.Timestamptz
-  // Legacy db_name/db_username/db_password DROPPED (§11.1) — replaced by Tenant.schemaName.
+  // Legacy db_name/db_username/db_password DROPPED (§11.1) — schema name is
+  // derived from the Company user's id (no per-user DB credentials).
   // Legacy session_timeout DROPPED (§13.3) — replaced by JWT TTL.
   equipmentTreePos  String    @default("") @map("equipment_tree_pos") @db.VarChar(1024)
   analyzerSettings  String    @default("") @map("analyzer_settings") @db.VarChar(1024)
@@ -81,13 +76,15 @@ model User {
   fcmToken          String?   @map("fcm_token") @db.VarChar(255)
   fcmDevice         FcmDevice @default(android) @map("fcm_device")
   unitOnly          Boolean   @default(false) @map("unit_only")
+  /// Moved here from the deleted Tenant model. Per-Company timezone;
+  /// sub-users inherit the value from their Company user at display time.
+  timezone          String    @default("Europe/Stockholm") @db.VarChar(64)
   legacyId          BigInt?   @unique @map("legacy_id")
   createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt         DateTime? @map("deleted_at") @db.Timestamptz
 
   userRoles    UserRole[]
-  tenantUsers  TenantUser[]
   history      History[]
 
   @@index([companyId])
@@ -285,14 +282,17 @@ model Testimonial {
 }
 
 // Feedback — platform-scoped per Phase 4b Gap 5 (legacy stored these in master DB).
-// `tenantId` denormalised so Super Admin can list/filter per company without joining
-// to TenantUser. User snapshot (§11.5) lets old rows survive user/tenant deletion.
-// `visibleToTenant` is a future-flag — when true, the Company role can see the row
-// in their own tenant view. Default false matches legacy "platform-only" behaviour.
+// Post Tenant-removal: `tenantId` is kept on the table for backwards compatibility
+// with the column name but the value is now the Company user's id (= which company
+// the feedback was submitted from). User+company snapshots (§11.5) let old rows
+// survive user deletion. `visibleToTenant` is a future-flag — when true, the Company
+// role can see the row in their own view. Default false = platform-only behaviour.
 model Feedback {
   id                Int       @id @default(autoincrement())
   body              String
   status            Int       @default(1) @db.SmallInt
+  /// Stores the Company user's id (formerly the Tenant.id; column kept for
+  /// table-level back-compat with the legacy `feedbacks.tenant_id` name).
   tenantId          Int?      @map("tenant_id")
   tenantNameSnap    String    @default("") @map("tenant_name_snap") @db.VarChar(255)
   userId            Int?      @map("user_id")
@@ -331,51 +331,13 @@ model SiteSetting {
   @@schema("public")
 }
 
-// Tenant — replaces the legacy users.db_name/db_username/db_password trio.
-// Per §17, every tenant has a timezone; per §11.2 every tenant has a schemaName.
-model Tenant {
-  id          Int          @id @default(autoincrement())
-  slug        String       @unique @db.VarChar(255)
-  name        String       @db.VarChar(255)
-  // schemaName: used when the company data lives as a schema inside fp_analyzer (legacy approach).
-  // dbName: used when the company has its own separate PostgreSQL database on the same server.
-  // One of these will be set depending on how the company was provisioned.
-  schemaName  String       @unique @map("schema_name") @db.VarChar(63)
-  dbName      String?      @unique @map("db_name") @db.VarChar(63)
-  timezone    String       @default("Europe/Stockholm") @db.VarChar(64)
-  status      TenantStatus @default(active)
-  primaryUserId Int?       @map("primary_user_id")
-  legacyDbName String?     @map("legacy_db_name") @db.VarChar(255)
-  legacyId    BigInt?      @unique @map("legacy_id")
-  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
-
-  users TenantUser[]
-
-  @@index([status])
-  @@map("tenants")
-  @@schema("public")
-}
-
-model TenantUser {
-  id        Int      @id @default(autoincrement())
-  tenantId  Int      @map("tenant_id")
-  userId    Int      @map("user_id")
-  // Per-tenant role assignment (e.g. Company-admin in tenant A, User in tenant B).
-  // Phase 3 wires this to the RolesGuard / PermissionsGuard.
-  roleId    Int?     @map("role_id")
-  status    Boolean  @default(true)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
-
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([tenantId, userId])
-  @@index([userId])
-  @@map("tenant_users")
-  @@schema("public")
-}
+// Tenant + TenantUser models REMOVED (see MIGRATION_NOTES §13).
+// A Company user IS the company. The tenant schema name is derived as
+// `tenant_${companyUserId}` from the User row's id (Company role) or
+// companyId (User role) at request time, with no DB lookup.
+// Multi-database mode (legacy Tenant.dbName) is no longer supported in
+// the codebase; production migrations involving separate-DB tenants
+// belong in the Phase 6 data-migration script.
 
 // =========================================================================
 // TENANT_TEMPLATE SCHEMA — cloned per tenant.
@@ -879,7 +841,14 @@ model Order {
 model FlowDesign {
   id          Int       @id @default(autoincrement())
   name        String    @db.VarChar(250)
+  // flow_format distinguishes drawio XML (default) from legacy GoJS JSON.
+  // Plan B (§11): drawio is the only writer in new_fp; pre-existing GoJS
+  // rows were blanked by the §11-S1 migration so they re-save as drawio.
+  flowFormat  String    @default("drawio") @map("flow_format")
   flowData    String?   @map("flow_data")
+  // SVG thumbnail captured at save-time, rendered by FlowCard in the
+  // Monitor/Analyzer card grids (§11-S6). Null = unsaved or legacy row.
+  svgCache    String?   @map("svg_cache")
   status      Int       @default(1) @db.SmallInt
   legacyId    BigInt?   @unique @map("legacy_id")
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
