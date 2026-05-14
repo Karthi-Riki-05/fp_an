@@ -55,8 +55,6 @@ interface ShiftScheduleRow {
   status: number;
 }
 
-interface CategoryRow { id: number; name: string | null }
-
 interface EquipmentFormValues {
   name: string;
   parentId?: number;
@@ -108,12 +106,10 @@ export default function EquipmentListPage() {
 
   // Tab data: one query per assignment kind so the cache key reflects the
   // entity filter and stale-time can differ per call site.
-  const { data: stopCategories } = useQuery<CategoryRow[]>({
-    queryKey: ['stop-categories', tenantId],
-    queryFn: async () => (await apiClient.get<CategoryRow[]>('/admin/stop-categories', { headers })).data,
-    enabled: !!tenantId,
-    staleTime: 60_000,
-  });
+  // Stop types come from `types` with entity=StopReason, same source the
+  // Stop Reasons page uses for its Category dropdown. Previously this
+  // hit /admin/stop-categories which is a separate, unused table.
+  const { data: stopTypes } = typesApi.useList(scope, { entity: 'StopReason', perPage: 200 });
   const { data: scrapTypes } = typesApi.useList(scope, { entity: 'ScrapReason', perPage: 200 });
   const { data: partTypes } = typesApi.useList(scope, { entity: 'Part', perPage: 200 });
   const { data: orderTypes } = typesApi.useList(scope, { entity: 'Order', perPage: 200 });
@@ -339,7 +335,7 @@ export default function EquipmentListPage() {
         okText={editingId === null ? 'Create' : 'Save changes'}
         confirmLoading={submitting}
         destroyOnClose
-        width={680}
+        width={920}
       >
         {editingId !== null && !detail ? (
           <Spin />
@@ -383,11 +379,11 @@ export default function EquipmentListPage() {
                 },
                 {
                   key: 'stop',
-                  label: `Stop types${'  '}(${form.getFieldValue('reasonStopTypeIds')?.length ?? 0})`,
+                  label: 'Stop types',
                   children: (
                     <Form.Item name="reasonStopTypeIds">
                       <Checkbox.Group
-                        options={(stopCategories ?? []).map((c) => ({ value: c.id, label: c.name ?? `#${c.id}` }))}
+                        options={(stopTypes?.data ?? []).map((t) => ({ value: t.id, label: t.name ?? `#${t.id}` }))}
                         style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
                       />
                     </Form.Item>
