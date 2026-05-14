@@ -2,7 +2,7 @@
 
 import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined } from '@ant-design/icons';
 import { App, Button, Checkbox, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Tooltip, Upload } from 'antd';
-import { ReactNode, useEffect, useMemo, useState } from 'react';
+import { ReactNode, useMemo, useState } from 'react';
 import IconLibraryModal from '../shared/IconLibraryModal';
 import { uploadIcon } from '../../lib/api/icons';
 import { toApiError } from '../../lib/api-client';
@@ -118,16 +118,16 @@ export function SimpleCrudPage<TRow extends { id: number }>(props: SimpleCrudPag
   const isEdit = editing !== null;
   const modalOpen = createOpen || isEdit;
 
-  useEffect(() => {
-    if (!modalOpen) return;
+  // Modal destroyOnClose + Form preserve=false remounts the form each open,
+  // so passing initialValues to the Form is the only reliable way to pre-fill
+  // it — setFieldsValue from a useEffect fires before Form.Item children
+  // register and is silently dropped.
+  const initialValues = useMemo<Record<string, unknown>>(() => {
     if (isEdit && editing) {
-      const values = props.toFormValues ? props.toFormValues(editing) : (editing as unknown as Record<string, unknown>);
-      form.setFieldsValue(values);
-    } else {
-      form.resetFields();
-      if (props.defaultValues) form.setFieldsValue(props.defaultValues);
+      return props.toFormValues ? props.toFormValues(editing) : (editing as unknown as Record<string, unknown>);
     }
-  }, [modalOpen, editing, isEdit, form, props]);
+    return props.defaultValues ?? {};
+  }, [isEdit, editing, props]);
 
   const closeModal = () => {
     setCreateOpen(false);
@@ -258,7 +258,7 @@ export function SimpleCrudPage<TRow extends { id: number }>(props: SimpleCrudPag
         maskClosable={false}
         width={520}
       >
-        <Form form={form} layout="vertical" preserve={false}>
+        <Form form={form} layout="vertical" preserve={false} initialValues={initialValues}>
           <ConditionalFields form={form} fields={fields} />
         </Form>
       </Modal>
