@@ -32,7 +32,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { apiClient, toApiError } from '../../../../lib/api-client';
 import { useMe } from '../../../../lib/api/auth';
 import {
@@ -46,6 +46,7 @@ import {
 import { salaryGroupsApi, typesApi } from '../../../../lib/api/admin-crud';
 import { EquipmentTreeSelect } from '../../../../components/equipment/EquipmentTreeSelect';
 import EquipmentPropertiesPanel from '../../../../components/equipment/EquipmentPropertiesPanel';
+import EquipmentDetailsView from '../../../../components/equipment/EquipmentDetailsView';
 
 const { Title } = Typography;
 
@@ -134,31 +135,31 @@ export default function EquipmentListPage() {
   const updateMut = useUpdateEquipment(tenantId);
   const deleteMut = useDeleteEquipment(tenantId);
 
-  // ── Modal lifecycle ────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!modalOpen) return;
-    if (editingId === null) {
-      form.resetFields();
-      form.setFieldsValue(DEFAULT_VALUES);
-    } else if (detail) {
-      // Wait for detail to arrive before populating — avoids the "raw id"
-      // pre-select bug called out in the audit Step 6.
-      form.setFieldsValue({
+  // Compute prefill values once, when detail arrives. With destroyOnClose +
+  // preserve={false} + lazy Tabs mounting, calling form.setFieldsValue from
+  // a useEffect would silently drop values for fields that haven't yet
+  // registered (e.g. the Stop/Scrap/Part/Order tabs that lazy-mount). Using
+  // initialValues guarantees each Form.Item picks up its value when it
+  // mounts, no matter when that is.
+  const initialValues = useMemo<EquipmentFormValues>(() => {
+    if (editingId !== null && detail) {
+      return {
         name: detail.name ?? '',
         parentId: detail.parentId || undefined,
         typeId: detail.typeId || undefined,
         description: detail.description ?? undefined,
-        sortOrder: detail.sortOrder,
-        isActive: detail.isActive,
+        sortOrder: detail.sortOrder ?? 0,
+        isActive: detail.isActive ?? true,
         reasonStopTypeIds: detail.reasonStopTypeIds ?? [],
         reasonScrapTypeIds: detail.reasonScrapTypeIds ?? [],
         reasonPartTypeIds: detail.reasonPartTypeIds ?? [],
         reasonOrderTypeIds: detail.reasonOrderTypeIds ?? [],
         scheduleId: detail.scheduleId ?? undefined,
         alsoAssignImport: detail.alsoAssignImport ?? false,
-      });
+      };
     }
-  }, [modalOpen, editingId, detail, form]);
+    return DEFAULT_VALUES;
+  }, [editingId, detail]);
 
   const closeModal = () => {
     setModalOpen(false);
@@ -352,8 +353,10 @@ export default function EquipmentListPage() {
       >
         {editingId !== null && !detail ? (
           <Spin />
+        ) : viewMode && detail ? (
+          <EquipmentDetailsView detail={detail} scope={scope} />
         ) : (
-          <Form<EquipmentFormValues> form={form} layout="vertical" preserve={false} initialValues={DEFAULT_VALUES} disabled={viewMode}>
+          <Form<EquipmentFormValues> form={form} layout="vertical" preserve={false} initialValues={initialValues}>
             <Tabs
               defaultActiveKey="equipment"
               items={[
