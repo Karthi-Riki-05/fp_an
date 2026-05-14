@@ -39,38 +39,57 @@
     }, 200);
   }
 
+  function xmlEscape(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+  }
+
   function handleInsertNode(editorUi, msg) {
     var graph = editorUi.editor.graph;
     var x = Number(msg.x) || 0;
     var y = Number(msg.y) || 0;
     var label = String(msg.label || 'Equipment');
     var equipmentId = String(msg.equipmentId || '');
-    var width = Number(msg.width) || 120;
-    var height = Number(msg.height) || 60;
-    // Default style — explicit shape=rectangle so drawio renders a filled
-    // box even on themes where the default vertex shape isn't rectangle.
     var style = msg.style
       || 'rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;';
 
-    graph.model.beginUpdate();
+    // Build XML the same shape drawio writes when you serialize a cell
+    // that has custom UserObject attributes, then deserialize via the
+    // exact same path mergeAiXml uses (stringToCells → importCells).
+    // mergeAiXml is known-good in this drawio build; reusing that path
+    // sidesteps every shape-renderer quirk we hit when calling
+    // insertVertex directly.
+    var xml =
+      '<mxGraphModel><root>' +
+      '<mxCell id="0"/>' +
+      '<mxCell id="1" parent="0"/>' +
+      '<UserObject id="fp-' + Date.now() + '"' +
+        ' label="' + xmlEscape(label) + '"' +
+        (equipmentId ? ' equipment-id="' + xmlEscape(equipmentId) + '"' : '') + '>' +
+        '<mxCell style="' + xmlEscape(style) + '" vertex="1" parent="1">' +
+          '<mxGeometry width="120" height="60" as="geometry"/>' +
+        '</mxCell>' +
+      '</UserObject>' +
+      '</root></mxGraphModel>';
+
     try {
-      // Step 1: insert as a normal string-valued vertex so drawio renders
-      // the rectangle + label using its standard path. (Passing an XML
-      // <object> as value short-circuits that path and produces a
-      // label-only render — which is what S5 originally hit.)
-      var vertex = graph.insertVertex(
-        graph.getDefaultParent(),
-        null,
-        label,
-        x, y, width, height,
-        style
-      );
-      // Step 2: promote the value to a UserObject and stamp the custom
-      // attribute. setAttributeForCell handles the upgrade transparently.
-      if (equipmentId) {
-        graph.setAttributeForCell(vertex, 'equipment-id', equipmentId);
+      console.log('[fp-embed] handleInsertNode v2 (stringToCells path)');
+      var cells = editorUi.stringToCells(xml);
+      if (!cells || cells.length === 0) {
+        console.warn('[fp-embed] insertNode: stringToCells returned 0 cells');
+        return;
       }
-      graph.setSelectionCell(vertex);
+      graph.model.beginUpdate();
+      try {
+        var inserted = graph.importCells(cells, x, y);
+        graph.setSelectionCells(inserted);
+      } finally {
+        graph.model.endUpdate();
+      }
       try {
         (window.opener || window.parent).postMessage(
           JSON.stringify({ event: 'insertNode', success: true, equipmentId: equipmentId }),
@@ -79,8 +98,6 @@
       } catch (e) {}
     } catch (err) {
       try { console.error('[fp-embed] insertNode failed', err); } catch (e) {}
-    } finally {
-      graph.model.endUpdate();
     }
   }
 

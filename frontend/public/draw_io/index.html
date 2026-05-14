@@ -71,8 +71,10 @@
 	<script src="js/main.js"></script>
 	<script src="./../custom/chart/js/over-ride.js"></script>
 	<!-- FP Analyzer integration — insertNode (equipment drop) + paintStatus
-	     (live monitor overlay). See FLOW_MANAGEMENT_ANALYSIS.md §11.4/§11.6. -->
-	<script src="./../custom/chart/js/fp-embed.js"></script>
+	     (live monitor overlay). See FLOW_MANAGEMENT_ANALYSIS.md §11.4/§11.6.
+	     The ?v= query param busts drawio's service-worker cache after edits.
+	     Bump it whenever fp-embed.js changes. -->
+	<script src="./../custom/chart/js/fp-embed.js?v=3"></script>
 
 	
 </body>
