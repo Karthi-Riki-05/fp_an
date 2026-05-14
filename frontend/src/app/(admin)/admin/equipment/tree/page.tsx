@@ -3,10 +3,12 @@
 import { ApartmentOutlined, ArrowRightOutlined } from '@ant-design/icons';
 import { Alert, Button, Modal, Skeleton, Space, Tree, Typography } from 'antd';
 import type { DataNode } from 'antd/es/tree';
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import DraggableEquipmentTree from '@/components/equipment/DraggableEquipmentTree';
 import EquipmentDetailsView from '@/components/equipment/EquipmentDetailsView';
+import EquipmentQuickEditModal from '@/components/equipment/EquipmentQuickEditModal';
 import { useEquipmentDetail, useEquipmentTree, type EquipmentTreeNode } from '@/lib/api/equipment';
 import { useMe } from '@/lib/api/auth';
 
@@ -52,6 +54,7 @@ function useIsDesktop(): boolean {
 
 export default function EquipmentStructurePage() {
   const router = useRouter();
+  const qc = useQueryClient();
   const { data: me } = useMe();
   const tenantId = me?.activeTenantId ?? null;
   const scope = { tenantId, isAdmin: me?.isAdmin ?? false };
@@ -61,6 +64,17 @@ export default function EquipmentStructurePage() {
 
   const [viewId, setViewId] = useState<number | null>(null);
   const { data: viewDetail, isLoading: viewLoading } = useEquipmentDetail(tenantId, viewId);
+
+  // Inline edit / add-child modal state. Editing happens here on the tree —
+  // no more navigating to the list page.
+  const [editId, setEditId] = useState<number | null>(null);
+  const [addUnderParent, setAddUnderParent] = useState<number | null>(null);
+  const editOpen = editId !== null || addUnderParent !== null;
+  const closeEdit = () => { setEditId(null); setAddUnderParent(null); };
+  const invalidateTree = () => {
+    qc.invalidateQueries({ queryKey: ['equipment-tree'] });
+    qc.invalidateQueries({ queryKey: ['equipment'] });
+  };
 
   return (
     <div>
@@ -109,8 +123,8 @@ export default function EquipmentStructurePage() {
               tree={tree}
               scope={scope}
               onView={(id) => setViewId(id)}
-              onEdit={(id) => router.push(`/admin/equipment?openEdit=${id}`)}
-              onAddChild={(parentId) => router.push(`/admin/equipment?openAdd=${parentId}`)}
+              onEdit={(id) => setEditId(id)}
+              onAddChild={(parentId) => setAddUnderParent(parentId)}
             />
           ) : (
             <>
@@ -149,6 +163,15 @@ export default function EquipmentStructurePage() {
       >
         {viewLoading || !viewDetail ? <Skeleton active /> : <EquipmentDetailsView detail={viewDetail} scope={scope} />}
       </Modal>
+
+      <EquipmentQuickEditModal
+        open={editOpen}
+        editingId={editId}
+        addUnderParentId={addUnderParent}
+        scope={scope}
+        onClose={closeEdit}
+        onSaved={invalidateTree}
+      />
     </div>
   );
 }
