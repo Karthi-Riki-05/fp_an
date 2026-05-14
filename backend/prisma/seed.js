@@ -15,6 +15,8 @@ const PERMISSIONS = [
   { name: 'impersonate-users',      displayName: 'Impersonate Users',           sort: 5 },
   { name: 'manage-equipment',       displayName: 'Manage Equipment',            sort: 10 },
   { name: 'manage-flow-designs',    displayName: 'Manage Flow Designs',         sort: 11 },
+  { name: 'view-flow-monitor',      displayName: 'View Flow Monitor',           sort: 11 },
+  { name: 'view-flow-analyzer',     displayName: 'View Flow Analyzer',          sort: 11 },
   { name: 'manage-parts',           displayName: 'Manage Parts',                sort: 12 },
   { name: 'manage-orders',          displayName: 'Manage Orders',               sort: 13 },
   { name: 'manage-work-shifts',     displayName: 'Manage Work Shifts',          sort: 14 },
@@ -39,12 +41,13 @@ const PERMISSIONS = [
   { name: 'write-stop-data',        displayName: 'Write Stop Data',             sort: 52 },
 ];
 
-if (PERMISSIONS.length !== 29) {
-  throw new Error(`Permission seed list has ${PERMISSIONS.length}, expected 29`);
+if (PERMISSIONS.length !== 31) {
+  throw new Error(`Permission seed list has ${PERMISSIONS.length}, expected 31`);
 }
 
 const COMPANY_PERMISSIONS = [
   'view-backend', 'manage-users', 'manage-equipment', 'manage-flow-designs',
+  'view-flow-monitor', 'view-flow-analyzer',
   'manage-parts', 'manage-orders', 'manage-work-shifts', 'manage-shift-schedules',
   'manage-machines', 'manage-folders', 'manage-workstations', 'manage-types',
   'manage-stop-reasons', 'manage-scrap-reasons', 'manage-cms', 'manage-feedback',
@@ -52,7 +55,10 @@ const COMPANY_PERMISSIONS = [
   'send-notifications', 'write-production-data', 'write-scrap-data', 'write-stop-data',
 ];
 
-const USER_PERMISSIONS = ['write-production-data', 'write-scrap-data', 'write-stop-data'];
+const USER_PERMISSIONS = [
+  'view-flow-monitor', 'view-flow-analyzer',
+  'write-production-data', 'write-scrap-data', 'write-stop-data',
+];
 
 const ROLES = [
   { name: 'Administrator', all: true,  sort: 1, permissions: PERMISSIONS.map((p) => p.name) },
@@ -117,18 +123,10 @@ async function main() {
       console.log(`  ${role.name}: ${grants.length} permissions`);
     }
 
-    // Demo tenant
-    console.log('[seed] demo tenant');
-    let demo = await prisma.tenant.findUnique({ where: { slug: 'demo' } });
-    if (!demo) {
-      demo = await prisma.tenant.create({ data: { slug: 'demo', name: 'Demo Tenant', schemaName: 'tenant_demo_pending', timezone: 'Europe/Stockholm' } });
-    }
-    const demoSchemaName = `tenant_${demo.id}`;
-    if (demo.schemaName !== demoSchemaName) {
-      demo = await prisma.tenant.update({ where: { id: demo.id }, data: { schemaName: demoSchemaName } });
-    }
-    const cloned = await provisionTenantSchema(prisma, demoSchemaName);
-    console.log(`  schema ${demoSchemaName}: ${cloned} tables cloned`);
+    // Demo tenant — post Tenant-removal: there is no Tenant table. The
+    // demo company is just the Company-role user (seeded below) and the
+    // schema is `tenant_${companyUser.id}`. Schema provisioning happens
+    // after the Company user is created.
 
     // Cleanup legacy dev emails
     const LEGACY_DEV_EMAILS = ['admin@fpanalyzer.local', 'user@demo.local'];
@@ -158,11 +156,11 @@ async function main() {
       console.log('[seed] SEED_SUPERADMIN_EMAIL/PASSWORD not set — skipping admin user');
     }
 
-    // Company user
+    // Company user — IS the company, per the Tenant-removal refactor.
     const companyEmail = ensure(process.env.SEED_COMPANY_EMAIL);
     const companyPassword = ensure(process.env.SEED_COMPANY_PASSWORD);
-    if (companyEmail && companyPassword && companyRoleId && demo) {
-      console.log(`[seed] company-role user (${companyEmail}) attached to demo tenant`);
+    if (companyEmail && companyPassword && companyRoleId) {
+      console.log(`[seed] company-role user (${companyEmail})`);
       const hash = await bcrypt.hash(companyPassword, 12);
       const u = await prisma.user.upsert({
         where: { email: companyEmail },
@@ -170,7 +168,11 @@ async function main() {
         create: { name: 'Company User', firstName: 'Company', lastName: 'User', email: companyEmail, password: hash, confirmed: true, status: 1 },
       });
       await prisma.userRole.upsert({ where: { userId_roleId: { userId: u.id, roleId: companyRoleId } }, update: {}, create: { userId: u.id, roleId: companyRoleId } });
-      await prisma.tenantUser.upsert({ where: { tenantId_userId: { tenantId: demo.id, userId: u.id } }, update: { status: true, roleId: companyRoleId }, create: { tenantId: demo.id, userId: u.id, roleId: companyRoleId, status: true } });
+      // Provision the per-Company schema. provisionTenantSchema is
+      // idempotent — safe to call on every seed run.
+      const schemaName = `tenant_${u.id}`;
+      const cloned = await provisionTenantSchema(prisma, schemaName);
+      console.log(`  schema ${schemaName}: ${cloned} tables cloned`);
     } else {
       console.log('[seed] SEED_COMPANY_EMAIL/PASSWORD not set — skipping company user');
     }

@@ -26,8 +26,11 @@ import {
   Typography,
 } from 'antd';
 import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { FlowCanvasPlaceholder, type FlowEdge, type FlowNode } from '../../../../components/flow/FlowCanvasPlaceholder';
+import FlowCardGrid from '../../../../components/flow/FlowCardGrid';
+import GoJsLicensePlaceholder from '../../../../components/flow/GoJsLicensePlaceholder';
 import { useMe } from '../../../../lib/api/auth';
 import {
   decodeReasonValue,
@@ -37,6 +40,7 @@ import {
   useEquipmentStopReasons,
   useFlowDesignsList,
 } from '../../../../lib/api/monitor';
+import { useFlowDesignsList as useFlowDesignsListV2, useFlowMonitorStatus } from '../../../../lib/api/flow-designs';
 
 const { Title, Text } = Typography;
 
@@ -86,14 +90,41 @@ function statusTag(status: FlowNode['status']) {
   return <Tag color={color} icon={icon}>{label}</Tag>;
 }
 
-export default function FlowMonitorPage() {
+function FlowMonitorGrid() {
+  const router = useRouter();
+  const { data: me } = useMe();
+  const scope = { tenantId: me?.activeTenantId ?? null, isAdmin: me?.isAdmin ?? false };
+  const gridFlows = useFlowDesignsListV2(scope);
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+        <Link href="/dashboard" aria-label="Back" style={{ color: 'rgba(0,0,0,0.45)' }}>
+          <ArrowLeftOutlined />
+        </Link>
+        <Title level={3} style={{ margin: 0 }}>Flow Monitor</Title>
+      </div>
+      <FlowCardGrid
+        flows={gridFlows.data ?? []}
+        onFlowClick={(id) => router.push(`/monitor/${id}`)}
+        title={`${gridFlows.data?.length ?? 0} active flow${(gridFlows.data?.length ?? 0) === 1 ? '' : 's'}`}
+      />
+    </div>
+  );
+}
+
+function FlowMonitorDetail({ initialFlowId }: { initialFlowId: number }) {
   const { message } = App.useApp();
   const { data: me } = useMe();
   const tenantId = me?.activeTenantId ?? null;
+  const scope = { tenantId, isAdmin: me?.isAdmin ?? false };
 
   // Real flow list from /api/v1/admin/flow-designs (B1.4).
   const { data: flows, isLoading: flowsLoading } = useFlowDesignsList(tenantId);
-  const [flowId, setFlowId] = useState<number | null>(null);
+  const [flowId, setFlowId] = useState<number | null>(initialFlowId);
+  // Live monitor status (ETag-cached on the server, polled every 10s). The
+  // data isn't painted onto the canvas yet because there's no GoJS — it
+  // streams now so Plan B's overlay drops in cleanly.
+  useFlowMonitorStatus(scope, flowId);
 
   // Default the flow Select to the first active flow once it loads. The
   // canvas is still mock so the selected flow doesn't actually drive
@@ -219,13 +250,17 @@ export default function FlowMonitorPage() {
       {/* main layout: canvas + side panel */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col xs={24} lg={17}>
-          <Card bodyStyle={{ padding: 12 }}>
-            <FlowCanvasPlaceholder
-              nodes={NODES}
-              edges={EDGES}
-              selectedId={selectedId}
-              onSelect={setSelectedId}
-            />
+          <Card styles={{ body: { padding: 12 } }}>
+            {process.env.NEXT_PUBLIC_GOJS_LICENSE_KEY ? (
+              <FlowCanvasPlaceholder
+                nodes={NODES}
+                edges={EDGES}
+                selectedId={selectedId}
+                onSelect={setSelectedId}
+              />
+            ) : (
+              <GoJsLicensePlaceholder width="100%" height={500} />
+            )}
           </Card>
         </Col>
         <Col xs={24} lg={7}>
@@ -476,4 +511,14 @@ export default function FlowMonitorPage() {
       </Modal>
     </div>
   );
+}
+
+// Top-level page: switch between the card grid and the detail view based
+// on the URL. The catch-all route segment `[[...id]]` makes /monitor and
+// /monitor/<id> hit the same file.
+export default function FlowMonitorPage() {
+  const routeParams = useParams<{ id?: string[] }>();
+  const urlFlowId = routeParams?.id?.[0] ? Number(routeParams.id[0]) : null;
+  if (urlFlowId === null) return <FlowMonitorGrid />;
+  return <FlowMonitorDetail initialFlowId={urlFlowId} />;
 }
