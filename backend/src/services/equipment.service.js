@@ -1,7 +1,7 @@
 'use strict';
 
 const { withTenant } = require('../prisma/client');
-const { NotFoundError } = require('../errors');
+const { BadRequestError, NotFoundError } = require('../errors');
 
 // Explicit int casts prevent Prisma $queryRawUnsafe from returning BigInt
 // for columns that might be defined as BIGINT in some tenant schema versions.
@@ -312,6 +312,133 @@ async function getOrdersForEquipment(tenant, equipmentId) {
   );
 }
 
+// ─────────────── Equipment Tree reorder / reparent ────────────────────────
+//
+// Mirrors legacy DashboardController@sortEquipments. The legacy endpoint
+// branched on parent_changed (reorder-within-parent vs reparent) and updated
+// one row per call; the new contract is a batch — clients send the full list
+// of affected rows in one POST so the entire drop is atomic.
+//
+// Validation pipeline (all done BEFORE the transaction begins so we read
+// the pre-update tree state):
+//   1. dedupe & coerce inputs (parentId null/missing -> 0 root)
+//   2. confirm every input id exists in this tenant and is not deleted
+//   3. confirm every non-zero parentId exists in this tenant
+//   4. anti-circular check: walk up from each new parentId on the CURRENT
+//      tree; if we encounter the node being moved, reject 400.
+// Then a single $transaction updates parent_id + sort_order on every row.
+
+async function reorder(tenant, items) {
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new BadRequestError('reorder-items-empty');
+  }
+
+  // Normalise inputs.
+  const normalised = items.map((it) => {
+    const id = Number(it?.id);
+    const parentId = (it?.parentId === null || it?.parentId === undefined)
+      ? 0
+      : Number(it.parentId);
+    const sortOrder = Number(it?.sortOrder);
+    if (!Number.isInteger(id) || id <= 0) {
+      throw new BadRequestError(`invalid-id: ${it?.id}`);
+    }
+    if (!Number.isInteger(parentId) || parentId < 0) {
+      throw new BadRequestError(`invalid-parentId: ${it?.parentId}`);
+    }
+    if (!Number.isInteger(sortOrder) || sortOrder < 0) {
+      throw new BadRequestError(`invalid-sortOrder: ${it?.sortOrder}`);
+    }
+    if (parentId === id) {
+      const err = new BadRequestError('circular-reference');
+      err.nodeId = id;
+      throw err;
+    }
+    return { id, parentId, sortOrder };
+  });
+
+  // De-duplicate by id (keep first occurrence; reject if a single id appears
+  // with conflicting values).
+  const byId = new Map();
+  for (const row of normalised) {
+    const existing = byId.get(row.id);
+    if (existing && (existing.parentId !== row.parentId || existing.sortOrder !== row.sortOrder)) {
+      throw new BadRequestError(`duplicate-id-conflict: ${row.id}`);
+    }
+    byId.set(row.id, row);
+  }
+  const inputs = [...byId.values()];
+  const inputIds = inputs.map((i) => i.id);
+  const parentIds = [...new Set(inputs.map((i) => i.parentId).filter((p) => p !== 0))];
+
+  return withTenant(tenant, async (tx) => {
+    // 2. All input ids belong to this tenant.
+    const existing = await tx.$queryRawUnsafe(
+      `SELECT id::int AS id, parent_id::int AS "parentId"
+         FROM equipment
+        WHERE id = ANY($1::int[]) AND deleted_at IS NULL`,
+      inputIds,
+    );
+    if (existing.length !== inputIds.length) {
+      const foundIds = new Set(existing.map((r) => r.id));
+      const missing = inputIds.filter((id) => !foundIds.has(id));
+      throw new NotFoundError(`equipment-not-found: ${missing.join(',')}`);
+    }
+
+    // 3. All proposed parent ids exist in this tenant (skip the 0 sentinel).
+    if (parentIds.length > 0) {
+      const parents = await tx.$queryRawUnsafe(
+        `SELECT id::int AS id FROM equipment
+          WHERE id = ANY($1::int[]) AND deleted_at IS NULL`,
+        parentIds,
+      );
+      if (parents.length !== parentIds.length) {
+        const foundIds = new Set(parents.map((r) => r.id));
+        const missing = parentIds.filter((id) => !foundIds.has(id));
+        throw new NotFoundError(`parent-not-found: ${missing.join(',')}`);
+      }
+    }
+
+    // 4. Anti-circular walk on the CURRENT (pre-update) tree state.
+    // Build a map of id → parentId for the whole tenant tree so a walk is
+    // O(depth). Then for each input row, walk up from the proposed new
+    // parent; if we encounter the row's own id, reject.
+    const allRows = await tx.$queryRawUnsafe(
+      `SELECT id::int AS id, parent_id::int AS "parentId"
+         FROM equipment WHERE deleted_at IS NULL`,
+    );
+    const parentMap = new Map(allRows.map((r) => [r.id, r.parentId]));
+    for (const row of inputs) {
+      let cursor = row.parentId;
+      const visited = new Set();
+      while (cursor !== 0) {
+        if (cursor === row.id) {
+          const err = new BadRequestError('circular-reference');
+          err.nodeId = row.id;
+          throw err;
+        }
+        if (visited.has(cursor)) break; // pre-existing cycle (shouldn't happen) — bail
+        visited.add(cursor);
+        cursor = parentMap.get(cursor) ?? 0;
+      }
+    }
+
+    // All checks passed — apply the updates.
+    for (const row of inputs) {
+      await tx.$executeRawUnsafe(
+        `UPDATE equipment SET parent_id = $1, sort_order = $2, updated_at = now()
+          WHERE id = $3 AND deleted_at IS NULL`,
+        row.parentId, row.sortOrder, row.id,
+      );
+    }
+    return { updated: inputs.length };
+  });
+}
+
+async function updatePosition(tenant, id, parentId, sortOrder) {
+  return reorder(tenant, [{ id, parentId, sortOrder }]);
+}
+
 // ─────────────── Equipment Properties (per-part-type config) ───────────────
 // One row per (equipment, part type). Stores cycle time, operator count,
 // salary group, value-adding cost, per-hour cost, currency, and the order
@@ -377,4 +504,5 @@ module.exports = {
   list, findOne, create, update, softDelete, getTree,
   getPartsForEquipment, getStopReasonsForEquipment, getScrapReasonsForEquipment, getOrdersForEquipment,
   getProperties, replaceProperties,
+  reorder, updatePosition,
 };

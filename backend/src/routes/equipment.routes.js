@@ -44,6 +44,37 @@ router.get('/:id/properties', async (req, res, next) => {
   try { res.json(await svc.getProperties(req.tenant, Number(req.params.id))); } catch (err) { next(err); }
 });
 
+// Tree reorder/reparent. POST /reorder is the batch endpoint used by the
+// draggable tree; PATCH /:id/position is a single-item convenience that
+// delegates to the same service code.
+function sendCircularRef(res, err) {
+  if (err && err.message === 'circular-reference' && err.nodeId !== undefined) {
+    res.status(400).json({ statusCode: 400, message: 'circular-reference', nodeId: err.nodeId });
+    return true;
+  }
+  return false;
+}
+
+router.post('/reorder', requirePermission('manage-equipment'), async (req, res, next) => {
+  try {
+    const items = Array.isArray(req.body) ? req.body : req.body?.items;
+    res.json(await svc.reorder(req.tenant, items ?? []));
+  } catch (err) {
+    if (sendCircularRef(res, err)) return;
+    next(err);
+  }
+});
+
+router.patch('/:id/position', requirePermission('manage-equipment'), async (req, res, next) => {
+  try {
+    const { parentId, sortOrder } = req.body ?? {};
+    res.json(await svc.updatePosition(req.tenant, Number(req.params.id), parentId, sortOrder));
+  } catch (err) {
+    if (sendCircularRef(res, err)) return;
+    next(err);
+  }
+});
+
 router.put('/:id/properties', requirePermission('manage-equipment'), async (req, res, next) => {
   try {
     const rows = Array.isArray(req.body) ? req.body : req.body?.properties;
