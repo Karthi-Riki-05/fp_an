@@ -72,8 +72,8 @@ router.get('/:id/diagram', VIEW_ANY, async (req, res, next) => {
 
 router.put('/:id/diagram', MANAGE, async (req, res, next) => {
   try {
-    const { flowData, asNewName } = req.body ?? {};
-    res.json(await svc.saveDiagram(req.tenant, Number(req.params.id), { flowData, asNewName }));
+    const { flowData, asNewName, svgData } = req.body ?? {};
+    res.json(await svc.saveDiagram(req.tenant, Number(req.params.id), { flowData, asNewName, svgData }));
   } catch (err) { next(err); }
 });
 

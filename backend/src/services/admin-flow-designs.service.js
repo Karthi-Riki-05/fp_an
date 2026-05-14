@@ -133,7 +133,8 @@ async function softDelete(tenant, id) {
 async function getDiagram(tenant, id) {
   const rows = await withTenant(tenant, (tx) =>
     tx.$queryRawUnsafe(
-      `SELECT id, name, flow_data AS "flowData"
+      `SELECT id, name, flow_data AS "flowData",
+              flow_format AS "flowFormat", svg_cache AS "svgCache"
          FROM flow_designs WHERE id = $1 AND deleted_at IS NULL`,
       id,
     ),
@@ -142,25 +143,65 @@ async function getDiagram(tenant, id) {
   return rows[0];
 }
 
+// Cap thumbnail SVGs so a runaway diagram (hundreds of nodes) doesn't
+// balloon flow_designs.svg_cache to multi-MB rows. 500 KB is well above
+// every realistic diagram we'd ship and still cheap to store.
+const SVG_MAX_BYTES = 500_000;
+
 /**
- * Save the GoJS model JSON into flow_data. If `asNewName` is provided, the
- * call creates a NEW row (Save As). Tenant-scoped name uniqueness on
- * Save As — 409 on conflict.
+ * Save the flow diagram (drawio XML preferred; legacy GoJS JSON tolerated
+ * but never freshly written — pre-§11 rows were blanked). When `asNewName`
+ * is provided the call creates a NEW row (Save As). Tenant-scoped name
+ * uniqueness on Save As — 409 on conflict.
  *
- * Mirrors legacy `DashboardController::editFlowDesignTest` (`:3138`) but
- * without the bg-image file-move side-effect (background uploads use a
- * dedicated endpoint now; the client holds the public URL).
+ * Format detection
+ *   - drawio XML  → starts with '<' (e.g. '<mxGraphModel' or '<mxfile')
+ *   - legacy GoJS → starts with '{' AND JSON-parses to { nodeDataArray }
+ *   - anything else → 400 flowData-unknown-format
+ *
+ * Setting `flow_format='drawio'` on every drawio save means any
+ * pre-§11 GoJS row that gets re-saved through the new editor flips its
+ * format flag automatically — no separate migration step needed.
+ *
+ * Optional `svgData` (drawio path only) is the export SVG captured by
+ * the Designer at save-time. Stored verbatim in svg_cache for the
+ * FlowCard thumbnail render in Monitor/Analyzer card grids.
  */
-async function saveDiagram(tenant, id, { flowData, asNewName }) {
+async function saveDiagram(tenant, id, { flowData, asNewName, svgData }) {
   if (typeof flowData !== 'string' || flowData.length === 0) {
     throw new BadRequestError('flowData-required');
   }
-  // Validate parseable + has nodeDataArray. Reject malformed early — saving
-  // garbage into flow_data would only blow up at the next load.
-  let parsed;
-  try { parsed = JSON.parse(flowData); } catch { throw new BadRequestError('flowData-not-json'); }
-  if (!parsed || !Array.isArray(parsed.nodeDataArray)) {
-    throw new BadRequestError('flowData-missing-nodeDataArray');
+
+  const trimmed = flowData.trimStart();
+  let flowFormat;
+  if (trimmed.startsWith('<')) {
+    // drawio XML — accept as-is, no DOM parse here (drawio itself validates
+    // on load; a syntactically broken XML would re-open as a blank canvas).
+    flowFormat = 'drawio';
+  } else if (trimmed.startsWith('{')) {
+    let parsed;
+    try { parsed = JSON.parse(trimmed); } catch { throw new BadRequestError('flowData-not-json'); }
+    if (!parsed || !Array.isArray(parsed.nodeDataArray)) {
+      throw new BadRequestError('flowData-missing-nodeDataArray');
+    }
+    flowFormat = 'gojs';
+  } else {
+    throw new BadRequestError('flowData-unknown-format');
+  }
+
+  // Validate / cap the SVG thumbnail.
+  let svgToStore = null;
+  if (svgData !== undefined && svgData !== null && svgData !== '') {
+    if (typeof svgData !== 'string') throw new BadRequestError('svgData-not-string');
+    const svgHead = svgData.trimStart();
+    if (!/^<svg/i.test(svgHead)) throw new BadRequestError('svgData-not-svg');
+    if (svgData.length > SVG_MAX_BYTES) {
+      // eslint-disable-next-line no-console
+      console.warn(`[flow-designs] svgData oversized (${svgData.length} bytes > ${SVG_MAX_BYTES}); skipping cache for flow id=${id}`);
+      svgToStore = null;
+    } else {
+      svgToStore = svgData;
+    }
   }
 
   return withTenant(tenant, async (tx) => {
@@ -172,19 +213,27 @@ async function saveDiagram(tenant, id, { flowData, asNewName }) {
       );
       if (dupes[0]) throw new ConflictError('name-already-in-use');
       const rows = await tx.$queryRawUnsafe(
-        `INSERT INTO flow_designs (name, flow_data, status, created_at, updated_at)
-         VALUES ($1, $2, 1, now(), now())
-         RETURNING id, name`,
-        name, flowData,
+        `INSERT INTO flow_designs (name, flow_data, flow_format, svg_cache, status, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, 1, now(), now())
+         RETURNING id, name, flow_format AS "flowFormat"`,
+        name, flowData, flowFormat, svgToStore,
       );
       return rows[0];
     }
-    // Update existing.
+    // Update existing. svg_cache is only overwritten when svgData was
+    // supplied — autosave (no SVG) leaves the previous thumbnail in place.
+    const sets = ['flow_data = $1', 'flow_format = $2', 'updated_at = now()'];
+    const params = [flowData, flowFormat];
+    if (svgData !== undefined) {
+      params.push(svgToStore);
+      sets.push(`svg_cache = $${params.length}`);
+    }
+    params.push(id);
     const rows = await tx.$queryRawUnsafe(
-      `UPDATE flow_designs SET flow_data = $1, updated_at = now()
-        WHERE id = $2 AND deleted_at IS NULL
-        RETURNING id, name`,
-      flowData, id,
+      `UPDATE flow_designs SET ${sets.join(', ')}
+        WHERE id = $${params.length} AND deleted_at IS NULL
+        RETURNING id, name, flow_format AS "flowFormat"`,
+      ...params,
     );
     if (!rows[0]) throw new NotFoundError('flow-design-not-found');
     return rows[0];
@@ -244,7 +293,10 @@ async function listWithData(tenant) {
   return withTenant(tenant, (tx) =>
     tx.$queryRawUnsafe(
       `SELECT id::int AS id, name, status::int AS status,
-              flow_data AS "flowData", updated_at AS "updatedAt"
+              flow_data   AS "flowData",
+              flow_format AS "flowFormat",
+              svg_cache   AS "svgCache",
+              updated_at  AS "updatedAt"
          FROM flow_designs
         WHERE deleted_at IS NULL AND status = 1
         ORDER BY name ASC`,
