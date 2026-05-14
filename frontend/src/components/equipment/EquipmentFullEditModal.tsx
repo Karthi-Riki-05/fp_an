@@ -14,14 +14,17 @@ import {
   Switch,
   Tabs,
 } from 'antd';
-import { useQuery } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
 import { apiClient, toApiError } from '../../lib/api-client';
 import { salaryGroupsApi, typesApi, type TenantScope } from '../../lib/api/admin-crud';
 import {
   useCreateEquipment,
   useEquipmentDetail,
+  useEquipmentProperties,
+  useReplaceEquipmentProperties,
   useUpdateEquipment,
+  type EquipmentPropertyRow,
 } from '../../lib/api/equipment';
 import EquipmentPropertiesPanel from './EquipmentPropertiesPanel';
 import { EquipmentTreeSelect } from './EquipmentTreeSelect';
@@ -84,13 +87,30 @@ export default function EquipmentFullEditModal({
   open, editingId, addUnderParentId, scope, onClose, onSaved,
 }: Props) {
   const { message } = App.useApp();
+  const qc = useQueryClient();
   const [form] = Form.useForm<EquipmentFormValues>();
   const [submitting, setSubmitting] = useState(false);
+  const [propertyRows, setPropertyRows] = useState<EquipmentPropertyRow[]>([]);
 
   const tenantId = scope.tenantId;
   const headers = scope.isAdmin && tenantId ? { 'X-Tenant-Id': String(tenantId) } : undefined;
 
   const { data: detail } = useEquipmentDetail(tenantId, editingId);
+  const { data: existingProperties } = useEquipmentProperties(tenantId, editingId);
+
+  // Reset / hydrate the controlled propertyRows whenever the modal flips
+  // between edit targets or the existing properties land for an editing
+  // session. The panel itself is purely controlled by us — no local state.
+  useEffect(() => {
+    if (!open) return;
+    if (editingId === null) {
+      setPropertyRows([]);
+      return;
+    }
+    if (existingProperties) {
+      setPropertyRows(existingProperties);
+    }
+  }, [open, editingId, existingProperties]);
   const { data: equipmentTypes } = typesApi.useList(scope, { entity: 'Equipment', perPage: 200 });
   const { data: stopTypes }      = typesApi.useList(scope, { entity: 'StopReason', perPage: 200 });
   const { data: scrapTypes }     = typesApi.useList(scope, { entity: 'ScrapReason', perPage: 200 });
@@ -113,6 +133,7 @@ export default function EquipmentFullEditModal({
 
   const createMut = useCreateEquipment(tenantId);
   const updateMut = useUpdateEquipment(tenantId);
+  const replacePropertiesMut = useReplaceEquipmentProperties(tenantId);
 
   // Prefill via initialValues — Form.Items on lazy-mounted Tabs only register
   // when their tab is first opened, so setFieldsValue inside a useEffect
@@ -144,6 +165,16 @@ export default function EquipmentFullEditModal({
   const onSubmit = async () => {
     try {
       const values = await form.validateFields();
+
+      // Validate Properties rows up front — better to surface "row N is
+      // missing a Part Type" before any network call than after equipment
+      // saves and properties fail halfway.
+      const badRow = propertyRows.findIndex((r) => !r.typeId || r.typeId <= 0);
+      if (badRow !== -1) {
+        message.error(`Properties row ${badRow + 1}: pick a Part Type before saving.`);
+        return;
+      }
+
       setSubmitting(true);
       const payload = {
         name: values.name,
@@ -159,13 +190,23 @@ export default function EquipmentFullEditModal({
         scheduleId: values.scheduleId ?? null,
         alsoAssignImport: values.alsoAssignImport,
       };
+
+      // Save equipment first to get an id (for create) or just update.
+      let savedId: number;
       if (editingId !== null) {
         await updateMut.mutateAsync({ id: editingId, input: payload });
-        message.success('Equipment updated.');
+        savedId = editingId;
       } else {
-        await createMut.mutateAsync(payload);
-        message.success('Equipment created.');
+        const created = await createMut.mutateAsync(payload);
+        savedId = created.id;
       }
+
+      // Then persist the Properties tab against that id. PUT-replaces the
+      // whole list so removed rows actually disappear.
+      await replacePropertiesMut.mutateAsync({ id: savedId, rows: propertyRows });
+      qc.invalidateQueries({ queryKey: ['equipment-properties', tenantId, savedId] });
+
+      message.success(editingId !== null ? 'Equipment updated.' : 'Equipment created.');
       onSaved?.();
       onClose();
     } catch (err) {
@@ -308,7 +349,14 @@ export default function EquipmentFullEditModal({
               {
                 key: 'properties',
                 label: 'Properties',
-                children: <EquipmentPropertiesPanel equipmentId={editingId} scope={scope} />,
+                children: (
+                  <EquipmentPropertiesPanel
+                    equipmentId={editingId}
+                    scope={scope}
+                    value={propertyRows}
+                    onChange={setPropertyRows}
+                  />
+                ),
               },
             ]}
           />

@@ -1,24 +1,17 @@
 'use client';
 
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import { Alert, App, Button, Card, Col, Input, InputNumber, Popconfirm, Radio, Row, Select, Space, Spin, Typography } from 'antd';
+import { Alert, Button, Card, Col, Input, InputNumber, Popconfirm, Radio, Row, Select, Space, Spin, Typography } from 'antd';
 import { useEffect, useState } from 'react';
-import { toApiError } from '../../lib/api-client';
 import { salaryGroupsApi, typesApi, type TenantScope } from '../../lib/api/admin-crud';
 import {
   useEquipmentProperties,
-  useReplaceEquipmentProperties,
   type EquipmentPropertyRow,
 } from '../../lib/api/equipment';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
-interface Props {
-  equipmentId: number | null;
-  scope: TenantScope;
-}
-
-const EMPTY_ROW: Omit<EquipmentPropertyRow, 'typeId'> & { typeId: number } = {
+const EMPTY_ROW: EquipmentPropertyRow = {
   typeId: 0,
   cycleTime: '00:00:00',
   costPerHour: 0,
@@ -30,19 +23,47 @@ const EMPTY_ROW: Omit<EquipmentPropertyRow, 'typeId'> & { typeId: number } = {
   orderSelection: 'free_text',
 };
 
-export default function EquipmentPropertiesPanel({ equipmentId, scope }: Props) {
-  const { message } = App.useApp();
+interface Props {
+  equipmentId: number | null;
+  scope: TenantScope;
+  /**
+   * Controlled rows. When omitted, the panel manages its own state and
+   * preloads from the server (legacy behaviour for the standalone view
+   * tab). When provided, the parent modal owns the state and persists it
+   * as part of its main Save — set by EquipmentFullEditModal.
+   */
+  value?: EquipmentPropertyRow[];
+  onChange?: (rows: EquipmentPropertyRow[]) => void;
+}
+
+export default function EquipmentPropertiesPanel({ equipmentId, scope, value, onChange }: Props) {
   const { data: partTypes } = typesApi.useList(scope, { entity: 'Part', perPage: 200 });
   const { data: salaryGroups } = salaryGroupsApi.useList(scope, { perPage: 200 });
   const { data: existing, isLoading } = useEquipmentProperties(scope.tenantId, equipmentId);
-  const saveMut = useReplaceEquipmentProperties(scope.tenantId);
 
-  const [rows, setRows] = useState<EquipmentPropertyRow[]>([]);
-  const [saving, setSaving] = useState(false);
+  // Uncontrolled fallback — used only when the parent doesn't supply
+  // value/onChange. The full edit modal supplies them so its main Save
+  // button persists Properties alongside the equipment record.
+  const [localRows, setLocalRows] = useState<EquipmentPropertyRow[]>([]);
+  const isControlled = value !== undefined;
+  const rows = isControlled ? value : localRows;
+  const setRows = (updater: (rs: EquipmentPropertyRow[]) => EquipmentPropertyRow[]) => {
+    if (isControlled) onChange?.(updater(value));
+    else setLocalRows((rs) => updater(rs));
+  };
 
+  // Hydrate from the server whenever existing data lands. Important: only
+  // overwrite local state when the server returns a non-empty list AND the
+  // local state is still empty — so the user's in-progress edits don't get
+  // clobbered by a refetch. Also matters when the modal first opens and
+  // existing arrives a tick after the panel mounts.
   useEffect(() => {
-    if (existing) setRows(existing);
-  }, [existing]);
+    if (!existing) return;
+    if (existing.length === 0) return;
+    if (rows.length > 0) return;
+    if (isControlled) onChange?.(existing);
+    else setLocalRows(existing);
+  }, [existing, rows.length, isControlled, onChange]);
 
   if (equipmentId === null) {
     return (
@@ -53,7 +74,7 @@ export default function EquipmentPropertiesPanel({ equipmentId, scope }: Props) 
       />
     );
   }
-  if (isLoading) return <Spin />;
+  if (isLoading && rows.length === 0) return <Spin />;
 
   const partOptions = (partTypes?.data ?? []).map((p) => ({ value: p.id, label: p.name ?? `#${p.id}` }));
   const salaryOptions = (salaryGroups?.data ?? []).map((s) => ({ value: s.id, label: s.name ?? `#${s.id}` }));
@@ -67,31 +88,13 @@ export default function EquipmentPropertiesPanel({ equipmentId, scope }: Props) 
   const removeRow = (idx: number) => setRows((rs) => rs.filter((_, i) => i !== idx));
   const addRow = () => setRows((rs) => [...rs, { ...EMPTY_ROW }]);
 
-  const onSave = async () => {
-    // Each row must have a Part Type selected.
-    const invalid = rows.findIndex((r) => !r.typeId || r.typeId <= 0);
-    if (invalid !== -1) {
-      message.error(`Row ${invalid + 1}: pick a Part Type before saving.`);
-      return;
-    }
-    setSaving(true);
-    try {
-      await saveMut.mutateAsync({ id: equipmentId, rows });
-      message.success('Properties saved.');
-    } catch (err) {
-      message.error(toApiError(err).message || 'Save failed.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
   return (
     <Space direction="vertical" size="middle" style={{ width: '100%' }}>
       {rows.length === 0 && (
         <Alert
           type="info"
           showIcon
-          message="No per-Part-Type properties yet. Add a row to configure cycle time, operator count, salary group and cost."
+          message="No per-Part-Type properties yet. Add a row, then click Save changes (modal footer) to persist."
         />
       )}
 
@@ -213,14 +216,9 @@ export default function EquipmentPropertiesPanel({ equipmentId, scope }: Props) 
         </Card>
       ))}
 
-      <Space>
-        <Button type="dashed" icon={<PlusOutlined />} onClick={addRow} disabled={!canAddMore}>
-          Add part type
-        </Button>
-        <Button type="primary" onClick={onSave} loading={saving}>
-          Save properties
-        </Button>
-      </Space>
+      <Button type="dashed" icon={<PlusOutlined />} onClick={addRow} disabled={!canAddMore}>
+        Add part type
+      </Button>
     </Space>
   );
 }
