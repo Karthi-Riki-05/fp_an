@@ -27,7 +27,7 @@ async function list(tenant, q) {
       `SELECT sr.id, sr.name, sr.type_id AS "typeId", sc.name AS "typeName",
               sr.description, sr.sort_order AS "sortOrder", sr.created_at AS "createdAt"
        FROM scrap_reasons sr
-       LEFT JOIN types sc ON sc.id = sr.type_id AND sc.entity = 'Scrap reason' AND sc.is_active = 'Y'
+       LEFT JOIN types sc ON sc.id = sr.type_id AND sc.entity = 'ScrapReason'::tenant_template."TypeEntity" AND sc.is_active = true AND sc.deleted_at IS NULL
        WHERE ${where}
        ORDER BY ${orderCol} ${orderDir}, sr.id ${orderDir}
        LIMIT ${perPage} OFFSET ${skip}`,
@@ -46,7 +46,7 @@ async function findOne(tenant, id) {
       `SELECT sr.id, sr.name, sr.type_id AS "typeId", sc.name AS "typeName",
               sr.description, sr.sort_order AS "sortOrder", sr.created_at AS "createdAt"
        FROM scrap_reasons sr
-       LEFT JOIN types sc ON sc.id = sr.type_id AND sc.entity = 'Scrap reason' AND sc.is_active = 'Y'
+       LEFT JOIN types sc ON sc.id = sr.type_id AND sc.entity = 'ScrapReason'::tenant_template."TypeEntity" AND sc.is_active = true AND sc.deleted_at IS NULL
        WHERE sr.id = $1 AND sr.deleted_at IS NULL`,
       id
     )
