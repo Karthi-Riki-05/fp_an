@@ -118,4 +118,68 @@ The existing `POST /api/v1/admin/users` create service already branches on wheth
 - `npx tsc --noEmit` in frontend — no new type errors introduced in `CompanyAdminCreateUserForm.tsx`, `UserFormModal.tsx`, `admin-users.ts`, or the create page. (Pre-existing Highcharts errors in `admin/boards/...` are unrelated.)
 - Functional smoke test (curl + browser) — pending the running stack; called out in "Deferred / Out of scope" if not run this round.
 
+## Module 2 — Legacy source findings
+
+### Routes & controller (legacy)
+- `routes/Backend/Dashboard.php`: GET `type/add`, POST `type/add`, GET `type/edit/{id}`, POST `type/update`, POST `type/delete`, POST `type/status`, GET `type/view/{id}`.
+- Controller: `DashboardController` methods `addType`, `storeType`, `editType`, `updateType`, `statusType`, `deleteType`, `viewType`, `getTypeSummary`.
+
+### Add Type form (legacy `backend/types/add_type.blade.php`)
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `name` | text | empty | required |
+| `entity` | select | empty | required. Values: `Equipments`, `Stop reason`, `Scrap reason`, `Parts`, `Orders` (the option *value*, used as the stored DB value, are display strings). |
+| `type` (loss model category) | select | empty | conditional. Shown when entity ≠ Equipments/Parts/Orders. Values: `Performance`, `Availability`, `Quality`. For Stop reason: Quality is hidden in legacy. For Scrap reason: Performance + Availability are hidden. (Per DROPDOWN_AUDIT RESOLVED iii the new_fp set is broader — see note below.) |
+| `description` | textarea | empty | rows=5 |
+| `icon` | file `<input type=file>` + library button | empty | "Choose from library" opens `#browseModal`. Hidden input `#icon_path` (form name `icon_name`) carries the chosen filename. |
+| `sort_order` | text | empty | rendered alongside icon column |
+| `exclude_type` | checkbox | unchecked | only shown when entity = `Stop reason` |
+
+### Icon library modal (legacy `backend/includes/icon/modal.blade.php`)
+- Reads `public/img/icons/` via PHP `scandir`. Both `public/img/icons/` and `public/build/img/icons/` exist in legacy with the same 1,793 PNGs.
+- Each list row: thumbnail (`<img>` lazy-loaded) + filename without extension. `data-text` attribute holds the full filename for the search filter.
+- Search box uses substring `text.search(src) >= 0` — client-side filter.
+- `getIcon(filename)` closes the modal and sets `#icon_name` text + `#icon_path` hidden-input value to the filename (with extension). Stored DB value = filename string.
+
+### View Type page (legacy `view_type.blade.php`)
+- 31 lines. Shows Name / Entity / Description / Icon (img tag) + a Back button. Trivial — the existing SimpleCrudPage "view" action covers an equivalent inspection.
+
+### List page columns (legacy `types.blade.php` lines 35-42)
+S.No · Name · Category type · Entity · Description · Icon Preview · Sort Order · Actions.
+
+### Discrepancy vs DROPDOWN_AUDIT RESOLVED iii
+Legacy UI hides `Quality` from Stop reason and hides `Performance`/`Availability` from Scrap reason. DROPDOWN_AUDIT broadened the set:
+- StopReason → NotApplicable / Performance / Availability / Quality (all four)
+- ScrapReason → NotApplicable / Quality
+Per the audit (already implemented in `types/page.tsx`), the new_fp set is the broader one. **Kept as-is** — the audit is the authoritative source per the prompt.
+
+### Module 2 — Backend changes
+
+- 1,793 icon PNGs copied from `fpanalyzer/public/build/img/icons/` → `new_fp/frontend/public/equipment-icons/`.
+- New router `backend/src/routes/admin-icons.routes.js`. `GET /api/v1/admin/icons[?search=]` — reads `frontend/public/equipment-icons/` via `fs.readdirSync`, filters by `.png/.jpe?g/.svg/.gif/.webp`, sorts case-insensitively by name, caches once per process. Optional `search` param does case-insensitive substring filter server-side; the modal also filters client-side.
+- Mounted at `/api/v1/admin/icons` in `app.js`.
+
+### Module 2 — Frontend changes
+
+- `frontend/src/lib/api/icons.ts` — `useIcons()` TanStack Query hook with 5-minute `staleTime`.
+- `frontend/src/components/shared/IconLibraryModal.tsx` — AntD `Modal` (width 520) titled "Choose icon". Right-aligned Search input (autofocus); scrollable list (max-height 400px) of rows showing 32×32 thumbnail + filename without extension. Click a row → `onSelect(filename)` + close. Red `Close` button in footer matches legacy.
+- `frontend/src/components/data-table/SimpleCrudPage.tsx` — extended the `SimpleField` discriminated union with a new variant `type: 'icon-picker'`. `renderField` adds a case that uses a small internal `IconPickerInput` component (works with AntD Form's value/onChange contract). Displays current 32×32 preview + filename, a teal "Choose from library" button, and a Clear button when a value is set.
+- `frontend/src/app/(admin)/admin/types/page.tsx`:
+  - Entity labels updated to match legacy: Equipments / Stop Reasons / Scrap Reason / Parts / Orders (stored enum values unchanged).
+  - Icon field switched from plain `text` to `icon-picker`.
+  - List columns: added an "Icon Preview" column rendering a 28×28 thumbnail from `/equipment-icons/<filename>` (em-dash when empty), placed between Description and Sort to match legacy order.
+
+### Module 2 — Verification
+
+- `node -c backend/src/app.js` and `backend/src/routes/admin-icons.routes.js` → syntax OK.
+- Standalone Node smoke of the readdir logic against the live `equipment-icons/` directory → `icons found: 1793`. First entries: `3d_glasses.png, Gear-icon-291x300.png, add.png`.
+- `npx tsc --noEmit` (excluding pre-existing Highcharts errors) → zero new type errors in `types/page.tsx`, `SimpleCrudPage.tsx`, `IconLibraryModal.tsx`, `icons.ts`.
+- Full CRUD click-through with running backend + frontend — pending; see Deferred below.
+
+## Deferred / Out of scope
+
+- Live browser smoke (Create / Edit / Delete / View Type, role-based User create with a real Company-Admin session) — not run this round. The static checks (syntax, type-check, standalone icon-load) all pass. Smoke testing requires the running stack and a Company-Admin login.
+- Legacy `view_type` blade is trivial (Name + Entity + Description + Icon img + Back button). Not ported as a separate "View Type" page — the existing SimpleCrudPage row-detail UX covers it. Flag if you want a dedicated full-page View.
+- Legacy hides Quality from Stop reason and Performance/Availability from Scrap reason in the UI; new_fp shows the broader set per DROPDOWN_AUDIT. Flag if you want the legacy hide-set instead.
+- `unitOnly` field on Company-Admin create user — present in Super-Admin form, absent in legacy Company-Admin form, omitted from `CompanyAdminCreateUserForm` to match legacy. Flag if Company-Admins should also see it.
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { Tag, Typography } from 'antd';
+import Image from 'next/image';
 import { SimpleCrudPage } from '../../../../components/data-table/SimpleCrudPage';
 import { useMe } from '../../../../lib/api/auth';
 import { typesApi, type AdminTypeRow } from '../../../../lib/api/admin-crud';
@@ -26,12 +27,18 @@ const KIND_OPTIONS_SCRAP = [
   { value: 'Quality',       label: 'Quality' },
 ];
 
+/**
+ * Display labels match legacy add_type.blade.php line 25 select options
+ * (Equipments, Stop Reasons, Scrap Reason, Parts, Orders). Stored values
+ * stay on the new_fp canonical enum (Equipment, StopReason, ...). Content
+ * is new_fp only — no legacy equivalent.
+ */
 const ENTITY_OPTIONS = [
-  { value: 'Equipment',   label: 'Equipment' },
-  { value: 'StopReason',  label: 'Stop reason' },
-  { value: 'ScrapReason', label: 'Scrap reason' },
-  { value: 'Part',        label: 'Part' },
-  { value: 'Order',       label: 'Order' },
+  { value: 'Equipment',   label: 'Equipments' },
+  { value: 'StopReason',  label: 'Stop Reasons' },
+  { value: 'ScrapReason', label: 'Scrap Reason' },
+  { value: 'Part',        label: 'Parts' },
+  { value: 'Order',       label: 'Orders' },
   { value: 'Content',     label: 'Content' },
 ];
 
@@ -70,6 +77,15 @@ export default function TypesPage() {
         ) },
         { id: 'entity', title: 'Entity', dataIndex: 'entity', width: 130, render: (v: string) => <Tag color="blue">{v}</Tag> },
         { id: 'description', title: 'Description', dataIndex: 'description' },
+        {
+          id: 'icon',
+          title: 'Icon Preview',
+          dataIndex: 'icon',
+          width: 100,
+          render: (v: string | null) =>
+            v ? <Image src={`/equipment-icons/${v}`} alt={v} width={28} height={28} style={{ objectFit: 'contain' }} unoptimized />
+              : <Text type="secondary">—</Text>,
+        },
         { id: 'sortOrder', title: 'Sort', dataIndex: 'sortOrder', width: 80 },
       ]}
       fields={[
@@ -91,7 +107,7 @@ export default function TypesPage() {
           visibleWhen: (v) => v.entity === 'StopReason',
         },
         { name: 'description', label: 'Description', type: 'textarea', maxLength: 2000 },
-        { name: 'icon', label: 'Icon filename', type: 'text', maxLength: 255 },
+        { name: 'icon', label: 'Icon', type: 'icon-picker' },
         { name: 'sortOrder', label: 'Sort order', type: 'number', min: 0 },
         { name: 'isActive', label: 'Active', type: 'switch' },
       ]}

@@ -1,8 +1,10 @@
 'use client';
 
 import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined } from '@ant-design/icons';
-import { App, Button, Checkbox, Form, Input, InputNumber, Modal, Popconfirm, Select, Switch, Tooltip } from 'antd';
+import { App, Button, Checkbox, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Tooltip } from 'antd';
+import Image from 'next/image';
 import { ReactNode, useEffect, useMemo, useState } from 'react';
+import IconLibraryModal from '../shared/IconLibraryModal';
 import { toApiError } from '../../lib/api-client';
 import {
   BaseListParams,
@@ -52,6 +54,14 @@ export type SimpleField =
        * selection in a single text column.
        */
       csv?: { separator?: string };
+      visibleWhen?: VisibleWhen;
+    }
+  | {
+      /** Icon picker: opens IconLibraryModal; value is the filename string. */
+      name: string;
+      label: string;
+      type: 'icon-picker';
+      required?: boolean;
       visibleWhen?: VisibleWhen;
     };
 
@@ -310,7 +320,38 @@ function renderField(f: SimpleField, values: Record<string, unknown>): ReactNode
     }
     case 'checkbox-group':
       return <Checkbox.Group options={f.options} />;
+    case 'icon-picker':
+      return <IconPickerInput />;
   }
+}
+
+function IconPickerInput({ value, onChange }: { value?: string; onChange?: (v: string) => void } = {}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Space direction="vertical" size={6}>
+        {value && (
+          <Space size={8}>
+            <Image src={`/equipment-icons/${value}`} alt={value} width={32} height={32} style={{ objectFit: 'contain' }} unoptimized />
+            <span style={{ fontSize: 12, color: '#666' }}>{value}</span>
+          </Space>
+        )}
+        <Space>
+          <Button onClick={() => setOpen(true)} style={{ background: '#00b4d8', color: 'white', borderColor: '#00b4d8' }}>
+            Choose from library
+          </Button>
+          {value && (
+            <Button size="small" onClick={() => onChange?.('')}>Clear</Button>
+          )}
+        </Space>
+      </Space>
+      <IconLibraryModal
+        open={open}
+        onClose={() => setOpen(false)}
+        onSelect={(filename) => { onChange?.(filename); setOpen(false); }}
+      />
+    </>
+  );
 }
 
 function fieldRules(f: SimpleField) {
