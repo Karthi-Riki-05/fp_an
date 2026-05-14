@@ -4,7 +4,6 @@ import {
   DeleteOutlined,
   EditOutlined,
   EyeOutlined,
-  MoreOutlined,
   PlusOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
@@ -14,8 +13,9 @@ import {
   Button,
   Card,
   Checkbox,
-  Dropdown,
   Form,
+  Popconfirm,
+  Tooltip,
   Input,
   InputNumber,
   Modal,
@@ -92,6 +92,7 @@ export default function EquipmentListPage() {
   const [filter, setFilter] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [viewMode, setViewMode] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form] = Form.useForm<EquipmentFormValues>();
 
@@ -162,6 +163,7 @@ export default function EquipmentListPage() {
   const closeModal = () => {
     setModalOpen(false);
     setEditingId(null);
+    setViewMode(false);
     form.resetFields();
   };
 
@@ -247,39 +249,43 @@ export default function EquipmentListPage() {
       ),
     },
     {
-      title: '',
+      title: 'Actions',
       key: 'actions',
-      width: 56,
+      width: 130,
       align: 'center',
       render: (_, row) => (
-        <Dropdown
-          menu={{
-            items: [
-              { key: 'view', icon: <EyeOutlined />, label: 'View', onClick: () => { setEditingId(row.id); setModalOpen(true); } },
-              { key: 'edit', icon: <EditOutlined />, label: 'Edit', onClick: () => { setEditingId(row.id); setModalOpen(true); } },
-              { type: 'divider' },
-              {
-                key: 'delete',
-                icon: <DeleteOutlined />,
-                label: 'Delete',
-                danger: true,
-                onClick: () =>
-                  modal.confirm({
-                    title: `Delete ${row.name}?`,
-                    content: 'Soft-delete — production data referencing this equipment is preserved.',
-                    okText: 'Delete',
-                    okButtonProps: { danger: true },
-                    onOk: async () => {
-                      try { await deleteMut.mutateAsync(row.id); message.success('Equipment deleted.'); }
-                      catch (err) { message.error(toApiError(err).message); }
-                    },
-                  }),
-              },
-            ],
-          }}
-        >
-          <Button type="text" icon={<MoreOutlined />} aria-label={`Actions for ${row.name}`} />
-        </Dropdown>
+        <span style={{ display: 'inline-flex', gap: 4 }}>
+          <Tooltip title="View">
+            <Button
+              type="text"
+              size="small"
+              icon={<EyeOutlined style={{ color: '#01b9d0' }} />}
+              onClick={() => { setEditingId(row.id); setViewMode(true); setModalOpen(true); }}
+            />
+          </Tooltip>
+          <Tooltip title="Edit">
+            <Button
+              type="text"
+              size="small"
+              icon={<EditOutlined style={{ color: '#01b9d0' }} />}
+              onClick={() => { setEditingId(row.id); setViewMode(false); setModalOpen(true); }}
+            />
+          </Tooltip>
+          <Popconfirm
+            title={`Delete ${row.name}?`}
+            description="Soft-delete — production data is preserved."
+            okText="Delete"
+            okButtonProps={{ danger: true }}
+            onConfirm={async () => {
+              try { await deleteMut.mutateAsync(row.id); message.success('Equipment deleted.'); }
+              catch (err) { message.error(toApiError(err).message); }
+            }}
+          >
+            <Tooltip title="Delete">
+              <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+            </Tooltip>
+          </Popconfirm>
+        </span>
       ),
     },
   ];
@@ -328,11 +334,18 @@ export default function EquipmentListPage() {
       </Card>
 
       <Modal
-        title={editingId === null ? 'Add equipment' : `Edit equipment #${editingId}`}
+        title={
+          viewMode
+            ? `View equipment #${editingId}`
+            : editingId === null
+              ? 'Add equipment'
+              : `Edit equipment #${editingId}`
+        }
         open={modalOpen}
         onCancel={closeModal}
-        onOk={onSubmit}
-        okText={editingId === null ? 'Create' : 'Save changes'}
+        onOk={viewMode ? closeModal : onSubmit}
+        okText={viewMode ? 'Close' : editingId === null ? 'Create' : 'Save changes'}
+        cancelButtonProps={viewMode ? { style: { display: 'none' } } : undefined}
         confirmLoading={submitting}
         destroyOnClose
         width={920}
@@ -340,7 +353,7 @@ export default function EquipmentListPage() {
         {editingId !== null && !detail ? (
           <Spin />
         ) : (
-          <Form<EquipmentFormValues> form={form} layout="vertical" preserve={false} initialValues={DEFAULT_VALUES}>
+          <Form<EquipmentFormValues> form={form} layout="vertical" preserve={false} initialValues={DEFAULT_VALUES} disabled={viewMode}>
             <Tabs
               defaultActiveKey="equipment"
               items={[
