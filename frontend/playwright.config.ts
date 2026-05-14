@@ -70,6 +70,21 @@ export default defineConfig({
       testMatch: '**/user.spec.ts',
     },
 
+    // Flow Management — Plan A E2E (uses Company user / user.json).
+    // Company role holds both manage-flow-designs AND the view-* perms,
+    // so a single auth state is enough to drive the admin list page,
+    // the Designer placeholder, Monitor, and Analyzer.
+    {
+      name: 'flow-management',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'tests/.auth/user.json',
+        viewport: { width: 1280, height: 800 },
+      },
+      dependencies: ['user-setup'],
+      testMatch: '**/flow-management.spec.ts',
+    },
+
     // Public pages — desktop + mobile (no auth)
     {
       name: 'public',

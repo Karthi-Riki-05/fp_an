@@ -30,6 +30,7 @@ export default function GoJsLicensePlaceholder({ width = '100%', height = 280, c
   if (compact) {
     return (
       <div
+        data-testid="gojs-placeholder"
         style={{
           display: 'flex',
           flexDirection: 'column',
@@ -50,6 +51,7 @@ export default function GoJsLicensePlaceholder({ width = '100%', height = 280, c
   }
   return (
     <div
+      data-testid="gojs-placeholder"
       style={{
         display: 'flex',
         flexDirection: 'column',

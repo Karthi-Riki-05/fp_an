@@ -22,6 +22,8 @@ export default function FlowCard({ name, flowData, onClick }: Props) {
     <Card
       hoverable
       onClick={onClick}
+      data-testid="flow-card"
+      className="flow-card"
       styles={{ body: { padding: 12 } }}
       style={{ cursor: 'pointer', borderRadius: 6 }}
     >
