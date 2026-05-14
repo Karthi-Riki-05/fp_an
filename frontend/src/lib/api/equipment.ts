@@ -135,3 +135,51 @@ export function useEquipmentTree(tenantId: number | null) {
     staleTime: 30_000,
   });
 }
+
+// ─── Equipment Properties (per-Part-Type) ──────────────────────────────────
+
+export interface EquipmentPropertyRow {
+  id?: number;
+  equipmentId?: number;
+  typeId: number;
+  cycleTime: string;
+  costPerHour: number;
+  currency: string;
+  operator: number;
+  salaryGroupId: number;
+  valueAddedType: 'currency' | 'percentage';
+  valueAddedVal: string;
+  orderSelection: 'free_text' | 'list';
+}
+
+export function useEquipmentProperties(tenantId: number | null, equipmentId: number | null) {
+  return useQuery({
+    queryKey: ['equipment-properties', tenantId, equipmentId] as const,
+    queryFn: async () => {
+      const { data } = await apiClient.get<EquipmentPropertyRow[]>(
+        `/equipment/${equipmentId}/properties`,
+        { headers: tenantHeaders(tenantId) },
+      );
+      return data;
+    },
+    enabled: equipmentId !== null,
+    staleTime: 5_000,
+  });
+}
+
+export function useReplaceEquipmentProperties(tenantId: number | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, rows }: { id: number; rows: EquipmentPropertyRow[] }) => {
+      const { data } = await apiClient.put<EquipmentPropertyRow[]>(
+        `/equipment/${id}/properties`,
+        rows,
+        { headers: tenantHeaders(tenantId) },
+      );
+      return data;
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['equipment-properties', tenantId, vars.id] });
+    },
+  });
+}

@@ -40,6 +40,17 @@ router.get('/:id/orders', async (req, res, next) => {
   try { res.json(await svc.getOrdersForEquipment(req.tenant, Number(req.params.id))); } catch (err) { next(err); }
 });
 
+router.get('/:id/properties', async (req, res, next) => {
+  try { res.json(await svc.getProperties(req.tenant, Number(req.params.id))); } catch (err) { next(err); }
+});
+
+router.put('/:id/properties', requirePermission('manage-equipment'), async (req, res, next) => {
+  try {
+    const rows = Array.isArray(req.body) ? req.body : req.body?.properties;
+    res.json(await svc.replaceProperties(req.tenant, Number(req.params.id), rows ?? []));
+  } catch (err) { next(err); }
+});
+
 router.get('/:id', async (req, res, next) => {
   try { res.json(await svc.findOne(req.tenant, Number(req.params.id))); } catch (err) { next(err); }
 });

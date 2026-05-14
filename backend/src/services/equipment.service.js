@@ -312,7 +312,69 @@ async function getOrdersForEquipment(tenant, equipmentId) {
   );
 }
 
+// ─────────────── Equipment Properties (per-part-type config) ───────────────
+// One row per (equipment, part type). Stores cycle time, operator count,
+// salary group, value-adding cost, per-hour cost, currency, and the order
+// number selection mode. Replaces legacy equipment_properties.
+
+const PROP_SELECT = `id::int AS id, equip_id::int AS "equipmentId",
+  type_id::int AS "typeId", cycle_time AS "cycleTime",
+  cost_per_hour::int AS "costPerHour", currency,
+  operator::int AS operator, salary_group_id::int AS "salaryGroupId",
+  value_added_type AS "valueAddedType", value_added_val AS "valueAddedVal",
+  order_selection AS "orderSelection"`;
+
+async function getProperties(tenant, equipmentId) {
+  return withTenant(tenant, (tx) =>
+    tx.$queryRawUnsafe(
+      `SELECT ${PROP_SELECT} FROM equipment_properties WHERE equip_id = $1 ORDER BY id`,
+      equipmentId,
+    ),
+  );
+}
+
+async function replaceProperties(tenant, equipmentId, rows) {
+  if (!Array.isArray(rows)) rows = [];
+  return withTenant(tenant, async (tx) => {
+    await tx.$executeRawUnsafe(
+      `DELETE FROM equipment_properties WHERE equip_id = $1`, equipmentId,
+    );
+    for (const r of rows) {
+      const typeId = Number(r.typeId);
+      if (!Number.isFinite(typeId) || typeId <= 0) continue;
+      await tx.$executeRawUnsafe(
+        `INSERT INTO equipment_properties (
+           equip_id, type_id, cycle_time, cost_per_hour, currency, operator,
+           salary_group_id, value_added_type, value_added_val, order_selection,
+           created_at, updated_at
+         ) VALUES (
+           $1, $2, $3, $4, $5, $6, $7,
+           $8::tenant_template."ValueAddedType",
+           $9,
+           $10::tenant_template."OrderSelection",
+           now(), now()
+         )`,
+        equipmentId,
+        typeId,
+        String(r.cycleTime ?? ''),
+        Number(r.costPerHour) || 0,
+        String(r.currency ?? ''),
+        Number(r.operator) || 0,
+        Number(r.salaryGroupId) || 0,
+        r.valueAddedType === 'percentage' ? 'percentage' : 'currency',
+        String(r.valueAddedVal ?? ''),
+        r.orderSelection === 'list' ? 'list' : 'free_text',
+      );
+    }
+    return tx.$queryRawUnsafe(
+      `SELECT ${PROP_SELECT} FROM equipment_properties WHERE equip_id = $1 ORDER BY id`,
+      equipmentId,
+    );
+  });
+}
+
 module.exports = {
   list, findOne, create, update, softDelete, getTree,
   getPartsForEquipment, getStopReasonsForEquipment, getScrapReasonsForEquipment, getOrdersForEquipment,
+  getProperties, replaceProperties,
 };

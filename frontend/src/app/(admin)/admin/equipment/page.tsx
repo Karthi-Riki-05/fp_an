@@ -10,7 +10,6 @@ import {
 } from '@ant-design/icons';
 import {
   App,
-  Alert,
   Breadcrumb,
   Button,
   Card,
@@ -44,8 +43,9 @@ import {
   useUpdateEquipment,
   type Equipment,
 } from '../../../../lib/api/equipment';
-import { typesApi } from '../../../../lib/api/admin-crud';
+import { salaryGroupsApi, typesApi } from '../../../../lib/api/admin-crud';
 import { EquipmentTreeSelect } from '../../../../components/equipment/EquipmentTreeSelect';
+import EquipmentPropertiesPanel from '../../../../components/equipment/EquipmentPropertiesPanel';
 
 const { Title } = Typography;
 
@@ -449,16 +449,7 @@ export default function EquipmentListPage() {
                 {
                   key: 'properties',
                   label: 'Properties',
-                  // TODO Phase C1b: per-part properties editor — needs equipment_properties
-                  // bulk endpoint. See DROPDOWN_AUDIT.md C1 section.
-                  children: (
-                    <Alert
-                      type="info"
-                      showIcon
-                      message="Per-part properties (cycle time, cost per hour, salary group, value-adding) are not yet ported."
-                      description="Tracked in DROPDOWN_AUDIT.md — needs an equipment_properties bulk endpoint. Existing rows are preserved on save."
-                    />
-                  ),
+                  children: <EquipmentPropertiesPanel equipmentId={editingId} scope={scope} />,
                 },
               ]}
             />
