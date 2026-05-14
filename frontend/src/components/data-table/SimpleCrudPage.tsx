@@ -1,10 +1,9 @@
 'use client';
 
 import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined } from '@ant-design/icons';
-import { App, Button, Checkbox, Descriptions, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Tag, Tooltip, Typography, Upload } from 'antd';
+import { App, Button, Checkbox, Descriptions, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Tag, Tooltip, Typography } from 'antd';
 import { ReactNode, useMemo, useState } from 'react';
-import IconLibraryModal from '../shared/IconLibraryModal';
-import { uploadIcon } from '../../lib/api/icons';
+import IconPicker from '../shared/IconPicker';
 import { toApiError } from '../../lib/api-client';
 import {
   BaseListParams,
@@ -337,69 +336,8 @@ function renderField(f: SimpleField, values: Record<string, unknown>): ReactNode
     case 'checkbox-group':
       return <Checkbox.Group options={f.options} />;
     case 'icon-picker':
-      return <IconPickerInput />;
+      return <IconPicker />;
   }
-}
-
-function IconPickerInput({ value, onChange }: { value?: string; onChange?: (v: string) => void } = {}) {
-  const [open, setOpen] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const { message } = App.useApp();
-
-  return (
-    <>
-      <Space direction="vertical" size={6}>
-        {value && (
-          <Space size={8}>
-            <img
-              src={`/equipment-icons/${value}`}
-              alt={value}
-              width={32}
-              height={32}
-              style={{ objectFit: 'contain' }}
-            />
-            <span style={{ fontSize: 12, color: '#666' }}>{value}</span>
-          </Space>
-        )}
-        <Space wrap>
-          <Upload
-            accept="image/*"
-            showUploadList={false}
-            beforeUpload={async (file) => {
-              setUploading(true);
-              try {
-                const filename = await uploadIcon(file);
-                onChange?.(filename);
-                message.success(`Uploaded ${filename}`);
-              } catch (err) {
-                const e = err instanceof Error ? err.message : 'Upload failed';
-                message.error(e);
-              } finally {
-                setUploading(false);
-              }
-              return false; // prevent AntD from auto-uploading
-            }}
-          >
-            <Button loading={uploading}>Choose file</Button>
-          </Upload>
-          <Button
-            onClick={() => setOpen(true)}
-            style={{ background: '#00b4d8', color: 'white', borderColor: '#00b4d8' }}
-          >
-            Choose from library
-          </Button>
-          {value && (
-            <Button size="small" onClick={() => onChange?.('')}>Clear</Button>
-          )}
-        </Space>
-      </Space>
-      <IconLibraryModal
-        open={open}
-        onClose={() => setOpen(false)}
-        onSelect={(filename) => { onChange?.(filename); setOpen(false); }}
-      />
-    </>
-  );
 }
 
 /**

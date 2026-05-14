@@ -26,6 +26,7 @@ import {
   useUpdateEquipment,
   type EquipmentPropertyRow,
 } from '../../lib/api/equipment';
+import IconPicker from '../shared/IconPicker';
 import EquipmentPropertiesPanel from './EquipmentPropertiesPanel';
 import { EquipmentTreeSelect } from './EquipmentTreeSelect';
 
@@ -40,6 +41,7 @@ interface EquipmentFormValues {
   parentId?: number;
   typeId?: number;
   description?: string;
+  icon?: string;
   sortOrder?: number;
   isActive: boolean;
   reasonStopTypeIds: number[];
@@ -52,6 +54,7 @@ interface EquipmentFormValues {
 
 const DEFAULT_VALUES: EquipmentFormValues = {
   name: '',
+  icon: '',
   isActive: true,
   reasonStopTypeIds: [],
   reasonScrapTypeIds: [],
@@ -146,6 +149,7 @@ export default function EquipmentFullEditModal({
         parentId: detail.parentId || undefined,
         typeId: detail.typeId || undefined,
         description: detail.description ?? undefined,
+        icon: detail.icon && detail.icon !== 'noimage.jpg' ? detail.icon : '',
         sortOrder: detail.sortOrder ?? 0,
         isActive: detail.isActive ?? true,
         reasonStopTypeIds: detail.reasonStopTypeIds ?? [],
@@ -181,6 +185,9 @@ export default function EquipmentFullEditModal({
         parentId: values.parentId ?? 0,
         typeId: values.typeId ?? 0,
         description: values.description ?? '',
+        // Empty string = no icon → fall back to the noimage.jpg sentinel
+        // the DB column defaults to; otherwise pass the picked filename.
+        icon: values.icon ? values.icon : 'noimage.jpg',
         sortOrder: values.sortOrder ?? 0,
         isActive: values.isActive,
         reasonStopTypeIds: values.reasonStopTypeIds,
@@ -266,14 +273,17 @@ export default function EquipmentFullEditModal({
                     <Form.Item name="description" label="Description">
                       <Input.TextArea rows={3} maxLength={2000} />
                     </Form.Item>
-                    <Space size="middle" wrap>
-                      <Form.Item name="sortOrder" label="Sort order">
-                        <InputNumber min={0} />
+                    <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
+                      <Form.Item name="icon" label="Icon" style={{ flex: 1 }}>
+                        <IconPicker />
                       </Form.Item>
-                      <Form.Item name="isActive" label="Active" valuePropName="checked">
-                        <Switch />
+                      <Form.Item name="sortOrder" label="Sort order" style={{ width: 160 }}>
+                        <InputNumber min={0} style={{ width: '100%' }} />
                       </Form.Item>
-                    </Space>
+                    </div>
+                    <Form.Item name="isActive" label="Active" valuePropName="checked">
+                      <Switch />
+                    </Form.Item>
                   </>
                 ),
               },
