@@ -1,0 +1,566 @@
+=====================================================================
+VALUECHART — DRAW.IO MASTER DOCUMENT
+=====================================================================
+Generated:       2026-04-15
+draw.io Version: 29.3.6
+Project path:    frontend/public/draw_io/
+Type:            Vendored static webapp (served by Next.js)
+=====================================================================
+
+
+1. WHAT IS THIS FOLDER
+----------------------------------------------------------------------
+frontend/public/draw_io/ contains a full, self-hosted copy of the
+open-source diagrams.net / draw.io web editor. It is NOT installed
+via npm — every file is checked into the repo and served by Next.js
+as static assets at /draw_io/*.
+
+The editor is displayed inside an <iframe> in the React app (see
+frontend/components/flows/EditorView.tsx) and communicates with the
+React parent via the draw.io "embed mode" postMessage JSON protocol.
+
+All ValueChart-specific customisations live in TWO files:
+  • frontend/public/draw_io/js/PreConfig.js              (config)
+  • frontend/public/custom/chart/js/over-ride.js         (behaviour)
+
+Everything else under draw_io/ is upstream draw.io 29.3.6 vendored
+as-is. DO NOT edit any *.min.js file — they are minified monoliths.
+
+
+2. FOLDER STRUCTURE
+----------------------------------------------------------------------
+frontend/public/draw_io/
+├── index.html                    iframe entry point
+├── clear.html, open.html, export3.html, dropbox.html, github.html,
+│   gitlab.html, onedrive3.html, teams.html, vsdxImporter.html
+│                                 OAuth + helper redirects
+├── favicon.ico, shortcuts.svg
+├── export-fonts.css
+├── service-worker.js (+ .map)
+├── workbox-05b6c01b.js, workbox-acfd85e3.js (+ .map)
+├── monday-app-association.json
+├── META-INF/
+│   └── MANIFEST.MF               Java WAR metadata (unused by us)
+├── WEB-INF/                      Java server config (unused; we serve statically)
+│   ├── appengine-web.xml, web.xml, logging.properties
+│   ├── *_client_id, *_client_secret (dropbox, github, gitlab, google,
+│   │   iconfinder, msgraph, pusher_properties, cloud_convert_api_key)
+│   └── lib/
+├── js/
+│   ├── PreConfig.js              ✅ CUSTOMISATION — window.DRAWIO_CONFIG
+│   ├── PostConfig.js             ✅ post-init hooks (currently empty for us)
+│   ├── bootstrap.js              loads PreConfig.js → app.min.js (critical order)
+│   ├── app.min.js                8.6 MB — draw.io monolith — NEVER edit
+│   ├── viewer.min.js (2.2 MB), viewer-static.min.js
+│   ├── integrate.min.js, extensions.min.js
+│   ├── stencils.min.js, shapes-14-6-5.min.js, orgchart.min.js
+│   ├── main.js, clear.js, open.js, export.js, export-init.js
+│   ├── embed.dev.js, math-print.js, vsdxImporter.js, unmini.js
+│   └── cryptojs/, deflate/, diagramly/, dropbox/, freehand/,
+│       grapheditor/, jquery/, jszip/, mermaid/, onedrive/,
+│       orgchart/, rough/, sanitizer/, simplepeer/, spin/
+├── mxgraph/
+│   ├── css/    (explorer.css, common.css)
+│   ├── images/
+│   └── src/
+├── styles/
+│   ├── grapheditor.css, high-contrast.css
+│   ├── default.xml, default-old.xml, dark-default.xml
+│   └── fonts/
+├── math4/es5/                    MathJax v4 ES5 build
+├── plugins/
+│   ├── trees/, webcola/          (not enabled in PreConfig)
+├── resources/                    i18n — dia_*.txt per locale
+├── shapes/
+│   ├── bpmn/, emoji/, er/, ios7/, mockup/, pid2/, rack/
+├── stencils/
+│   ├── android/, aws/, aws2/, cisco/, cisco_safe/, clipart/,
+│   ├── electrical/, gcp/, ios7/, mockup/, mscae/, office/,
+│   └── pid/, rack/, signs/, veeam/
+├── templates/
+│   ├── basic/, business/, charts/, cloud/, engineering/,
+│   ├── flowcharts/, layout/, maps/, network/, other/,
+│   └── software/, tables/, uml/, venn/, wireframes/
+├── connect/common/               connect integrations
+├── images/                       general assets
+└── img/
+    ├── clipart/, computers/, finance/, google-app/, lib/,
+    └── networking/, people/, telecommunication/
+
+External to draw_io/ but related:
+  frontend/public/custom/chart/js/over-ride.js   (1091 lines, loaded
+                                                  by index.html after
+                                                  main.js)
+
+
+3. KEY FILES EXPLAINED
+----------------------------------------------------------------------
+| File                                     | Purpose                                                            | Edit? |
+|------------------------------------------|--------------------------------------------------------------------|-------|
+| draw_io/index.html                       | iframe entry; loads bootstrap.js → main.js → over-ride.js          | care  |
+| draw_io/js/bootstrap.js                  | Loads PreConfig.js then app.min.js (order is critical)             | care  |
+| draw_io/js/PreConfig.js                  | Global window.DRAWIO_CONFIG — UI, plugins, allowAi, aiModels       | YES   |
+| draw_io/js/PostConfig.js                 | Runs after app.min.js — empty hook, safe place for post-init code  | YES   |
+| draw_io/js/app.min.js                    | draw.io 29.3.6 monolith, 8.6 MB minified                           | NEVER |
+| draw_io/js/viewer.min.js                 | Read-only viewer (used by lightbox / export flows)                 | NEVER |
+| draw_io/js/*.min.js (others)             | Vendor bundles (stencils, shapes, orgchart, integrate, extensions) | NEVER |
+| draw_io/styles/grapheditor.css           | Editor CSS — used by mxGraph                                       | NEVER |
+| custom/chart/js/over-ride.js             | Custom postMessage handlers (mergeAiXml, ChatWindow patch)         | YES   |
+| frontend/components/flows/EditorView.tsx | React wrapper: iframe src, postMessage bridge, autosave, history   | YES   |
+| META-INF/, WEB-INF/                      | Java WAR / AppEngine artefacts — unused at runtime                 | IGNORE|
+
+
+4. HOW THE EDITOR WORKS — END TO END
+----------------------------------------------------------------------
+Step 1 — User clicks a flow in /dashboard/flows (or anywhere using
+         window.open(`/dashboard/flows/${id}`, '_blank')).
+
+Step 2 — DashboardLayout.tsx regex matches the editor route, skips
+         sidebar/header and renders full-viewport.
+
+Step 3 — FlowEditorPage renders <EditorView flowId={id} />.
+
+Step 4 — EditorView mounts an iframe at:
+           /draw_io/index.html?embed=1&proto=json&spin=1
+             &noExitBtn=1&noSaveBtn=1
+             &sketch=1&ui=sketch&touch=1
+
+Step 5 — Browser loads draw_io/index.html →
+           <script src="js/bootstrap.js">           loads first
+           <script src="js/main.js">                loads second
+           <script src="../custom/chart/js/over-ride.js">  loads third
+         bootstrap.js internally calls:
+           mxscript('js/PreConfig.js', loadAppJS)   ← our config MUST
+                                                      set window.DRAWIO_CONFIG
+                                                      BEFORE app.min.js reads it
+
+Step 6 — draw.io finishes initialising and posts
+           { event: "init" }
+         to its parent window.
+
+Step 7 — EditorView's message listener:
+           a. Calls getFlowById(flowId) → GET /api/flows/:id
+           b. Reads data.xml / data.diagramData
+           c. Replies to iframe with:
+              {
+                action: "load",
+                xml,
+                autosave: 1,
+                titles: ["My Backend Shapes"],
+                allEntries: [
+                  { title: "Employee Node", xml: "…", aspect: "fixed" },
+                  { title: "Action Box",    xml: "…", aspect: "fixed" }
+                ]
+              }
+
+Step 8 — iframe.onLoad fires injectEditorCustomisations():
+           • Injects <style id="vc-hide-ai-style"> into iframe head
+           • Runs hideAiNodes(doc) to hide AI/Gemini buttons
+           • Calls injectSidebarTemplateButton(doc) to mount a
+             <a id="vc-sidebar-templates-btn"> inside .geFooterToolbar
+           • Starts a MutationObserver on doc.body — every childList/
+             attribute change re-runs the two steps above
+
+Step 9 — User edits the diagram. draw.io fires on every change
+           { event: "autosave" }
+         EditorView debounces 5 s then calls triggerExport().
+
+Step 10 — triggerExport posts
+            { action: "export", format: "png", spin: "Saving diagram..." }
+          draw.io replies
+            { event: "export", data: <png-base64>, xml: <xml> }
+
+Step 11 — EditorView POSTs /api/save-diagram
+           { flowId, name, xml, thumbnail }   (thumbnail dropped if >500 KB)
+          → Next.js proxy signs a JWT with NEXTAUTH_SECRET →
+          → PUT /api/flows/:id → backend service updates `flows.diagramData`
+            AND creates a new `flow_versions` row (with thumbnail).
+
+Step 12 — On success, EditorView posts back
+            { action: "status", message: "Saved successfully!", modified: false }
+          which clears draw.io's dirty-state indicator.
+
+Step 13 — User clicks our custom Save or Exit button (or presses
+          Ctrl+S). Exit → window.close() then fallback to
+          /dashboard/flows.
+
+
+5. POSTMESSAGE PROTOCOL — COMPLETE REFERENCE
+----------------------------------------------------------------------
+Parent → iframe (outbound):
+  action: "load"        { xml, autosave, titles, allEntries }
+  action: "export"      { format: "png", spin: "…" }
+  action: "mergeAiXml"  { xml }                      (custom, over-ride.js)
+  action: "status"      { message, modified: false }
+  action: "resize"      { fit: 1 }
+
+iframe → parent (inbound events):
+  event: "init"         {}        draw.io ready to receive
+  event: "save"         {}        user clicked Save / Ctrl+S
+  event: "autosave"     {}        every canvas mutation (requires autosave=1)
+  event: "export"       { data, xml }  reply to export action
+  event: "exit"         {}        user clicked Exit
+
+Custom React CustomEvents (within parent window):
+  'aiXmlReady'          detail:{ xml }   AI / Template browser →
+                        EditorView forwards as mergeAiXml postMessage
+
+Always guard inbound messages:
+  if (event.source !== iframeRef.current.contentWindow) return;
+  if (typeof event.data !== 'string') return;
+
+
+6. PRECONFIG.JS — CURRENT CONFIGURATION
+----------------------------------------------------------------------
+Full window.DRAWIO_CONFIG value (current state after customisations):
+
+  ui: "sketch"
+  allowAi: false                ← disables built-in AI chat entry
+  enabledLibraries: true
+  disablePlugins: true
+  defaultFonts: ["Inter", "Roboto"]
+  plugins: []                   ← built-in "ai" plugin removed
+  settings: { v: "2026", theme: "atlas" }
+  gptApiKey: "sk-your-openai-key"     (placeholder, not used while allowAi=false)
+  aiGlobals: { gptApiKey, create/update/assist system prompts }
+  aiModels: [{ name: "GPT-4o", model: "gpt-4o", config: "gpt" },
+             { name: "GPT-3.5 Turbo", model: "gpt-3.5-turbo", config: "gpt" }]
+  showStartScreen: false
+  settingsName: "drawio-config"
+  version: "1.0"
+  aiConfigs: { gpt: { endpoint: "/api/openai", … } }
+
+Plus globals set on window:
+  DRAWIO_PUBLIC_BUILD = true
+  EXPORT_URL          = 'REPLACE_WITH_YOUR_IMAGE_SERVER'
+  PLANT_URL           = 'REPLACE_WITH_YOUR_PLANTUML_SERVER'
+  DRAWIO_BASE_URL     = null
+  DRAWIO_VIEWER_URL   = null
+  DRAWIO_LIGHTBOX_URL = null
+  DRAW_MATH_URL       = 'math4/es5'
+  SAVE_URL            = location.origin + '/api/flows'
+  urlParams['sync']   = 'manual'   ← disables draw.io auto-sync
+  urlParams['sketch'] = '1'
+
+
+7. HOW TO ADD CUSTOM SHAPES
+----------------------------------------------------------------------
+Custom shapes are registered via the `allEntries` array of the
+`load` postMessage. They appear in the sketch sidebar under the
+category names listed in `titles`.
+
+Example (add "Server Node" to the shapes):
+
+  In EditorView.tsx, handleMessage's init branch, find customBackendShapes:
+
+    const customBackendShapes = [
+      { title: "Employee Node", xml: "<mxGraphModel>…</mxGraphModel>" },
+      { title: "Action Box",    xml: "<mxGraphModel>…</mxGraphModel>" },
+      { title: "Server Node",                 // ← ADD
+        xml: `<mxGraphModel>
+                <root>
+                  <mxCell id="0"/>
+                  <mxCell id="1" parent="0"/>
+                  <mxCell id="2"
+                          value="Server"
+                          style="shape=mxgraph.cisco.servers.standard_host"
+                          vertex="1" parent="1">
+                    <mxGeometry width="50" height="50" as="geometry"/>
+                  </mxCell>
+                </root>
+              </mxGraphModel>`
+      }
+    ];
+
+    iframe.contentWindow.postMessage(JSON.stringify({
+      action: "load",
+      xml,
+      autosave: 1,
+      titles: ["My Backend Shapes"],             // category header
+      allEntries: customBackendShapes.map(s => ({
+        title: s.title,
+        xml:   s.xml,
+        aspect: "fixed"
+      }))
+    }), '*');
+
+
+8. HOW TO CUSTOMIZE THE UI
+----------------------------------------------------------------------
+Three layered approaches — use them in this order of preference:
+
+a) URL param (simplest, upstream-supported):
+     ui=sketch|atlas|kennedy|min   — choose theme
+     noSaveBtn=1                   — hide built-in Save button
+     noExitBtn=1                   — hide built-in Exit button
+     chrome=0                      — hide ALL chrome
+     toolbar=0, nav=0              — hide toolbar / nav
+     lightbox=1, stealth=1         — read-only embeds
+
+b) PreConfig.js (persistent config):
+     Edit window.DRAWIO_CONFIG — set `allowAi`, `plugins`, `defaultFonts`,
+     `settings.theme` etc. These are read during draw.io bootstrap.
+
+c) CSS injection + MutationObserver (runtime, enforced):
+     iframe.onLoad calls injectEditorCustomisations(iframe, onTemplatesClick):
+
+       const doc = iframe.contentDocument;
+       const style = doc.createElement('style');
+       style.textContent = '.geMenubar [title*="AI" i] { display:none !important; }';
+       doc.head.appendChild(style);
+
+       new doc.defaultView.MutationObserver(() => hideAiNodes(doc))
+         .observe(doc.body, { childList:true, subtree:true,
+                               attributes:true,
+                               attributeFilter:['title','aria-label','data-action'] });
+
+     Store the observer on `iframe.contentWindow.__vcAiObserver` to
+     avoid double-attaching.
+
+
+9. HOW AI XML MERGE WORKS
+----------------------------------------------------------------------
+Flow:
+  (A) AIAssistant.tsx or TemplateBrowser generates/picks XML.
+  (B) It dispatches a CustomEvent on window:
+        window.dispatchEvent(new CustomEvent('aiXmlReady',
+                                            { detail: { xml } }));
+  (C) EditorView listens for 'aiXmlReady' and forwards into the iframe:
+        iframe.contentWindow.postMessage(JSON.stringify({
+          action: 'mergeAiXml',
+          xml
+        }), '*');
+  (D) over-ride.js:883 handles the mergeAiXml action:
+        1. mxUtils.parseXml(msg.xml) → DOM
+        2. graph.getModel().beginUpdate(); codec.decode() → mxCell[]
+        3. Computes a free position (below current diagram, or
+           viewport-centre if canvas is empty)
+        4. graph.setSelectionCells(graph.importCells(cells, pt.x, pt.y))
+        5. endUpdate(); posts { event:'mergeAiXml', success:true }
+
+importCells() is the same API draw.io's own "Insert into canvas"
+uses — existing cells, grid, page, and background are preserved.
+
+
+10. KNOWN ISSUES AND SOLUTIONS
+----------------------------------------------------------------------
+Issue: AI / Gemini star button appears in the sketch sidebar
+Solution: PreConfig.js → allowAi:false, plugins:[], disablePlugins:true.
+          Plus MutationObserver + CSS injection in EditorView.tsx.
+          Static CSS alone is insufficient because draw.io lazy-
+          mounts toolbar buttons after bootstrap.
+
+Issue: Duplicate Save / Exit buttons (one from draw.io, one from us)
+Solution: iframe URL params noSaveBtn=1 & noExitBtn=1.
+
+Issue: PreConfig.js not applying
+Solution: Check bootstrap.js:283 — it must call
+          mxscript('js/PreConfig.js', loadAppJS). PreConfig MUST
+          load BEFORE app.min.js. If you see the error mid-boot,
+          the load order was broken.
+
+Issue: Zone.Identifier files polluting the folder (from Windows)
+Solution: find frontend/public/draw_io -name "*Zone.Identifier*" -delete
+          (Run this whenever contributors work from a Windows
+           filesystem.)
+
+Issue: Editor stuck on "Loading..."
+Solution: 1. Open browser devtools → check console for syntax
+             errors in PreConfig.js.
+          2. Verify iframe URL params include embed=1 & proto=json.
+          3. Verify over-ride.js loaded (check Network tab).
+
+Issue: Autosave fires but save doesn't persist
+Solution: 1. Check /api/save-diagram proxy returns 200.
+          2. Ensure the permission check (permRef) isn't blocking
+             (view-only users can't save).
+          3. Thumbnails larger than 500 KB are stripped — server
+             validator enforces this.
+
+Issue: Custom shapes don't appear
+Solution: Ensure shapes are passed via `allEntries` inside the SAME
+          `load` message as the XML — they cannot be added later.
+
+Issue: mergeAiXml does nothing
+Solution: Confirm over-ride.js is reachable at
+          /custom/chart/js/over-ride.js (200 OK). Check its console
+          for "[over-ride.js] mergeAiXml received" log.
+
+
+11. DRAW.IO URL PARAMETERS — COMPLETE REFERENCE
+----------------------------------------------------------------------
+Currently used in the main editor iframe:
+  embed=1           Enable embed mode — required for postMessage
+  proto=json        Use JSON protocol (alternative: 'xml')
+  spin=1            Show spinner during load
+  noExitBtn=1       Hide built-in Exit button
+  noSaveBtn=1       Hide built-in Save button
+  sketch=1          Enable sketch paper style
+  ui=sketch         UI theme: sketch | atlas | kennedy | min
+  touch=1           Enable touch gestures
+
+Currently used in the preview iframe (Doc→Diagram modal, mobile):
+  chrome=0          Hide all chrome
+  stealth=1         Read-only lightbox-ish mode
+  lightbox=1        Lightbox mode (disables editing)
+  nav=0             Hide the navigation bar
+  toolbar=0         Hide the toolbar
+  ui=min            Minimal UI
+
+Other useful params (not currently set):
+  lang=en           UI language
+  configure=1       Accept runtime config postMessage
+  math=1            Enable MathJax rendering
+  gridColor=#RRGGBB Override grid colour
+  pageVisible=0     Hide page breaks
+  savesidebar=0     Don't persist sidebar state
+  splash=0          Hide splash screen
+  offline=1         Offline mode
+
+
+12. UPDATING DRAW.IO
+----------------------------------------------------------------------
+1. Download the new release tarball / zip from
+     https://github.com/jgraph/drawio/releases
+2. Back up the current folder:
+     cp -R frontend/public/draw_io frontend/public/draw_io.bak-<ver>
+3. Replace the contents of frontend/public/draw_io/ with the new
+   release's `src/main/webapp/` contents.
+4. Re-apply our customisations:
+     • Restore our PreConfig.js (it is NOT in upstream — we overwrote
+       the placeholder). Compare against the new upstream PreConfig.js
+       for any new config keys we should set.
+     • Restore index.html's trailing script tag:
+         <script src="./../custom/chart/js/over-ride.js"></script>
+       (upstream doesn't include this.)
+     • Leave bootstrap.js, main.js, app.min.js untouched from upstream.
+5. Run once in the browser — verify EditorUi.VERSION matches the
+   new version (bump the number in this document and in
+   .claude/rules/drawio.md).
+6. Delete Zone.Identifier files if present:
+     find frontend/public/draw_io -name "*Zone.Identifier*" -delete
+7. Smoke-test: open a flow → load / autosave / export / mergeAiXml /
+   templates button → history thumbnail → restore. All should work.
+8. Commit as a single atomic change. Do NOT mix a draw.io upgrade
+   with feature changes — rollback becomes impossible.
+
+
+13. DEVELOPER QUICK REFERENCE
+----------------------------------------------------------------------
+Task                                          → How
+---------------------------------------------- ---------------------------------------
+Add a new custom shape                         Edit customBackendShapes in EditorView.tsx
+Hide a draw.io UI element                      CSS in injectEditorCustomisations or
+                                                 add regex in matchAiNode()
+Add a new postMessage action                   Add handler in over-ride.js, call
+                                                 from EditorView.tsx via postMessage
+Change editor theme                            iframe src: ui=sketch|atlas|kennedy|min
+Disable a draw.io feature                      window.DRAWIO_CONFIG in PreConfig.js
+Persist something to the backend               POST /api/save-diagram (adds a
+                                                 FlowVersion snapshot automatically)
+Insert AI-generated diagram                    window.dispatchEvent(
+                                                 new CustomEvent('aiXmlReady',
+                                                   { detail: { xml } }))
+Clean Windows metadata files                   find frontend/public/draw_io
+                                                 -name "*Zone.Identifier*" -delete
+
+
+14. EDITORVIEW.TSX — FUNCTION REFERENCE
+----------------------------------------------------------------------
+Module-level helpers:
+  HIDE_AI_CSS                static CSS blob hiding AI selectors
+  matchAiNode(el)            regex match on title/aria-label/data-action/img src
+  hideAiNodes(doc)           scans and hides every matching node
+  injectSidebarTemplateButton(doc, onClick)
+                             mounts <a id="vc-sidebar-templates-btn"> into
+                             .geFooterToolbar / .geSidebarContainer / .geSidebar
+  injectEditorCustomisations(iframe, onTemplatesClick)
+                             main onLoad handler: CSS + hideAi + template btn
+                             + MutationObserver (guarded via __vcAiObserver)
+
+Component state:
+  loading                    spinner overlay while iframe mounts
+  isMounted                  SSR guard
+  flowName                   editable flow title
+  permission, permRef        'owner' | 'edit' | 'view' (ref avoids stale closure)
+  templateBrowserOpen        AntD Drawer visibility
+  showTemplateChooser        auto-shown for empty flows / ?new=1
+  saveStatus                 'idle' | 'saving' | 'saved'
+  lastSavedAt                last successful save timestamp
+  versionsOpen               History drawer visibility
+  versions, versionsLoading  list from GET /api/flows/:id/versions
+  restoring                  POST .../versions/restore/:versionId in flight
+  previewVersion             full-size thumbnail modal state
+  windowWidth, isMobile      responsive breakpoint at 768px
+
+useEffect hooks:
+  1. Attach/detach postMessage listener (main protocol)
+  2. Auto-open template chooser on ?new=1
+  3. Listen for 'aiXmlReady' CustomEvent
+  4. Refresh "Saved X min ago" label every 30 s
+  5. Resize listener → windowWidth
+
+Top bar buttons:
+  Back arrow (handleExit)
+  flow-name Input
+  autosave indicator         "Saving… | Saved just now | 🟢 Autosave on · …"
+  History drawer trigger     (owner only)
+  Save button                manual triggerExport()
+  Exit button                (desktop only; mobile uses arrow)
+
+Inside iframe (injected by us):
+  #vc-hide-ai-style          <style> element with HIDE_AI_CSS
+  #vc-sidebar-templates-btn  our Templates icon
+
+
+15. INTEGRATION WITH VALUECHART FEATURES
+----------------------------------------------------------------------
+Autosave
+  • draw.io fires `autosave` on every change (autosave=1 in load msg).
+  • EditorView debounces 5 s, then posts `export`.
+  • `export` reply is written to the backend via /api/save-diagram.
+  • Backend creates a FlowVersion snapshot whenever diagramData
+    changes, capped at the latest 20 versions per flow.
+
+Version History
+  • Drawer opens on History button (owner only).
+  • GET /api/flows/:id/versions returns latest 20 with
+    { id, createdAt, thumbnail, savedBy:{ id, name, email } }.
+  • Each version row shows its 72×54 thumbnail — click to open a
+    lightbox modal — "Restore This Version" POSTs to
+    /api/flows/:id/versions/restore/:versionId then reloads.
+
+AI XML Generation
+  • User types in AIAssistant chat or clicks suggestion chip.
+  • useAi hook calls /api/ai-assistant/generate-diagram → returns XML.
+  • AIAssistant dispatches 'aiXmlReady' → EditorView forwards
+    `mergeAiXml` postMessage → over-ride.js imports cells.
+
+Doc → Diagram
+  • AIAssistant's input has a paperclip button (only when isInEditor).
+  • User picks a PDF/DOC/DOCX → handleDocumentUpload → useAi's
+    generateDiagramFromDocument → /api/ai-assistant/generate-diagram-from-document.
+  • Response XML flows through DiagramPreview → user approves →
+    same 'aiXmlReady' path as above.
+
+Template Browser
+  • Triggered by the Templates icon we inject into the draw.io sidebar
+    (id="vc-sidebar-templates-btn"), or by auto-open on empty/new flow.
+  • TemplateBrowser drawer lets user pick a category + template.
+  • onInsert dispatches 'mergeAiXml' postMessage directly.
+  • For new flows, the chosen template is immediately persisted via
+    POST /api/save-diagram so it survives a refresh.
+
+Mobile WebView (/mobile/editor/[id])
+  • Uses the SAME /draw_io/ asset path and the SAME postMessage
+    protocol. The mobile page authenticates with a short-lived JWT
+    (?token=…) verified against /api/v1/auth/mobile/entitlements.
+  • iframe params differ slightly: noExitBtn=1 fixed (mobile app
+    owns navigation — no Exit button anywhere).
+  • Save path uses PUT /api/v1/flows/:id directly (Bearer token),
+    not the cookie-authed /api/save-diagram proxy.
+
+=====================================================================
+End of master document.
+Rule file cross-reference: .claude/rules/drawio.md
+=====================================================================

@@ -139,13 +139,13 @@ export default function FlowDesignsPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, gap: 12 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, gap: 12 }}>
         <Title level={3} style={{ margin: 0 }}>Flow Designs</Title>
-        <Space>
+        <Space style={{ flexWrap: 'wrap' }}>
           <Input.Search
             placeholder="Filter by name…"
             allowClear
-            style={{ width: 240 }}
+            style={{ width: '100%', maxWidth: 240 }}
             onSearch={(v) => { setSearch(v || undefined); setPage(1); }}
           />
           <Button

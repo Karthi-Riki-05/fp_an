@@ -5,6 +5,15 @@ const { prisma } = require('../prisma/client');
 const { verify: verifyPassword, hash } = require('./password.service');
 const { UnauthorizedError, ForbiddenError, NotFoundError } = require('../errors');
 
+/**
+ * JWT payload shape (post Tenant-removal):
+ *   { sub, email, roles, kind, impersonator_id? }
+ *
+ * `tenantId` is no longer a claim — the tenant schema is derived at
+ * request time by the auth + tenant middleware from the loaded user's
+ * role + companyId. See MIGRATION_NOTES §13.
+ */
+
 function parseTtlToSeconds(ttl) {
   if (/^\d+$/.test(ttl)) return Number(ttl);
   const m = ttl.match(/^(\d+)\s*([smhd])$/);
@@ -23,12 +32,29 @@ function signToken(payload, ttl) {
   return jwt.sign(payload, process.env.JWT_ACCESS_SECRET, { expiresIn: ttl });
 }
 
+function pickRoleName(userRoles) {
+  const names = userRoles.map((ur) => ur.role.name);
+  if (names.includes('Administrator')) return 'Administrator';
+  if (names.includes('Company')) return 'Company';
+  if (names.includes('User')) return 'User';
+  return names[0] ?? null;
+}
+
+/** Compute the "active company user id" for a logged-in user — used in
+ * /me responses to keep the frontend's `activeTenantId` field working
+ * with its new meaning. */
+function activeCompanyUserIdFor(user) {
+  const role = pickRoleName(user.userRoles);
+  if (role === 'Company') return user.id;
+  if (role === 'User') return user.companyId || null;
+  return null; // Administrator → no fixed context
+}
+
 async function login(email, plainPassword) {
   const user = await prisma.user.findFirst({
     where: { email: email.toLowerCase(), deletedAt: null },
     include: {
       userRoles: { include: { role: true } },
-      tenantUsers: { where: { status: true }, orderBy: { id: 'asc' } },
     },
   });
 
@@ -43,42 +69,50 @@ async function login(email, plainPassword) {
   }
 
   if (user.status !== 1) throw new UnauthorizedError('user-disabled');
-
   if (!user.confirmed) throw new ForbiddenError('account_not_confirmed');
 
   const roleNames = user.userRoles.map((ur) => ur.role.name);
-  const isAdmin = user.userRoles.some((ur) => ur.role.all);
-  const tenantId = isAdmin ? null : user.tenantUsers[0]?.tenantId ?? null;
+  const tenantId = activeCompanyUserIdFor(user);
 
   const ttl = process.env.JWT_ACCESS_TTL || '15m';
   const expiresIn = parseTtlToSeconds(ttl);
 
-  const accessToken = signToken({ sub: user.id, email: user.email, tenantId, roles: roleNames, kind: 'web' }, ttl);
+  const accessToken = signToken({ sub: user.id, email: user.email, roles: roleNames, kind: 'web' }, ttl);
 
-  return { accessToken, user: { id: user.id, email: user.email, name: user.name, tenantId, roles: roleNames }, expiresIn };
+  return {
+    accessToken,
+    // `tenantId` in the response = Company user id (legacy field name kept
+    // per TENANT_REMOVAL decision 4). Frontend stores this in activeTenantId.
+    user: { id: user.id, email: user.email, name: user.name, tenantId, roles: roleNames },
+    expiresIn,
+  };
 }
 
 async function issueImpersonationToken({ targetUserId, impersonatorUserId }) {
   const target = await prisma.user.findFirst({
     where: { id: targetUserId, deletedAt: null },
-    include: {
-      userRoles: { include: { role: true } },
-      tenantUsers: { where: { status: true }, orderBy: { id: 'asc' } },
-    },
+    include: { userRoles: { include: { role: true } } },
   });
   if (!target) throw new NotFoundError('user-not-found');
   if (target.status !== 1) throw new ForbiddenError('user-disabled');
   const targetRoleNames = target.userRoles.map((ur) => ur.role.name);
   if (target.userRoles.some((ur) => ur.role.all)) throw new ForbiddenError('cannot-impersonate-administrator');
 
-  const tenantId = target.tenantUsers[0]?.tenantId ?? null;
+  const tenantId = activeCompanyUserIdFor(target);
   const ttl = process.env.JWT_IMPERSONATE_TTL || '30m';
   const expiresIn = parseTtlToSeconds(ttl);
 
-  const payload = { sub: target.id, email: target.email, tenantId, roles: targetRoleNames, kind: 'web', impersonator_id: impersonatorUserId };
+  const payload = {
+    sub: target.id, email: target.email, roles: targetRoleNames, kind: 'web',
+    impersonator_id: impersonatorUserId,
+  };
   const accessToken = signToken(payload, ttl);
 
-  return { accessToken, user: { id: target.id, email: target.email, name: target.name, tenantId, roles: targetRoleNames, impersonatorId: impersonatorUserId }, expiresIn };
+  return {
+    accessToken,
+    user: { id: target.id, email: target.email, name: target.name, tenantId, roles: targetRoleNames, impersonatorId: impersonatorUserId },
+    expiresIn,
+  };
 }
 
 async function stopImpersonation(originalSuperAdminId) {
@@ -93,7 +127,7 @@ async function stopImpersonation(originalSuperAdminId) {
 
   const ttl = process.env.JWT_ACCESS_TTL || '15m';
   const expiresIn = parseTtlToSeconds(ttl);
-  const accessToken = signToken({ sub: su.id, email: su.email, tenantId: null, roles: roleNames, kind: 'web' }, ttl);
+  const accessToken = signToken({ sub: su.id, email: su.email, roles: roleNames, kind: 'web' }, ttl);
 
   return { accessToken, user: { id: su.id, email: su.email, name: su.name, tenantId: null, roles: roleNames }, expiresIn };
 }

@@ -1,0 +1,190 @@
+'use strict';
+
+/**
+ * IoT firmware compatibility shim — legacy fpanalyzer semantics for
+ * the two endpoints the field units call without a JWT:
+ *
+ *   POST /api/v1/machine/installV1     "I'm online / restart"
+ *   POST /api/v1/machine/saveStopDataV1 "machine stopped at T"
+ *
+ * Mounted in app.js BEFORE the global JWT authMiddleware so callers
+ * that authenticate via `company_email_id` in the request body can
+ * reach these without a cookie. JWT callers still work — see iotAuth.
+ *
+ * All other /api/v1/machine/* endpoints continue to live in
+ * mobile-machine.routes.js behind JWT auth.
+ */
+
+const { Router } = require('express');
+const { iotAuth } = require('../middleware/iot-auth');
+const iotSvc = require('../services/iot-machine-data.service');
+
+const router = Router();
+
+function ok(data, msg = '') { return { success: true, msg, data }; }
+function fail(msg) { return { success: false, msg }; }
+
+/**
+ * @swagger
+ * /api/v1/machine/installV1:
+ *   post:
+ *     tags: [Mobile - Machine]
+ *     summary: IoT install / restart signal (legacy fpanalyzer flow)
+ *     description: |
+ *       Field-firmware "I'm online" call. Authenticates via either a
+ *       JWT (cookie/bearer) OR the legacy `company_email_id` body field
+ *       — the Company-role user that owns the tenant schema.
+ *
+ *       Behaviour mirrors the Laravel `MachineController@installV1`:
+ *         - find machine by `machine_id`; fallback to (pin_no + unit_name)
+ *         - if neither exists → INSERT a fresh unconfigured machines row
+ *         - if found AND configured AND both start_time + end_time given
+ *           → treat as a stop-end / restart, close out the open
+ *           machine_data row + write `machine_status='on'`
+ *         - otherwise → flip `running_status='on'`, refresh `last_online`
+ *
+ *       Filter-time queue debounce intentionally not ported (firmware
+ *       handles it locally now).
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [pin_no, unit_name, company_email_id]
+ *             properties:
+ *               company_email_id:
+ *                 type: string
+ *                 description: Company-owner email (resolves to tenant_${id}). Use volvo123@gmail.com for the Volvo tenant.
+ *                 example: "volvo123@gmail.com"
+ *               pin_no:
+ *                 type: integer
+ *                 description: IoT board pin. For Volvo, pin 1 = Montering Input (machine_id 9).
+ *                 example: 1
+ *               unit_name:
+ *                 type: string
+ *                 description: Display name for the unit. Must match exactly when used to look up an existing row.
+ *                 example: "Montering Input - 1"
+ *               bluetooth_id: { type: string, example: "*" }
+ *               wifi_id:      { type: string, example: "*" }
+ *               machine_id:
+ *                 type: integer
+ *                 description: Existing machine id. For Volvo, use 9 (Montering Input - 1, equipment 76).
+ *                 example: 9
+ *               start_time:
+ *                 type: string
+ *                 description: Stop start time (only used when end_time is also supplied — restart signal).
+ *                 example: "2026-05-18 11:33:47"
+ *               end_time:
+ *                 type: string
+ *                 description: Stop end time. Presence triggers the restart / close-out flow.
+ *                 example: "2026-05-18 11:45:00"
+ *           examples:
+ *             volvoHeartbeat:
+ *               summary: Volvo — plain heartbeat (machine already enrolled)
+ *               value:
+ *                 company_email_id: "volvo123@gmail.com"
+ *                 machine_id: 9
+ *                 pin_no: 1
+ *                 unit_name: "Montering Input - 1"
+ *                 bluetooth_id: "*"
+ *                 wifi_id: "*"
+ *             volvoRestart:
+ *               summary: Volvo — restart / close out an open stop
+ *               value:
+ *                 company_email_id: "volvo123@gmail.com"
+ *                 machine_id: 9
+ *                 pin_no: 1
+ *                 unit_name: "Montering Input - 1"
+ *                 bluetooth_id: "*"
+ *                 wifi_id: "*"
+ *                 start_time: "2026-05-18 11:33:47"
+ *                 end_time: "2026-05-18 11:45:00"
+ *             volvoEnrollNew:
+ *               summary: Volvo — enroll a brand-new unit (no matching pin_no + unit_name)
+ *               value:
+ *                 company_email_id: "volvo123@gmail.com"
+ *                 pin_no: 99
+ *                 unit_name: "Biglia_2.0_test"
+ *                 bluetooth_id: "*"
+ *                 wifi_id: "*"
+ *     responses:
+ *       200:
+ *         description: Legacy `{success,msg,data}` envelope
+ */
+router.post('/installV1', iotAuth, async (req, res) => {
+  try {
+    const result = await iotSvc.installMachine(req.tenant, req.body);
+    res.json(ok(result.data, result.action));
+  } catch (e) {
+    res.json(fail(e.message ?? 'install failed'));
+  }
+});
+
+/**
+ * @swagger
+ * /api/v1/machine/saveStopDataV1:
+ *   post:
+ *     tags: [Mobile - Machine]
+ *     summary: IoT stop-start signal (legacy fpanalyzer flow)
+ *     description: |
+ *       Records the START of a stop. Only `start_time` is required;
+ *       the matching end_time arrives later via `installV1`.
+ *
+ *       Mirrors `MachineController@saveStopDataV1`:
+ *         - refresh `unit_connected='yes'`
+ *         - reject if machine has no equipment_id (returns
+ *           "Machine not configured")
+ *         - long-stop suppression: if machine_status is already 'off',
+ *           skip the insert + return early
+ *         - else upsert machine_status (off, time=start_time) and
+ *           INSERT a machine_data row (start_time only)
+ *         - flip machines.running_status='off', has_unregister_data='yes'
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [machine_id, start_time, company_email_id]
+ *             properties:
+ *               company_email_id:
+ *                 type: string
+ *                 description: Company-owner email (resolves to tenant_${id}). Use volvo123@gmail.com for the Volvo tenant.
+ *                 example: "volvo123@gmail.com"
+ *               machine_id:
+ *                 type: integer
+ *                 description: Existing machine id. For Volvo, use 9 (Montering Input - 1, equipment 76).
+ *                 example: 9
+ *               start_time:
+ *                 type: string
+ *                 description: Stop start timestamp.
+ *                 example: "2026-05-18 11:33:47"
+ *           examples:
+ *             volvoStopStart:
+ *               summary: Volvo — stop start on Montering Input - 1
+ *               value:
+ *                 company_email_id: "volvo123@gmail.com"
+ *                 machine_id: 9
+ *                 start_time: "2026-05-18 11:33:47"
+ *             volvoStopStartLater:
+ *               summary: Volvo — stop start a few minutes later (triggers long-stop suppression if prior stop still open)
+ *               value:
+ *                 company_email_id: "volvo123@gmail.com"
+ *                 machine_id: 9
+ *                 start_time: "2026-05-18 11:35:00"
+ *     responses:
+ *       200:
+ *         description: Legacy `{success,msg,data}` envelope
+ */
+router.post('/saveStopDataV1', iotAuth, async (req, res) => {
+  try {
+    const result = await iotSvc.saveStopStart(req.tenant, req.body);
+    // saveStopStart already returns the legacy envelope.
+    res.json(result);
+  } catch (e) {
+    res.json(fail(e.message ?? 'saveStopData failed'));
+  }
+});
+
+module.exports = router;

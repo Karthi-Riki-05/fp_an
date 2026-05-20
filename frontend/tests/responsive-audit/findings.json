@@ -1,0 +1,7042 @@
+[
+  {
+    "page": "login",
+    "url": "/login",
+    "viewport": "mobile-s-iphone-se",
+    "width": 375,
+    "height": 667,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 375,
+      "clientWidth": 375
+    },
+    "smallTapTargets": 7,
+    "smallTapTargetSamples": [
+      {
+        "tag": "button",
+        "text": "🇬🇧 EN",
+        "w": 58,
+        "h": 30
+      },
+      {
+        "tag": "a",
+        "text": "Tillbaka",
+        "w": 64,
+        "h": 20
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 233,
+        "h": 24
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 213,
+        "h": 24
+      },
+      {
+        "tag": "a",
+        "text": "Glömt lösenord?",
+        "w": 86,
+        "h": 15
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "w": 99,
+        "h": 15
+      }
+    ],
+    "tinyText": 13,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "🇬🇧 EN",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "Tillbaka",
+        "size": 13
+      },
+      {
+        "tag": "label",
+        "text": "E-post",
+        "size": 13
+      },
+      {
+        "tag": "label",
+        "text": "Lösenord",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "Glömt lösenord?",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "Behöver du ett konto? Mejla",
+        "size": 12
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Card] `bodyStyle` is deprecated. Please use `styles.body` instead.",
+      "console.error: Warning: [antd: Card] `bordered` is deprecated. Please use `variant` instead."
+    ]
+  },
+  {
+    "page": "login",
+    "url": "/login",
+    "viewport": "mobile-m-iphone-13",
+    "width": 390,
+    "height": 844,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 390,
+      "clientWidth": 390
+    },
+    "smallTapTargets": 7,
+    "smallTapTargetSamples": [
+      {
+        "tag": "button",
+        "text": "🇬🇧 EN",
+        "w": 58,
+        "h": 30
+      },
+      {
+        "tag": "a",
+        "text": "Tillbaka",
+        "w": 64,
+        "h": 20
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 248,
+        "h": 24
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 228,
+        "h": 24
+      },
+      {
+        "tag": "a",
+        "text": "Glömt lösenord?",
+        "w": 86,
+        "h": 15
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "w": 99,
+        "h": 15
+      }
+    ],
+    "tinyText": 13,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "🇬🇧 EN",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "Tillbaka",
+        "size": 13
+      },
+      {
+        "tag": "label",
+        "text": "E-post",
+        "size": 13
+      },
+      {
+        "tag": "label",
+        "text": "Lösenord",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "Glömt lösenord?",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "Behöver du ett konto? Mejla",
+        "size": 12
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Card] `bodyStyle` is deprecated. Please use `styles.body` instead.",
+      "console.error: Warning: [antd: Card] `bordered` is deprecated. Please use `variant` instead."
+    ]
+  },
+  {
+    "page": "login",
+    "url": "/login",
+    "viewport": "mobile-l-pixel-7",
+    "width": 412,
+    "height": 915,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 412,
+      "clientWidth": 412
+    },
+    "smallTapTargets": 7,
+    "smallTapTargetSamples": [
+      {
+        "tag": "button",
+        "text": "🇬🇧 EN",
+        "w": 58,
+        "h": 30
+      },
+      {
+        "tag": "a",
+        "text": "Tillbaka",
+        "w": 64,
+        "h": 20
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 270,
+        "h": 24
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 250,
+        "h": 24
+      },
+      {
+        "tag": "a",
+        "text": "Glömt lösenord?",
+        "w": 86,
+        "h": 15
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "w": 99,
+        "h": 15
+      }
+    ],
+    "tinyText": 13,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "🇬🇧 EN",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "Tillbaka",
+        "size": 13
+      },
+      {
+        "tag": "label",
+        "text": "E-post",
+        "size": 13
+      },
+      {
+        "tag": "label",
+        "text": "Lösenord",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "Glömt lösenord?",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "Behöver du ett konto? Mejla",
+        "size": 12
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Card] `bodyStyle` is deprecated. Please use `styles.body` instead.",
+      "console.error: Warning: [antd: Card] `bordered` is deprecated. Please use `variant` instead."
+    ]
+  },
+  {
+    "page": "login",
+    "url": "/login",
+    "viewport": "foldable-zfold-folded",
+    "width": 343,
+    "height": 842,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 343,
+      "clientWidth": 343
+    },
+    "smallTapTargets": 7,
+    "smallTapTargetSamples": [
+      {
+        "tag": "button",
+        "text": "🇬🇧 EN",
+        "w": 58,
+        "h": 30
+      },
+      {
+        "tag": "a",
+        "text": "Tillbaka",
+        "w": 64,
+        "h": 20
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 201,
+        "h": 24
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 181,
+        "h": 24
+      },
+      {
+        "tag": "a",
+        "text": "Glömt lösenord?",
+        "w": 86,
+        "h": 15
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "w": 99,
+        "h": 15
+      }
+    ],
+    "tinyText": 13,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "🇬🇧 EN",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "Tillbaka",
+        "size": 13
+      },
+      {
+        "tag": "label",
+        "text": "E-post",
+        "size": 13
+      },
+      {
+        "tag": "label",
+        "text": "Lösenord",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "Glömt lösenord?",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "Behöver du ett konto? Mejla",
+        "size": 12
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Card] `bodyStyle` is deprecated. Please use `styles.body` instead.",
+      "console.error: Warning: [antd: Card] `bordered` is deprecated. Please use `variant` instead."
+    ]
+  },
+  {
+    "page": "login",
+    "url": "/login",
+    "viewport": "foldable-zfold-open",
+    "width": 673,
+    "height": 842,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 673,
+      "clientWidth": 673
+    },
+    "smallTapTargets": 7,
+    "smallTapTargetSamples": [
+      {
+        "tag": "button",
+        "text": "🇬🇧 EN",
+        "w": 58,
+        "h": 30
+      },
+      {
+        "tag": "a",
+        "text": "Tillbaka",
+        "w": 64,
+        "h": 20
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 310,
+        "h": 24
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 290,
+        "h": 24
+      },
+      {
+        "tag": "a",
+        "text": "Glömt lösenord?",
+        "w": 86,
+        "h": 15
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "w": 99,
+        "h": 15
+      }
+    ],
+    "tinyText": 13,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "🇬🇧 EN",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "Tillbaka",
+        "size": 13
+      },
+      {
+        "tag": "label",
+        "text": "E-post",
+        "size": 13
+      },
+      {
+        "tag": "label",
+        "text": "Lösenord",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "Glömt lösenord?",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "Behöver du ett konto? Mejla",
+        "size": 12
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Card] `bodyStyle` is deprecated. Please use `styles.body` instead.",
+      "console.error: Warning: [antd: Card] `bordered` is deprecated. Please use `variant` instead."
+    ]
+  },
+  {
+    "page": "login",
+    "url": "/login",
+    "viewport": "tablet-s-ipad-mini",
+    "width": 768,
+    "height": 1024,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 768,
+      "clientWidth": 768
+    },
+    "smallTapTargets": 7,
+    "smallTapTargetSamples": [
+      {
+        "tag": "button",
+        "text": "🇬🇧 EN",
+        "w": 58,
+        "h": 30
+      },
+      {
+        "tag": "a",
+        "text": "Tillbaka",
+        "w": 64,
+        "h": 20
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 310,
+        "h": 24
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 290,
+        "h": 24
+      },
+      {
+        "tag": "a",
+        "text": "Glömt lösenord?",
+        "w": 86,
+        "h": 15
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "w": 99,
+        "h": 15
+      }
+    ],
+    "tinyText": 13,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "🇬🇧 EN",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "Tillbaka",
+        "size": 13
+      },
+      {
+        "tag": "label",
+        "text": "E-post",
+        "size": 13
+      },
+      {
+        "tag": "label",
+        "text": "Lösenord",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "Glömt lösenord?",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "Behöver du ett konto? Mejla",
+        "size": 12
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Card] `bodyStyle` is deprecated. Please use `styles.body` instead.",
+      "console.error: Warning: [antd: Card] `bordered` is deprecated. Please use `variant` instead."
+    ]
+  },
+  {
+    "page": "login",
+    "url": "/login",
+    "viewport": "tablet-l-ipad-pro",
+    "width": 1024,
+    "height": 1366,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 1024,
+      "clientWidth": 1024
+    },
+    "smallTapTargets": 7,
+    "smallTapTargetSamples": [
+      {
+        "tag": "button",
+        "text": "🇬🇧 EN",
+        "w": 58,
+        "h": 30
+      },
+      {
+        "tag": "a",
+        "text": "Tillbaka",
+        "w": 64,
+        "h": 20
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 310,
+        "h": 24
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 290,
+        "h": 24
+      },
+      {
+        "tag": "a",
+        "text": "Glömt lösenord?",
+        "w": 86,
+        "h": 15
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "w": 99,
+        "h": 15
+      }
+    ],
+    "tinyText": 13,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "🇬🇧 EN",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "Tillbaka",
+        "size": 13
+      },
+      {
+        "tag": "label",
+        "text": "E-post",
+        "size": 13
+      },
+      {
+        "tag": "label",
+        "text": "Lösenord",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "Glömt lösenord?",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "Behöver du ett konto? Mejla",
+        "size": 12
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Card] `bodyStyle` is deprecated. Please use `styles.body` instead.",
+      "console.error: Warning: [antd: Card] `bordered` is deprecated. Please use `variant` instead."
+    ]
+  },
+  {
+    "page": "login",
+    "url": "/login",
+    "viewport": "desktop-1440",
+    "width": 1440,
+    "height": 900,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440
+    },
+    "smallTapTargets": 7,
+    "smallTapTargetSamples": [
+      {
+        "tag": "button",
+        "text": "🇬🇧 EN",
+        "w": 58,
+        "h": 30
+      },
+      {
+        "tag": "a",
+        "text": "Tillbaka",
+        "w": 64,
+        "h": 20
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 310,
+        "h": 24
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 290,
+        "h": 24
+      },
+      {
+        "tag": "a",
+        "text": "Glömt lösenord?",
+        "w": 86,
+        "h": 15
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "w": 99,
+        "h": 15
+      }
+    ],
+    "tinyText": 13,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "🇬🇧 EN",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "Tillbaka",
+        "size": 13
+      },
+      {
+        "tag": "label",
+        "text": "E-post",
+        "size": 13
+      },
+      {
+        "tag": "label",
+        "text": "Lösenord",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "Glömt lösenord?",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "Behöver du ett konto? Mejla",
+        "size": 12
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Card] `bodyStyle` is deprecated. Please use `styles.body` instead.",
+      "console.error: Warning: [antd: Card] `bordered` is deprecated. Please use `variant` instead."
+    ]
+  },
+  {
+    "page": "user-dashboard",
+    "url": "/dashboard",
+    "viewport": "mobile-s-iphone-se",
+    "width": 375,
+    "height": 667,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 375,
+      "clientWidth": 375
+    },
+    "smallTapTargets": 6,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "div",
+        "text": "Startsida",
+        "w": 55,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Min profil",
+        "w": 60,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Inställningar",
+        "w": 77,
+        "h": 22
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "w": 107,
+        "h": 16
+      }
+    ],
+    "tinyText": 16,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Enheter",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Flödesupptagning",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Flödesanalys",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Resultat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Ordrar",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Byt lösenord",
+        "size": 13
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "user-dashboard",
+    "url": "/dashboard",
+    "viewport": "mobile-m-iphone-13",
+    "width": 390,
+    "height": 844,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 390,
+      "clientWidth": 390
+    },
+    "smallTapTargets": 0,
+    "smallTapTargetSamples": [],
+    "tinyText": 0,
+    "tinyTextSamples": [],
+    "errors": []
+  },
+  {
+    "page": "user-dashboard",
+    "url": "/dashboard",
+    "viewport": "mobile-l-pixel-7",
+    "width": 412,
+    "height": 915,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 412,
+      "clientWidth": 412
+    },
+    "smallTapTargets": 6,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "div",
+        "text": "Startsida",
+        "w": 55,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Min profil",
+        "w": 60,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Inställningar",
+        "w": 77,
+        "h": 22
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "w": 107,
+        "h": 16
+      }
+    ],
+    "tinyText": 16,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Enheter",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Flödesupptagning",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Flödesanalys",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Resultat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Ordrar",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Byt lösenord",
+        "size": 13
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "user-dashboard",
+    "url": "/dashboard",
+    "viewport": "foldable-zfold-folded",
+    "width": 343,
+    "height": 842,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 343,
+      "clientWidth": 343
+    },
+    "smallTapTargets": 6,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "div",
+        "text": "Startsida",
+        "w": 55,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Min profil",
+        "w": 60,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Inställningar",
+        "w": 77,
+        "h": 22
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "w": 107,
+        "h": 16
+      }
+    ],
+    "tinyText": 16,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Enheter",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Flödesupptagning",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Flödesanalys",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Resultat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Ordrar",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Byt lösenord",
+        "size": 13
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "user-dashboard",
+    "url": "/dashboard",
+    "viewport": "foldable-zfold-open",
+    "width": 673,
+    "height": 842,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 673,
+      "clientWidth": 673
+    },
+    "smallTapTargets": 6,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "div",
+        "text": "Startsida",
+        "w": 55,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Min profil",
+        "w": 60,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Inställningar",
+        "w": 77,
+        "h": 22
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "w": 107,
+        "h": 16
+      }
+    ],
+    "tinyText": 16,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Enheter",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Flödesupptagning",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Flödesanalys",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Resultat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Ordrar",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Byt lösenord",
+        "size": 13
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "user-dashboard",
+    "url": "/dashboard",
+    "viewport": "tablet-s-ipad-mini",
+    "width": 768,
+    "height": 1024,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 768,
+      "clientWidth": 768
+    },
+    "smallTapTargets": 6,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "div",
+        "text": "Startsida",
+        "w": 55,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Min profil",
+        "w": 60,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Inställningar",
+        "w": 77,
+        "h": 22
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "w": 107,
+        "h": 16
+      }
+    ],
+    "tinyText": 16,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Enheter",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Flödesupptagning",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Flödesanalys",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Resultat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Ordrar",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Byt lösenord",
+        "size": 13
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "user-dashboard",
+    "url": "/dashboard",
+    "viewport": "tablet-l-ipad-pro",
+    "width": 1024,
+    "height": 1366,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 1024,
+      "clientWidth": 1024
+    },
+    "smallTapTargets": 6,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Company User",
+        "w": 146,
+        "h": 38
+      },
+      {
+        "tag": "div",
+        "text": "Startsida",
+        "w": 55,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Min profil",
+        "w": 60,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Inställningar",
+        "w": 77,
+        "h": 22
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "w": 107,
+        "h": 16
+      }
+    ],
+    "tinyText": 16,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Enheter",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Flödesupptagning",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Flödesanalys",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Resultat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Ordrar",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Byt lösenord",
+        "size": 13
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "user-dashboard",
+    "url": "/dashboard",
+    "viewport": "desktop-1440",
+    "width": 1440,
+    "height": 900,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440
+    },
+    "smallTapTargets": 6,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Company User",
+        "w": 146,
+        "h": 38
+      },
+      {
+        "tag": "div",
+        "text": "Startsida",
+        "w": 55,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Min profil",
+        "w": 60,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Inställningar",
+        "w": 77,
+        "h": 22
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "w": 107,
+        "h": 16
+      }
+    ],
+    "tinyText": 16,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Enheter",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Flödesupptagning",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Flödesanalys",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Resultat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Ordrar",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Byt lösenord",
+        "size": 13
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "user-myprofile-tab",
+    "url": "/dashboard?tab=myprofile",
+    "viewport": "mobile-s-iphone-se",
+    "width": 375,
+    "height": 667,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 375,
+      "clientWidth": 375
+    },
+    "smallTapTargets": 12,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "div",
+        "text": "Startsida",
+        "w": 55,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Min profil",
+        "w": 60,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Inställningar",
+        "w": 77,
+        "h": 22
+      },
+      {
+        "tag": "button",
+        "text": "English",
+        "w": 30,
+        "h": 30
+      }
+    ],
+    "tinyText": 6,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Science Park Skövde, Växthuset\nKaplangat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "+46 (0)70 334 4688",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. Alla rättigheter förbehålln",
+        "size": 12
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Table] `index` parameter of `rowKey` function is deprecated. There is no guarantee that it will work as expected."
+    ]
+  },
+  {
+    "page": "user-myprofile-tab",
+    "url": "/dashboard?tab=myprofile",
+    "viewport": "mobile-m-iphone-13",
+    "width": 390,
+    "height": 844,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 390,
+      "clientWidth": 390
+    },
+    "smallTapTargets": 12,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "div",
+        "text": "Startsida",
+        "w": 55,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Min profil",
+        "w": 60,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Inställningar",
+        "w": 77,
+        "h": 22
+      },
+      {
+        "tag": "button",
+        "text": "English",
+        "w": 30,
+        "h": 30
+      }
+    ],
+    "tinyText": 6,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Science Park Skövde, Växthuset\nKaplangat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "+46 (0)70 334 4688",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. Alla rättigheter förbehålln",
+        "size": 12
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Table] `index` parameter of `rowKey` function is deprecated. There is no guarantee that it will work as expected."
+    ]
+  },
+  {
+    "page": "user-myprofile-tab",
+    "url": "/dashboard?tab=myprofile",
+    "viewport": "mobile-l-pixel-7",
+    "width": 412,
+    "height": 915,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 412,
+      "clientWidth": 412
+    },
+    "smallTapTargets": 0,
+    "smallTapTargetSamples": [],
+    "tinyText": 0,
+    "tinyTextSamples": [],
+    "errors": [
+      "console.error: Warning: [antd: Table] `index` parameter of `rowKey` function is deprecated. There is no guarantee that it will work as expected."
+    ]
+  },
+  {
+    "page": "user-myprofile-tab",
+    "url": "/dashboard?tab=myprofile",
+    "viewport": "foldable-zfold-folded",
+    "width": 343,
+    "height": 842,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 343,
+      "clientWidth": 343
+    },
+    "smallTapTargets": 12,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "div",
+        "text": "Startsida",
+        "w": 55,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Min profil",
+        "w": 60,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Inställningar",
+        "w": 77,
+        "h": 22
+      },
+      {
+        "tag": "button",
+        "text": "English",
+        "w": 30,
+        "h": 30
+      }
+    ],
+    "tinyText": 6,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Science Park Skövde, Växthuset\nKaplangat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "+46 (0)70 334 4688",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. Alla rättigheter förbehålln",
+        "size": 12
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Table] `index` parameter of `rowKey` function is deprecated. There is no guarantee that it will work as expected."
+    ]
+  },
+  {
+    "page": "user-myprofile-tab",
+    "url": "/dashboard?tab=myprofile",
+    "viewport": "foldable-zfold-open",
+    "width": 673,
+    "height": 842,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 673,
+      "clientWidth": 673
+    },
+    "smallTapTargets": 12,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "div",
+        "text": "Startsida",
+        "w": 55,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Min profil",
+        "w": 60,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Inställningar",
+        "w": 77,
+        "h": 22
+      },
+      {
+        "tag": "button",
+        "text": "English",
+        "w": 30,
+        "h": 30
+      }
+    ],
+    "tinyText": 6,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Science Park Skövde, Växthuset\nKaplangat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "+46 (0)70 334 4688",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. Alla rättigheter förbehålln",
+        "size": 12
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Table] `index` parameter of `rowKey` function is deprecated. There is no guarantee that it will work as expected."
+    ]
+  },
+  {
+    "page": "user-myprofile-tab",
+    "url": "/dashboard?tab=myprofile",
+    "viewport": "tablet-s-ipad-mini",
+    "width": 768,
+    "height": 1024,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 768,
+      "clientWidth": 768
+    },
+    "smallTapTargets": 12,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "div",
+        "text": "Startsida",
+        "w": 55,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Min profil",
+        "w": 60,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Inställningar",
+        "w": 77,
+        "h": 22
+      },
+      {
+        "tag": "button",
+        "text": "English",
+        "w": 30,
+        "h": 30
+      }
+    ],
+    "tinyText": 6,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Science Park Skövde, Växthuset\nKaplangat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "+46 (0)70 334 4688",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. Alla rättigheter förbehålln",
+        "size": 12
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Table] `index` parameter of `rowKey` function is deprecated. There is no guarantee that it will work as expected."
+    ]
+  },
+  {
+    "page": "user-myprofile-tab",
+    "url": "/dashboard?tab=myprofile",
+    "viewport": "tablet-l-ipad-pro",
+    "width": 1024,
+    "height": 1366,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 1024,
+      "clientWidth": 1024
+    },
+    "smallTapTargets": 12,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Company User",
+        "w": 146,
+        "h": 38
+      },
+      {
+        "tag": "div",
+        "text": "Startsida",
+        "w": 55,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Min profil",
+        "w": 60,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Inställningar",
+        "w": 77,
+        "h": 22
+      },
+      {
+        "tag": "button",
+        "text": "English",
+        "w": 30,
+        "h": 30
+      }
+    ],
+    "tinyText": 6,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Science Park Skövde, Växthuset\nKaplangat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "+46 (0)70 334 4688",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. Alla rättigheter förbehålln",
+        "size": 12
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Table] `index` parameter of `rowKey` function is deprecated. There is no guarantee that it will work as expected."
+    ]
+  },
+  {
+    "page": "user-myprofile-tab",
+    "url": "/dashboard?tab=myprofile",
+    "viewport": "desktop-1440",
+    "width": 1440,
+    "height": 900,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440
+    },
+    "smallTapTargets": 12,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Company User",
+        "w": 146,
+        "h": 38
+      },
+      {
+        "tag": "div",
+        "text": "Startsida",
+        "w": 55,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Min profil",
+        "w": 60,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Inställningar",
+        "w": 77,
+        "h": 22
+      },
+      {
+        "tag": "button",
+        "text": "English",
+        "w": 30,
+        "h": 30
+      }
+    ],
+    "tinyText": 6,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Science Park Skövde, Växthuset\nKaplangat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "+46 (0)70 334 4688",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. Alla rättigheter förbehålln",
+        "size": 12
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Table] `index` parameter of `rowKey` function is deprecated. There is no guarantee that it will work as expected."
+    ]
+  },
+  {
+    "page": "user-settings-tab",
+    "url": "/dashboard?tab=settings",
+    "viewport": "mobile-s-iphone-se",
+    "width": 375,
+    "height": 667,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 375,
+      "clientWidth": 375
+    },
+    "smallTapTargets": 11,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "div",
+        "text": "Startsida",
+        "w": 55,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Min profil",
+        "w": 60,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Inställningar",
+        "w": 77,
+        "h": 22
+      },
+      {
+        "tag": "span",
+        "text": "⋮⋮",
+        "w": 20,
+        "h": 14
+      }
+    ],
+    "tinyText": 6,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Science Park Skövde, Växthuset\nKaplangat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "+46 (0)70 334 4688",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. Alla rättigheter förbehålln",
+        "size": 12
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "user-settings-tab",
+    "url": "/dashboard?tab=settings",
+    "viewport": "mobile-m-iphone-13",
+    "width": 390,
+    "height": 844,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 390,
+      "clientWidth": 390
+    },
+    "smallTapTargets": 11,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "div",
+        "text": "Startsida",
+        "w": 55,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Min profil",
+        "w": 60,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Inställningar",
+        "w": 77,
+        "h": 22
+      },
+      {
+        "tag": "span",
+        "text": "⋮⋮",
+        "w": 20,
+        "h": 14
+      }
+    ],
+    "tinyText": 6,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Science Park Skövde, Växthuset\nKaplangat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "+46 (0)70 334 4688",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. Alla rättigheter förbehålln",
+        "size": 12
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "user-settings-tab",
+    "url": "/dashboard?tab=settings",
+    "viewport": "mobile-l-pixel-7",
+    "width": 412,
+    "height": 915,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 412,
+      "clientWidth": 412
+    },
+    "smallTapTargets": 11,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "div",
+        "text": "Startsida",
+        "w": 55,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Min profil",
+        "w": 60,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Inställningar",
+        "w": 77,
+        "h": 22
+      },
+      {
+        "tag": "span",
+        "text": "⋮⋮",
+        "w": 20,
+        "h": 14
+      }
+    ],
+    "tinyText": 6,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Science Park Skövde, Växthuset\nKaplangat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "+46 (0)70 334 4688",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. Alla rättigheter förbehålln",
+        "size": 12
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "user-settings-tab",
+    "url": "/dashboard?tab=settings",
+    "viewport": "foldable-zfold-folded",
+    "width": 343,
+    "height": 842,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 343,
+      "clientWidth": 343
+    },
+    "smallTapTargets": 0,
+    "smallTapTargetSamples": [],
+    "tinyText": 0,
+    "tinyTextSamples": [],
+    "errors": []
+  },
+  {
+    "page": "user-settings-tab",
+    "url": "/dashboard?tab=settings",
+    "viewport": "foldable-zfold-open",
+    "width": 673,
+    "height": 842,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 673,
+      "clientWidth": 673
+    },
+    "smallTapTargets": 11,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "div",
+        "text": "Startsida",
+        "w": 55,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Min profil",
+        "w": 60,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Inställningar",
+        "w": 77,
+        "h": 22
+      },
+      {
+        "tag": "span",
+        "text": "⋮⋮",
+        "w": 20,
+        "h": 14
+      }
+    ],
+    "tinyText": 6,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Science Park Skövde, Växthuset\nKaplangat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "+46 (0)70 334 4688",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. Alla rättigheter förbehålln",
+        "size": 12
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "user-settings-tab",
+    "url": "/dashboard?tab=settings",
+    "viewport": "tablet-s-ipad-mini",
+    "width": 768,
+    "height": 1024,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 768,
+      "clientWidth": 768
+    },
+    "smallTapTargets": 11,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "div",
+        "text": "Startsida",
+        "w": 55,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Min profil",
+        "w": 60,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Inställningar",
+        "w": 77,
+        "h": 22
+      },
+      {
+        "tag": "span",
+        "text": "⋮⋮",
+        "w": 20,
+        "h": 14
+      }
+    ],
+    "tinyText": 6,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Science Park Skövde, Växthuset\nKaplangat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "+46 (0)70 334 4688",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. Alla rättigheter förbehålln",
+        "size": 12
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "user-settings-tab",
+    "url": "/dashboard?tab=settings",
+    "viewport": "tablet-l-ipad-pro",
+    "width": 1024,
+    "height": 1366,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 1024,
+      "clientWidth": 1024
+    },
+    "smallTapTargets": 11,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Company User",
+        "w": 146,
+        "h": 38
+      },
+      {
+        "tag": "div",
+        "text": "Startsida",
+        "w": 55,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Min profil",
+        "w": 60,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Inställningar",
+        "w": 77,
+        "h": 22
+      },
+      {
+        "tag": "span",
+        "text": "⋮⋮",
+        "w": 20,
+        "h": 14
+      }
+    ],
+    "tinyText": 6,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Science Park Skövde, Växthuset\nKaplangat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "+46 (0)70 334 4688",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. Alla rättigheter förbehålln",
+        "size": 12
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "user-settings-tab",
+    "url": "/dashboard?tab=settings",
+    "viewport": "desktop-1440",
+    "width": 1440,
+    "height": 900,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440
+    },
+    "smallTapTargets": 11,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Company User",
+        "w": 146,
+        "h": 38
+      },
+      {
+        "tag": "div",
+        "text": "Startsida",
+        "w": 55,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Min profil",
+        "w": 60,
+        "h": 22
+      },
+      {
+        "tag": "div",
+        "text": "Inställningar",
+        "w": 77,
+        "h": 22
+      },
+      {
+        "tag": "span",
+        "text": "⋮⋮",
+        "w": 20,
+        "h": 14
+      }
+    ],
+    "tinyText": 6,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Science Park Skövde, Växthuset\nKaplangat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "+46 (0)70 334 4688",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. Alla rättigheter förbehålln",
+        "size": 12
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "profile-edit",
+    "url": "/profile/edit",
+    "viewport": "mobile-s-iphone-se",
+    "width": 375,
+    "height": 667,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 375,
+      "clientWidth": 375
+    },
+    "smallTapTargets": 10,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 293,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 293,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 293,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 293,
+        "h": 42
+      }
+    ],
+    "tinyText": 6,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Science Park Skövde, Växthuset\nKaplangat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "+46 (0)70 334 4688",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. Alla rättigheter förbehålln",
+        "size": 12
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "profile-edit",
+    "url": "/profile/edit",
+    "viewport": "mobile-m-iphone-13",
+    "width": 390,
+    "height": 844,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 390,
+      "clientWidth": 390
+    },
+    "smallTapTargets": 10,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 308,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 308,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 308,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 308,
+        "h": 42
+      }
+    ],
+    "tinyText": 6,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Science Park Skövde, Växthuset\nKaplangat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "+46 (0)70 334 4688",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. Alla rättigheter förbehålln",
+        "size": 12
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "profile-edit",
+    "url": "/profile/edit",
+    "viewport": "mobile-l-pixel-7",
+    "width": 412,
+    "height": 915,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 412,
+      "clientWidth": 412
+    },
+    "smallTapTargets": 10,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 330,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 330,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 330,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 330,
+        "h": 42
+      }
+    ],
+    "tinyText": 6,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Science Park Skövde, Växthuset\nKaplangat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "+46 (0)70 334 4688",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. Alla rättigheter förbehålln",
+        "size": 12
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "profile-edit",
+    "url": "/profile/edit",
+    "viewport": "foldable-zfold-folded",
+    "width": 343,
+    "height": 842,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 343,
+      "clientWidth": 343
+    },
+    "smallTapTargets": 10,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 261,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 261,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 261,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 261,
+        "h": 42
+      }
+    ],
+    "tinyText": 6,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Science Park Skövde, Växthuset\nKaplangat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "+46 (0)70 334 4688",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. Alla rättigheter förbehålln",
+        "size": 12
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "profile-edit",
+    "url": "/profile/edit",
+    "viewport": "foldable-zfold-open",
+    "width": 673,
+    "height": 842,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 673,
+      "clientWidth": 673
+    },
+    "smallTapTargets": 10,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 591,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 591,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 591,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 591,
+        "h": 42
+      }
+    ],
+    "tinyText": 6,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Science Park Skövde, Växthuset\nKaplangat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "+46 (0)70 334 4688",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. Alla rättigheter förbehålln",
+        "size": 12
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "profile-edit",
+    "url": "/profile/edit",
+    "viewport": "tablet-s-ipad-mini",
+    "width": 768,
+    "height": 1024,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 768,
+      "clientWidth": 768
+    },
+    "smallTapTargets": 10,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 638,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 638,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 638,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 638,
+        "h": 42
+      }
+    ],
+    "tinyText": 6,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Science Park Skövde, Växthuset\nKaplangat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "+46 (0)70 334 4688",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. Alla rättigheter förbehålln",
+        "size": 12
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "profile-edit",
+    "url": "/profile/edit",
+    "viewport": "tablet-l-ipad-pro",
+    "width": 1024,
+    "height": 1366,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 1024,
+      "clientWidth": 1024
+    },
+    "smallTapTargets": 10,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Company User",
+        "w": 146,
+        "h": 38
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 638,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 638,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 638,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 638,
+        "h": 42
+      }
+    ],
+    "tinyText": 6,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Science Park Skövde, Växthuset\nKaplangat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "+46 (0)70 334 4688",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. Alla rättigheter förbehålln",
+        "size": 12
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "profile-edit",
+    "url": "/profile/edit",
+    "viewport": "desktop-1440",
+    "width": 1440,
+    "height": 900,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440
+    },
+    "smallTapTargets": 10,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Company User",
+        "w": 146,
+        "h": 38
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 638,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 638,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 638,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 638,
+        "h": 42
+      }
+    ],
+    "tinyText": 6,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Science Park Skövde, Växthuset\nKaplangat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "+46 (0)70 334 4688",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. Alla rättigheter förbehålln",
+        "size": 12
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "profile-password",
+    "url": "/profile/password",
+    "viewport": "mobile-s-iphone-se",
+    "width": 375,
+    "height": 667,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 375,
+      "clientWidth": 375
+    },
+    "smallTapTargets": 9,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 249,
+        "h": 22
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 249,
+        "h": 22
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 249,
+        "h": 22
+      },
+      {
+        "tag": "button",
+        "text": "Byt lösenord",
+        "w": 110,
+        "h": 38
+      }
+    ],
+    "tinyText": 6,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Science Park Skövde, Växthuset\nKaplangat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "+46 (0)70 334 4688",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. Alla rättigheter förbehålln",
+        "size": 12
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "profile-password",
+    "url": "/profile/password",
+    "viewport": "mobile-m-iphone-13",
+    "width": 390,
+    "height": 844,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 390,
+      "clientWidth": 390
+    },
+    "smallTapTargets": 9,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 264,
+        "h": 22
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 264,
+        "h": 22
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 264,
+        "h": 22
+      },
+      {
+        "tag": "button",
+        "text": "Byt lösenord",
+        "w": 110,
+        "h": 38
+      }
+    ],
+    "tinyText": 6,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Science Park Skövde, Växthuset\nKaplangat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "+46 (0)70 334 4688",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. Alla rättigheter förbehålln",
+        "size": 12
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "profile-password",
+    "url": "/profile/password",
+    "viewport": "mobile-l-pixel-7",
+    "width": 412,
+    "height": 915,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 412,
+      "clientWidth": 412
+    },
+    "smallTapTargets": 9,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 286,
+        "h": 22
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 286,
+        "h": 22
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 286,
+        "h": 22
+      },
+      {
+        "tag": "button",
+        "text": "Byt lösenord",
+        "w": 110,
+        "h": 38
+      }
+    ],
+    "tinyText": 6,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Science Park Skövde, Växthuset\nKaplangat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "+46 (0)70 334 4688",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. Alla rättigheter förbehålln",
+        "size": 12
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "profile-password",
+    "url": "/profile/password",
+    "viewport": "foldable-zfold-folded",
+    "width": 343,
+    "height": 842,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 343,
+      "clientWidth": 343
+    },
+    "smallTapTargets": 9,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 217,
+        "h": 22
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 217,
+        "h": 22
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 217,
+        "h": 22
+      },
+      {
+        "tag": "button",
+        "text": "Byt lösenord",
+        "w": 110,
+        "h": 38
+      }
+    ],
+    "tinyText": 6,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Science Park Skövde, Växthuset\nKaplangat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "+46 (0)70 334 4688",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. Alla rättigheter förbehålln",
+        "size": 12
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "profile-password",
+    "url": "/profile/password",
+    "viewport": "foldable-zfold-open",
+    "width": 673,
+    "height": 842,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 673,
+      "clientWidth": 673
+    },
+    "smallTapTargets": 9,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 547,
+        "h": 22
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 547,
+        "h": 22
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 547,
+        "h": 22
+      },
+      {
+        "tag": "button",
+        "text": "Byt lösenord",
+        "w": 110,
+        "h": 38
+      }
+    ],
+    "tinyText": 6,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Science Park Skövde, Växthuset\nKaplangat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "+46 (0)70 334 4688",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. Alla rättigheter förbehålln",
+        "size": 12
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "profile-password",
+    "url": "/profile/password",
+    "viewport": "tablet-s-ipad-mini",
+    "width": 768,
+    "height": 1024,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 768,
+      "clientWidth": 768
+    },
+    "smallTapTargets": 0,
+    "smallTapTargetSamples": [],
+    "tinyText": 0,
+    "tinyTextSamples": [],
+    "errors": []
+  },
+  {
+    "page": "profile-password",
+    "url": "/profile/password",
+    "viewport": "tablet-l-ipad-pro",
+    "width": 1024,
+    "height": 1366,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 1024,
+      "clientWidth": 1024
+    },
+    "smallTapTargets": 9,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Company User",
+        "w": 146,
+        "h": 38
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 594,
+        "h": 22
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 594,
+        "h": 22
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 594,
+        "h": 22
+      },
+      {
+        "tag": "button",
+        "text": "Byt lösenord",
+        "w": 110,
+        "h": 38
+      }
+    ],
+    "tinyText": 6,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Science Park Skövde, Växthuset\nKaplangat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "+46 (0)70 334 4688",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. Alla rättigheter förbehålln",
+        "size": 12
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "profile-password",
+    "url": "/profile/password",
+    "viewport": "desktop-1440",
+    "width": 1440,
+    "height": 900,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440
+    },
+    "smallTapTargets": 9,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Company User",
+        "w": 146,
+        "h": 38
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 594,
+        "h": 22
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 594,
+        "h": 22
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 594,
+        "h": 22
+      },
+      {
+        "tag": "button",
+        "text": "Byt lösenord",
+        "w": 110,
+        "h": 38
+      }
+    ],
+    "tinyText": 6,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "Science Park Skövde, Växthuset\nKaplangat",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "+46 (0)70 334 4688",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. Alla rättigheter förbehålln",
+        "size": 12
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "units",
+    "url": "/units",
+    "viewport": "mobile-s-iphone-se",
+    "width": 375,
+    "height": 667,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 375,
+      "clientWidth": 375
+    },
+    "smallTapTargets": 4,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "a",
+        "text": "",
+        "w": 16,
+        "h": 16
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "w": 107,
+        "h": 16
+      }
+    ],
+    "tinyText": 12,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "3",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "Day",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "s",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "3",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "Day",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "s",
+        "size": 11
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Modal] `destroyOnClose` is deprecated. Please use `destroyOnHidden` instead."
+    ]
+  },
+  {
+    "page": "units",
+    "url": "/units",
+    "viewport": "mobile-m-iphone-13",
+    "width": 390,
+    "height": 844,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 390,
+      "clientWidth": 390
+    },
+    "smallTapTargets": 4,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "a",
+        "text": "",
+        "w": 16,
+        "h": 16
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "w": 107,
+        "h": 16
+      }
+    ],
+    "tinyText": 12,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "3",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "Day",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "s",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "3",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "Day",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "s",
+        "size": 11
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Modal] `destroyOnClose` is deprecated. Please use `destroyOnHidden` instead."
+    ]
+  },
+  {
+    "page": "units",
+    "url": "/units",
+    "viewport": "mobile-l-pixel-7",
+    "width": 412,
+    "height": 915,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 412,
+      "clientWidth": 412
+    },
+    "smallTapTargets": 4,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "a",
+        "text": "",
+        "w": 16,
+        "h": 16
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "w": 107,
+        "h": 16
+      }
+    ],
+    "tinyText": 12,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "3",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "Day",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "s",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "3",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "Day",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "s",
+        "size": 11
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Modal] `destroyOnClose` is deprecated. Please use `destroyOnHidden` instead."
+    ]
+  },
+  {
+    "page": "units",
+    "url": "/units",
+    "viewport": "foldable-zfold-folded",
+    "width": 343,
+    "height": 842,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 343,
+      "clientWidth": 343
+    },
+    "smallTapTargets": 4,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "a",
+        "text": "",
+        "w": 16,
+        "h": 16
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "w": 107,
+        "h": 16
+      }
+    ],
+    "tinyText": 12,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "3",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "Day",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "s",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "3",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "Day",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "s",
+        "size": 11
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Modal] `destroyOnClose` is deprecated. Please use `destroyOnHidden` instead."
+    ]
+  },
+  {
+    "page": "units",
+    "url": "/units",
+    "viewport": "foldable-zfold-open",
+    "width": 673,
+    "height": 842,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 673,
+      "clientWidth": 673
+    },
+    "smallTapTargets": 4,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Open menu",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "a",
+        "text": "",
+        "w": 16,
+        "h": 16
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "w": 107,
+        "h": 16
+      }
+    ],
+    "tinyText": 12,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "3",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "Day",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "s",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "3",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "Day",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "s",
+        "size": 11
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Modal] `destroyOnClose` is deprecated. Please use `destroyOnHidden` instead."
+    ]
+  },
+  {
+    "page": "units",
+    "url": "/units",
+    "viewport": "tablet-s-ipad-mini",
+    "width": 768,
+    "height": 1024,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 768,
+      "clientWidth": 768
+    },
+    "smallTapTargets": 0,
+    "smallTapTargetSamples": [],
+    "tinyText": 0,
+    "tinyTextSamples": [],
+    "errors": [
+      "console.error: Warning: [antd: Modal] `destroyOnClose` is deprecated. Please use `destroyOnHidden` instead."
+    ]
+  },
+  {
+    "page": "units",
+    "url": "/units",
+    "viewport": "tablet-l-ipad-pro",
+    "width": 1024,
+    "height": 1366,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 1024,
+      "clientWidth": 1024
+    },
+    "smallTapTargets": 4,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Company User",
+        "w": 146,
+        "h": 38
+      },
+      {
+        "tag": "a",
+        "text": "",
+        "w": 16,
+        "h": 16
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "w": 107,
+        "h": 16
+      }
+    ],
+    "tinyText": 12,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "3",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "Day",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "s",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "3",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "Day",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "s",
+        "size": 11
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Modal] `destroyOnClose` is deprecated. Please use `destroyOnHidden` instead."
+    ]
+  },
+  {
+    "page": "units",
+    "url": "/units",
+    "viewport": "desktop-1440",
+    "width": 1440,
+    "height": 900,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440
+    },
+    "smallTapTargets": 4,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "",
+        "w": 133,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Company User",
+        "w": 146,
+        "h": 38
+      },
+      {
+        "tag": "a",
+        "text": "",
+        "w": 16,
+        "h": 16
+      },
+      {
+        "tag": "a",
+        "text": "info@fpanalyzer.se",
+        "w": 107,
+        "h": 16
+      }
+    ],
+    "tinyText": 12,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "3",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "Day",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "s",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "3",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "Day",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "s",
+        "size": 11
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Modal] `destroyOnClose` is deprecated. Please use `destroyOnHidden` instead."
+    ]
+  },
+  {
+    "page": "admin-dashboard",
+    "url": "/admin/dashboard",
+    "viewport": "mobile-s-iphone-se",
+    "width": 375,
+    "height": 667,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 375,
+      "clientWidth": 375
+    },
+    "smallTapTargets": 4,
+    "smallTapTargetSamples": [
+      {
+        "tag": "button",
+        "text": "Toggle navigation",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "🇬🇧 EN",
+        "w": 54,
+        "h": 30
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 192,
+        "h": 22
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 192,
+        "h": 22
+      }
+    ],
+    "tinyText": 17,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "🇬🇧 EN",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Administrativ översikt",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "· Europe/Stockholm",
+        "size": 12
+      },
+      {
+        "tag": "div",
+        "text": "Flödesuppföljning",
+        "size": 13
+      },
+      {
+        "tag": "div",
+        "text": "Produktionsdata",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "poster",
+        "size": 13
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Card] `bodyStyle` is deprecated. Please use `styles.body` instead."
+    ]
+  },
+  {
+    "page": "admin-dashboard",
+    "url": "/admin/dashboard",
+    "viewport": "mobile-m-iphone-13",
+    "width": 390,
+    "height": 844,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 390,
+      "clientWidth": 390
+    },
+    "smallTapTargets": 4,
+    "smallTapTargetSamples": [
+      {
+        "tag": "button",
+        "text": "Toggle navigation",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "🇬🇧 EN",
+        "w": 54,
+        "h": 30
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 207,
+        "h": 22
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 207,
+        "h": 22
+      }
+    ],
+    "tinyText": 17,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "🇬🇧 EN",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Administrativ översikt",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "· Europe/Stockholm",
+        "size": 12
+      },
+      {
+        "tag": "div",
+        "text": "Flödesuppföljning",
+        "size": 13
+      },
+      {
+        "tag": "div",
+        "text": "Produktionsdata",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "poster",
+        "size": 13
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Card] `bodyStyle` is deprecated. Please use `styles.body` instead."
+    ]
+  },
+  {
+    "page": "admin-dashboard",
+    "url": "/admin/dashboard",
+    "viewport": "mobile-l-pixel-7",
+    "width": 412,
+    "height": 915,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 412,
+      "clientWidth": 412
+    },
+    "smallTapTargets": 4,
+    "smallTapTargetSamples": [
+      {
+        "tag": "button",
+        "text": "Toggle navigation",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "🇬🇧 EN",
+        "w": 54,
+        "h": 30
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 228,
+        "h": 22
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 228,
+        "h": 22
+      }
+    ],
+    "tinyText": 17,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "🇬🇧 EN",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Administrativ översikt",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "· Europe/Stockholm",
+        "size": 12
+      },
+      {
+        "tag": "div",
+        "text": "Flödesuppföljning",
+        "size": 13
+      },
+      {
+        "tag": "div",
+        "text": "Produktionsdata",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "poster",
+        "size": 13
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Card] `bodyStyle` is deprecated. Please use `styles.body` instead."
+    ]
+  },
+  {
+    "page": "admin-dashboard",
+    "url": "/admin/dashboard",
+    "viewport": "foldable-zfold-folded",
+    "width": 343,
+    "height": 842,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 343,
+      "clientWidth": 343
+    },
+    "smallTapTargets": 4,
+    "smallTapTargetSamples": [
+      {
+        "tag": "button",
+        "text": "Toggle navigation",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "🇬🇧 EN",
+        "w": 54,
+        "h": 30
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 161,
+        "h": 22
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 161,
+        "h": 22
+      }
+    ],
+    "tinyText": 17,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "🇬🇧 EN",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Administrativ översikt",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "· Europe/Stockholm",
+        "size": 12
+      },
+      {
+        "tag": "div",
+        "text": "Flödesuppföljning",
+        "size": 13
+      },
+      {
+        "tag": "div",
+        "text": "Produktionsdata",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "poster",
+        "size": 13
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Card] `bodyStyle` is deprecated. Please use `styles.body` instead."
+    ]
+  },
+  {
+    "page": "admin-dashboard",
+    "url": "/admin/dashboard",
+    "viewport": "foldable-zfold-open",
+    "width": 673,
+    "height": 842,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 673,
+      "clientWidth": 673
+    },
+    "smallTapTargets": 0,
+    "smallTapTargetSamples": [],
+    "tinyText": 0,
+    "tinyTextSamples": [],
+    "errors": [
+      "console.error: Warning: [antd: Card] `bodyStyle` is deprecated. Please use `styles.body` instead."
+    ]
+  },
+  {
+    "page": "admin-dashboard",
+    "url": "/admin/dashboard",
+    "viewport": "tablet-s-ipad-mini",
+    "width": 768,
+    "height": 1024,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 768,
+      "clientWidth": 768
+    },
+    "smallTapTargets": 4,
+    "smallTapTargetSamples": [
+      {
+        "tag": "button",
+        "text": "Toggle navigation",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "🇬🇧 EN",
+        "w": 54,
+        "h": 30
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 109,
+        "h": 22
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 109,
+        "h": 22
+      }
+    ],
+    "tinyText": 17,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "🇬🇧 EN",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Administrativ översikt",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "· Europe/Stockholm",
+        "size": 12
+      },
+      {
+        "tag": "div",
+        "text": "Flödesuppföljning",
+        "size": 13
+      },
+      {
+        "tag": "div",
+        "text": "Produktionsdata",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "poster",
+        "size": 13
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Card] `bodyStyle` is deprecated. Please use `styles.body` instead."
+    ]
+  },
+  {
+    "page": "admin-dashboard",
+    "url": "/admin/dashboard",
+    "viewport": "tablet-l-ipad-pro",
+    "width": 1024,
+    "height": 1366,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 1024,
+      "clientWidth": 1024
+    },
+    "smallTapTargets": 14,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "Administration",
+        "w": 219,
+        "h": 40
+      },
+      {
+        "tag": "button",
+        "text": "Användarhantering",
+        "w": 219,
+        "h": 36
+      },
+      {
+        "tag": "a",
+        "text": "Kategorihantering",
+        "w": 219,
+        "h": 40
+      },
+      {
+        "tag": "button",
+        "text": "Utrustningshantering",
+        "w": 219,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Flödeshantering",
+        "w": 219,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Produktionshantering",
+        "w": 219,
+        "h": 36
+      }
+    ],
+    "tinyText": 29,
+    "tinyTextSamples": [
+      {
+        "tag": "div",
+        "text": "Company User",
+        "size": 13
+      },
+      {
+        "tag": "div",
+        "text": "Online",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "Administration",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Användarhantering",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Kategorihantering",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Utrustningshantering",
+        "size": 13
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Card] `bodyStyle` is deprecated. Please use `styles.body` instead."
+    ]
+  },
+  {
+    "page": "admin-dashboard",
+    "url": "/admin/dashboard",
+    "viewport": "desktop-1440",
+    "width": 1440,
+    "height": 900,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440
+    },
+    "smallTapTargets": 14,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "Administration",
+        "w": 219,
+        "h": 40
+      },
+      {
+        "tag": "button",
+        "text": "Användarhantering",
+        "w": 219,
+        "h": 36
+      },
+      {
+        "tag": "a",
+        "text": "Kategorihantering",
+        "w": 219,
+        "h": 40
+      },
+      {
+        "tag": "button",
+        "text": "Utrustningshantering",
+        "w": 219,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Flödeshantering",
+        "w": 219,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Produktionshantering",
+        "w": 219,
+        "h": 36
+      }
+    ],
+    "tinyText": 29,
+    "tinyTextSamples": [
+      {
+        "tag": "div",
+        "text": "Company User",
+        "size": 13
+      },
+      {
+        "tag": "div",
+        "text": "Online",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "Administration",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Användarhantering",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Kategorihantering",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Utrustningshantering",
+        "size": 13
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Card] `bodyStyle` is deprecated. Please use `styles.body` instead."
+    ]
+  },
+  {
+    "page": "admin-users",
+    "url": "/admin/access/users",
+    "viewport": "mobile-s-iphone-se",
+    "width": 375,
+    "height": 667,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 375,
+      "clientWidth": 375
+    },
+    "smallTapTargets": 26,
+    "smallTapTargetSamples": [
+      {
+        "tag": "button",
+        "text": "Toggle navigation",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "🇬🇧 EN",
+        "w": 54,
+        "h": 30
+      },
+      {
+        "tag": "button",
+        "text": "Add New",
+        "w": 111,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "All Users",
+        "w": 71,
+        "h": 30
+      },
+      {
+        "tag": "button",
+        "text": "Deactivated Users",
+        "w": 129,
+        "h": 30
+      },
+      {
+        "tag": "button",
+        "text": "Deleted Users",
+        "w": 103,
+        "h": 30
+      }
+    ],
+    "tinyText": 11,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "🇬🇧 EN",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Company",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "Yes",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "User",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "No",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "User",
+        "size": 12
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Modal] `destroyOnClose` is deprecated. Please use `destroyOnHidden` instead."
+    ]
+  },
+  {
+    "page": "admin-users",
+    "url": "/admin/access/users",
+    "viewport": "mobile-m-iphone-13",
+    "width": 390,
+    "height": 844,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 390,
+      "clientWidth": 390
+    },
+    "smallTapTargets": 26,
+    "smallTapTargetSamples": [
+      {
+        "tag": "button",
+        "text": "Toggle navigation",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "🇬🇧 EN",
+        "w": 54,
+        "h": 30
+      },
+      {
+        "tag": "button",
+        "text": "Add New",
+        "w": 111,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "All Users",
+        "w": 71,
+        "h": 30
+      },
+      {
+        "tag": "button",
+        "text": "Deactivated Users",
+        "w": 129,
+        "h": 30
+      },
+      {
+        "tag": "button",
+        "text": "Deleted Users",
+        "w": 103,
+        "h": 30
+      }
+    ],
+    "tinyText": 11,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "🇬🇧 EN",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Company",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "Yes",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "User",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "No",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "User",
+        "size": 12
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Modal] `destroyOnClose` is deprecated. Please use `destroyOnHidden` instead."
+    ]
+  },
+  {
+    "page": "admin-users",
+    "url": "/admin/access/users",
+    "viewport": "mobile-l-pixel-7",
+    "width": 412,
+    "height": 915,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 412,
+      "clientWidth": 412
+    },
+    "smallTapTargets": 26,
+    "smallTapTargetSamples": [
+      {
+        "tag": "button",
+        "text": "Toggle navigation",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "🇬🇧 EN",
+        "w": 54,
+        "h": 30
+      },
+      {
+        "tag": "button",
+        "text": "Add New",
+        "w": 111,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "All Users",
+        "w": 71,
+        "h": 30
+      },
+      {
+        "tag": "button",
+        "text": "Deactivated Users",
+        "w": 129,
+        "h": 30
+      },
+      {
+        "tag": "button",
+        "text": "Deleted Users",
+        "w": 103,
+        "h": 30
+      }
+    ],
+    "tinyText": 11,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "🇬🇧 EN",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Company",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "Yes",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "User",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "No",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "User",
+        "size": 12
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Modal] `destroyOnClose` is deprecated. Please use `destroyOnHidden` instead."
+    ]
+  },
+  {
+    "page": "admin-users",
+    "url": "/admin/access/users",
+    "viewport": "foldable-zfold-folded",
+    "width": 343,
+    "height": 842,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 343,
+      "clientWidth": 343
+    },
+    "smallTapTargets": 26,
+    "smallTapTargetSamples": [
+      {
+        "tag": "button",
+        "text": "Toggle navigation",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "🇬🇧 EN",
+        "w": 54,
+        "h": 30
+      },
+      {
+        "tag": "button",
+        "text": "Add New",
+        "w": 111,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "All Users",
+        "w": 71,
+        "h": 30
+      },
+      {
+        "tag": "button",
+        "text": "Deactivated Users",
+        "w": 129,
+        "h": 30
+      },
+      {
+        "tag": "button",
+        "text": "Deleted Users",
+        "w": 103,
+        "h": 30
+      }
+    ],
+    "tinyText": 11,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "🇬🇧 EN",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Company",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "Yes",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "User",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "No",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "User",
+        "size": 12
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Modal] `destroyOnClose` is deprecated. Please use `destroyOnHidden` instead."
+    ]
+  },
+  {
+    "page": "admin-users",
+    "url": "/admin/access/users",
+    "viewport": "foldable-zfold-open",
+    "width": 673,
+    "height": 842,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 673,
+      "clientWidth": 673
+    },
+    "smallTapTargets": 0,
+    "smallTapTargetSamples": [],
+    "tinyText": 0,
+    "tinyTextSamples": [],
+    "errors": []
+  },
+  {
+    "page": "admin-users",
+    "url": "/admin/access/users",
+    "viewport": "tablet-s-ipad-mini",
+    "width": 768,
+    "height": 1024,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 768,
+      "clientWidth": 768
+    },
+    "smallTapTargets": 27,
+    "smallTapTargetSamples": [
+      {
+        "tag": "button",
+        "text": "Toggle navigation",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "🇬🇧 EN",
+        "w": 54,
+        "h": 30
+      },
+      {
+        "tag": "button",
+        "text": "Add New",
+        "w": 111,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "All Users",
+        "w": 71,
+        "h": 30
+      },
+      {
+        "tag": "button",
+        "text": "Deactivated Users",
+        "w": 129,
+        "h": 30
+      },
+      {
+        "tag": "button",
+        "text": "Deleted Users",
+        "w": 103,
+        "h": 30
+      }
+    ],
+    "tinyText": 11,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "🇬🇧 EN",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Company",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "Yes",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "User",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "No",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "User",
+        "size": 12
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Modal] `destroyOnClose` is deprecated. Please use `destroyOnHidden` instead."
+    ]
+  },
+  {
+    "page": "admin-users",
+    "url": "/admin/access/users",
+    "viewport": "tablet-l-ipad-pro",
+    "width": 1024,
+    "height": 1366,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 1024,
+      "clientWidth": 1024
+    },
+    "smallTapTargets": 39,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "Administration",
+        "w": 219,
+        "h": 40
+      },
+      {
+        "tag": "button",
+        "text": "Användarhantering",
+        "w": 219,
+        "h": 36
+      },
+      {
+        "tag": "a",
+        "text": "Användare",
+        "w": 219,
+        "h": 36
+      },
+      {
+        "tag": "a",
+        "text": "Lönegrupp",
+        "w": 219,
+        "h": 36
+      },
+      {
+        "tag": "a",
+        "text": "Kategorihantering",
+        "w": 219,
+        "h": 40
+      },
+      {
+        "tag": "button",
+        "text": "Utrustningshantering",
+        "w": 219,
+        "h": 36
+      }
+    ],
+    "tinyText": 25,
+    "tinyTextSamples": [
+      {
+        "tag": "div",
+        "text": "Company User",
+        "size": 13
+      },
+      {
+        "tag": "div",
+        "text": "Online",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "Administration",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Användarhantering",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "Användare",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "Lönegrupp",
+        "size": 13
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Modal] `destroyOnClose` is deprecated. Please use `destroyOnHidden` instead."
+    ]
+  },
+  {
+    "page": "admin-users",
+    "url": "/admin/access/users",
+    "viewport": "desktop-1440",
+    "width": 1440,
+    "height": 900,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440
+    },
+    "smallTapTargets": 39,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "Administration",
+        "w": 219,
+        "h": 40
+      },
+      {
+        "tag": "button",
+        "text": "Användarhantering",
+        "w": 219,
+        "h": 36
+      },
+      {
+        "tag": "a",
+        "text": "Användare",
+        "w": 219,
+        "h": 36
+      },
+      {
+        "tag": "a",
+        "text": "Lönegrupp",
+        "w": 219,
+        "h": 36
+      },
+      {
+        "tag": "a",
+        "text": "Kategorihantering",
+        "w": 219,
+        "h": 40
+      },
+      {
+        "tag": "button",
+        "text": "Utrustningshantering",
+        "w": 219,
+        "h": 36
+      }
+    ],
+    "tinyText": 25,
+    "tinyTextSamples": [
+      {
+        "tag": "div",
+        "text": "Company User",
+        "size": 13
+      },
+      {
+        "tag": "div",
+        "text": "Online",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "Administration",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Användarhantering",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "Användare",
+        "size": 13
+      },
+      {
+        "tag": "a",
+        "text": "Lönegrupp",
+        "size": 13
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Modal] `destroyOnClose` is deprecated. Please use `destroyOnHidden` instead."
+    ]
+  },
+  {
+    "page": "admin-equipment",
+    "url": "/admin/equipment",
+    "viewport": "mobile-s-iphone-se",
+    "width": 375,
+    "height": 667,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 375,
+      "clientWidth": 375
+    },
+    "smallTapTargets": 11,
+    "smallTapTargetSamples": [
+      {
+        "tag": "button",
+        "text": "Toggle navigation",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "🇬🇧 EN",
+        "w": 54,
+        "h": 30
+      },
+      {
+        "tag": "a",
+        "text": "Admin",
+        "w": 48,
+        "h": 22
+      },
+      {
+        "tag": "button",
+        "text": "Add equipment",
+        "w": 148,
+        "h": 38
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 227,
+        "h": 22
+      },
+      {
+        "tag": "button",
+        "text": "",
+        "w": 30,
+        "h": 30
+      }
+    ],
+    "tinyText": 8,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "🇬🇧 EN",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "CNC Mill",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "active",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "active",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Modal] `destroyOnClose` is deprecated. Please use `destroyOnHidden` instead."
+    ]
+  },
+  {
+    "page": "admin-equipment",
+    "url": "/admin/equipment",
+    "viewport": "mobile-m-iphone-13",
+    "width": 390,
+    "height": 844,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 390,
+      "clientWidth": 390
+    },
+    "smallTapTargets": 11,
+    "smallTapTargetSamples": [
+      {
+        "tag": "button",
+        "text": "Toggle navigation",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "🇬🇧 EN",
+        "w": 54,
+        "h": 30
+      },
+      {
+        "tag": "a",
+        "text": "Admin",
+        "w": 48,
+        "h": 22
+      },
+      {
+        "tag": "button",
+        "text": "Add equipment",
+        "w": 148,
+        "h": 38
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 242,
+        "h": 22
+      },
+      {
+        "tag": "button",
+        "text": "",
+        "w": 30,
+        "h": 30
+      }
+    ],
+    "tinyText": 8,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "🇬🇧 EN",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "CNC Mill",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "active",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "active",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Modal] `destroyOnClose` is deprecated. Please use `destroyOnHidden` instead."
+    ]
+  },
+  {
+    "page": "admin-equipment",
+    "url": "/admin/equipment",
+    "viewport": "mobile-l-pixel-7",
+    "width": 412,
+    "height": 915,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 412,
+      "clientWidth": 412
+    },
+    "smallTapTargets": 11,
+    "smallTapTargetSamples": [
+      {
+        "tag": "button",
+        "text": "Toggle navigation",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "🇬🇧 EN",
+        "w": 54,
+        "h": 30
+      },
+      {
+        "tag": "a",
+        "text": "Admin",
+        "w": 48,
+        "h": 22
+      },
+      {
+        "tag": "button",
+        "text": "Add equipment",
+        "w": 148,
+        "h": 38
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 264,
+        "h": 22
+      },
+      {
+        "tag": "button",
+        "text": "",
+        "w": 30,
+        "h": 30
+      }
+    ],
+    "tinyText": 8,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "🇬🇧 EN",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "CNC Mill",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "active",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "active",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Modal] `destroyOnClose` is deprecated. Please use `destroyOnHidden` instead."
+    ]
+  },
+  {
+    "page": "admin-equipment",
+    "url": "/admin/equipment",
+    "viewport": "foldable-zfold-folded",
+    "width": 343,
+    "height": 842,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 343,
+      "clientWidth": 343
+    },
+    "smallTapTargets": 11,
+    "smallTapTargetSamples": [
+      {
+        "tag": "button",
+        "text": "Toggle navigation",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "🇬🇧 EN",
+        "w": 54,
+        "h": 30
+      },
+      {
+        "tag": "a",
+        "text": "Admin",
+        "w": 48,
+        "h": 22
+      },
+      {
+        "tag": "button",
+        "text": "Add equipment",
+        "w": 148,
+        "h": 38
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 195,
+        "h": 22
+      },
+      {
+        "tag": "button",
+        "text": "",
+        "w": 30,
+        "h": 30
+      }
+    ],
+    "tinyText": 8,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "🇬🇧 EN",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "CNC Mill",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "active",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "active",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Modal] `destroyOnClose` is deprecated. Please use `destroyOnHidden` instead."
+    ]
+  },
+  {
+    "page": "admin-equipment",
+    "url": "/admin/equipment",
+    "viewport": "foldable-zfold-open",
+    "width": 673,
+    "height": 842,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 673,
+      "clientWidth": 673
+    },
+    "smallTapTargets": 5,
+    "smallTapTargetSamples": [
+      {
+        "tag": "button",
+        "text": "Toggle navigation",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "🇬🇧 EN",
+        "w": 54,
+        "h": 30
+      },
+      {
+        "tag": "a",
+        "text": "Admin",
+        "w": 48,
+        "h": 22
+      },
+      {
+        "tag": "button",
+        "text": "Add equipment",
+        "w": 148,
+        "h": 38
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 310,
+        "h": 22
+      }
+    ],
+    "tinyText": 5,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "🇬🇧 EN",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. All Rights Reserved.",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "Developed By Flow Process Sweden AB",
+        "size": 12
+      }
+    ],
+    "errors": [
+      "console.error: Warning: [antd: Modal] `destroyOnClose` is deprecated. Please use `destroyOnHidden` instead.",
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Failed to load resource: the server responded with a status of 429 ()"
+    ]
+  },
+  {
+    "page": "admin-equipment",
+    "url": "/admin/equipment",
+    "viewport": "tablet-s-ipad-mini",
+    "width": 768,
+    "height": 1024,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 768,
+      "clientWidth": 768
+    },
+    "smallTapTargets": 0,
+    "smallTapTargetSamples": [],
+    "tinyText": 0,
+    "tinyTextSamples": [],
+    "errors": [
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s",
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s"
+    ]
+  },
+  {
+    "page": "admin-equipment",
+    "url": "/admin/equipment",
+    "viewport": "tablet-l-ipad-pro",
+    "width": 1024,
+    "height": 1366,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 1024,
+      "clientWidth": 1024
+    },
+    "smallTapTargets": 0,
+    "smallTapTargetSamples": [],
+    "tinyText": 0,
+    "tinyTextSamples": [],
+    "errors": [
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s",
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s"
+    ]
+  },
+  {
+    "page": "admin-equipment",
+    "url": "/admin/equipment",
+    "viewport": "desktop-1440",
+    "width": 1440,
+    "height": 900,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440
+    },
+    "smallTapTargets": 0,
+    "smallTapTargetSamples": [],
+    "tinyText": 0,
+    "tinyTextSamples": [],
+    "errors": [
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s"
+    ]
+  },
+  {
+    "page": "admin-equipment-tree",
+    "url": "/admin/equipment/tree",
+    "viewport": "mobile-s-iphone-se",
+    "width": 375,
+    "height": 667,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 375,
+      "clientWidth": 375
+    },
+    "smallTapTargets": 0,
+    "smallTapTargetSamples": [],
+    "tinyText": 0,
+    "tinyTextSamples": [],
+    "errors": [
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s",
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s"
+    ]
+  },
+  {
+    "page": "admin-equipment-tree",
+    "url": "/admin/equipment/tree",
+    "viewport": "mobile-m-iphone-13",
+    "width": 390,
+    "height": 844,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 390,
+      "clientWidth": 390
+    },
+    "smallTapTargets": 0,
+    "smallTapTargetSamples": [],
+    "tinyText": 0,
+    "tinyTextSamples": [],
+    "errors": [
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s",
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s"
+    ]
+  },
+  {
+    "page": "admin-equipment-tree",
+    "url": "/admin/equipment/tree",
+    "viewport": "mobile-l-pixel-7",
+    "width": 412,
+    "height": 915,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 412,
+      "clientWidth": 412
+    },
+    "smallTapTargets": 0,
+    "smallTapTargetSamples": [],
+    "tinyText": 0,
+    "tinyTextSamples": [],
+    "errors": [
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s",
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s"
+    ]
+  },
+  {
+    "page": "admin-equipment-tree",
+    "url": "/admin/equipment/tree",
+    "viewport": "foldable-zfold-folded",
+    "width": 343,
+    "height": 842,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 343,
+      "clientWidth": 343
+    },
+    "smallTapTargets": 0,
+    "smallTapTargetSamples": [],
+    "tinyText": 0,
+    "tinyTextSamples": [],
+    "errors": [
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s",
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s"
+    ]
+  },
+  {
+    "page": "admin-equipment-tree",
+    "url": "/admin/equipment/tree",
+    "viewport": "foldable-zfold-open",
+    "width": 673,
+    "height": 842,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 673,
+      "clientWidth": 673
+    },
+    "smallTapTargets": 0,
+    "smallTapTargetSamples": [],
+    "tinyText": 0,
+    "tinyTextSamples": [],
+    "errors": [
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s",
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s"
+    ]
+  },
+  {
+    "page": "admin-equipment-tree",
+    "url": "/admin/equipment/tree",
+    "viewport": "tablet-s-ipad-mini",
+    "width": 768,
+    "height": 1024,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 768,
+      "clientWidth": 768
+    },
+    "smallTapTargets": 0,
+    "smallTapTargetSamples": [],
+    "tinyText": 0,
+    "tinyTextSamples": [],
+    "errors": [
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s"
+    ]
+  },
+  {
+    "page": "admin-equipment-tree",
+    "url": "/admin/equipment/tree",
+    "viewport": "tablet-l-ipad-pro",
+    "width": 1024,
+    "height": 1366,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 1024,
+      "clientWidth": 1024
+    },
+    "smallTapTargets": 0,
+    "smallTapTargetSamples": [],
+    "tinyText": 0,
+    "tinyTextSamples": [],
+    "errors": [
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s",
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s"
+    ]
+  },
+  {
+    "page": "admin-equipment-tree",
+    "url": "/admin/equipment/tree",
+    "viewport": "desktop-1440",
+    "width": 1440,
+    "height": 900,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440
+    },
+    "smallTapTargets": 0,
+    "smallTapTargetSamples": [],
+    "tinyText": 0,
+    "tinyTextSamples": [],
+    "errors": [
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s",
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s"
+    ]
+  },
+  {
+    "page": "admin-shift-schedules",
+    "url": "/admin/shift-schedules",
+    "viewport": "mobile-s-iphone-se",
+    "width": 375,
+    "height": 667,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 375,
+      "clientWidth": 375
+    },
+    "smallTapTargets": 0,
+    "smallTapTargetSamples": [],
+    "tinyText": 0,
+    "tinyTextSamples": [],
+    "errors": [
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s",
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s"
+    ]
+  },
+  {
+    "page": "admin-shift-schedules",
+    "url": "/admin/shift-schedules",
+    "viewport": "mobile-m-iphone-13",
+    "width": 390,
+    "height": 844,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 390,
+      "clientWidth": 390
+    },
+    "smallTapTargets": 0,
+    "smallTapTargetSamples": [],
+    "tinyText": 0,
+    "tinyTextSamples": [],
+    "errors": [
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s",
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s"
+    ]
+  },
+  {
+    "page": "admin-shift-schedules",
+    "url": "/admin/shift-schedules",
+    "viewport": "mobile-l-pixel-7",
+    "width": 412,
+    "height": 915,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 412,
+      "clientWidth": 412
+    },
+    "smallTapTargets": 0,
+    "smallTapTargetSamples": [],
+    "tinyText": 0,
+    "tinyTextSamples": [],
+    "errors": [
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s",
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s"
+    ]
+  },
+  {
+    "page": "admin-shift-schedules",
+    "url": "/admin/shift-schedules",
+    "viewport": "foldable-zfold-folded",
+    "width": 343,
+    "height": 842,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 343,
+      "clientWidth": 343
+    },
+    "smallTapTargets": 0,
+    "smallTapTargetSamples": [],
+    "tinyText": 0,
+    "tinyTextSamples": [],
+    "errors": [
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s",
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s"
+    ]
+  },
+  {
+    "page": "admin-shift-schedules",
+    "url": "/admin/shift-schedules",
+    "viewport": "foldable-zfold-open",
+    "width": 673,
+    "height": 842,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 673,
+      "clientWidth": 673
+    },
+    "smallTapTargets": 0,
+    "smallTapTargetSamples": [],
+    "tinyText": 0,
+    "tinyTextSamples": [],
+    "errors": [
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s"
+    ]
+  },
+  {
+    "page": "admin-shift-schedules",
+    "url": "/admin/shift-schedules",
+    "viewport": "tablet-s-ipad-mini",
+    "width": 768,
+    "height": 1024,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 768,
+      "clientWidth": 768
+    },
+    "smallTapTargets": 0,
+    "smallTapTargetSamples": [],
+    "tinyText": 0,
+    "tinyTextSamples": [],
+    "errors": [
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s",
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s"
+    ]
+  },
+  {
+    "page": "admin-shift-schedules",
+    "url": "/admin/shift-schedules",
+    "viewport": "tablet-l-ipad-pro",
+    "width": 1024,
+    "height": 1366,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 1024,
+      "clientWidth": 1024
+    },
+    "smallTapTargets": 0,
+    "smallTapTargetSamples": [],
+    "tinyText": 0,
+    "tinyTextSamples": [],
+    "errors": [
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s",
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s"
+    ]
+  },
+  {
+    "page": "admin-shift-schedules",
+    "url": "/admin/shift-schedules",
+    "viewport": "desktop-1440",
+    "width": 1440,
+    "height": 900,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440
+    },
+    "smallTapTargets": 0,
+    "smallTapTargetSamples": [],
+    "tinyText": 0,
+    "tinyTextSamples": [],
+    "errors": [
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s",
+      "console.error: Failed to load resource: the server responded with a status of 429 ()",
+      "console.error: Warning: Cannot update a component (`%s`) while rendering a different component (`%s`). To locate the bad setState() call inside `%s`, follow the stack trace as described in https://reactjs.org/link/s"
+    ]
+  },
+  {
+    "page": "admin-shift-edit",
+    "url": "/admin/shift-schedules/4/edit",
+    "viewport": "mobile-s-iphone-se",
+    "width": 375,
+    "height": 667,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 375,
+      "clientWidth": 375
+    },
+    "smallTapTargets": 12,
+    "smallTapTargetSamples": [
+      {
+        "tag": "button",
+        "text": "Toggle navigation",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "🇬🇧 EN",
+        "w": 54,
+        "h": 30
+      },
+      {
+        "tag": "a",
+        "text": "",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 277,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 277,
+        "h": 42
+      }
+    ],
+    "tinyText": 7,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "🇬🇧 EN",
+        "size": 13
+      },
+      {
+        "tag": "div",
+        "text": "11:00 - 12:00",
+        "size": 10.1
+      },
+      {
+        "tag": "div",
+        "text": "drag-mpb1lmgz",
+        "size": 11.9
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. All Rights Reserved.",
+        "size": 12
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "admin-shift-edit",
+    "url": "/admin/shift-schedules/4/edit",
+    "viewport": "mobile-m-iphone-13",
+    "width": 390,
+    "height": 844,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 390,
+      "clientWidth": 390
+    },
+    "smallTapTargets": 12,
+    "smallTapTargetSamples": [
+      {
+        "tag": "button",
+        "text": "Toggle navigation",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "🇬🇧 EN",
+        "w": 54,
+        "h": 30
+      },
+      {
+        "tag": "a",
+        "text": "",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 292,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 292,
+        "h": 42
+      }
+    ],
+    "tinyText": 7,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "🇬🇧 EN",
+        "size": 13
+      },
+      {
+        "tag": "div",
+        "text": "11:00 - 12:00",
+        "size": 10.1
+      },
+      {
+        "tag": "div",
+        "text": "drag-mpb1lmgz",
+        "size": 11.9
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. All Rights Reserved.",
+        "size": 12
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "admin-shift-edit",
+    "url": "/admin/shift-schedules/4/edit",
+    "viewport": "mobile-l-pixel-7",
+    "width": 412,
+    "height": 915,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 412,
+      "clientWidth": 412
+    },
+    "smallTapTargets": 12,
+    "smallTapTargetSamples": [
+      {
+        "tag": "button",
+        "text": "Toggle navigation",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "🇬🇧 EN",
+        "w": 54,
+        "h": 30
+      },
+      {
+        "tag": "a",
+        "text": "",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 314,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 314,
+        "h": 42
+      }
+    ],
+    "tinyText": 7,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "🇬🇧 EN",
+        "size": 13
+      },
+      {
+        "tag": "div",
+        "text": "11:00 - 12:00",
+        "size": 10.1
+      },
+      {
+        "tag": "div",
+        "text": "drag-mpb1lmgz",
+        "size": 11.9
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. All Rights Reserved.",
+        "size": 12
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "admin-shift-edit",
+    "url": "/admin/shift-schedules/4/edit",
+    "viewport": "foldable-zfold-folded",
+    "width": 343,
+    "height": 842,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 343,
+      "clientWidth": 343
+    },
+    "smallTapTargets": 12,
+    "smallTapTargetSamples": [
+      {
+        "tag": "button",
+        "text": "Toggle navigation",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "🇬🇧 EN",
+        "w": 54,
+        "h": 30
+      },
+      {
+        "tag": "a",
+        "text": "",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 245,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 245,
+        "h": 42
+      }
+    ],
+    "tinyText": 7,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "🇬🇧 EN",
+        "size": 13
+      },
+      {
+        "tag": "div",
+        "text": "11:00 - 12:00",
+        "size": 10.1
+      },
+      {
+        "tag": "div",
+        "text": "drag-mpb1lmgz",
+        "size": 11.9
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. All Rights Reserved.",
+        "size": 12
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "admin-shift-edit",
+    "url": "/admin/shift-schedules/4/edit",
+    "viewport": "foldable-zfold-open",
+    "width": 673,
+    "height": 842,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 673,
+      "clientWidth": 673
+    },
+    "smallTapTargets": 12,
+    "smallTapTargetSamples": [
+      {
+        "tag": "button",
+        "text": "Toggle navigation",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "🇬🇧 EN",
+        "w": 54,
+        "h": 30
+      },
+      {
+        "tag": "a",
+        "text": "",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 575,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 575,
+        "h": 42
+      }
+    ],
+    "tinyText": 7,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "🇬🇧 EN",
+        "size": 13
+      },
+      {
+        "tag": "div",
+        "text": "11:00 - 12:00",
+        "size": 10.1
+      },
+      {
+        "tag": "div",
+        "text": "drag-mpb1lmgz",
+        "size": 11.9
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. All Rights Reserved.",
+        "size": 12
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "admin-shift-edit",
+    "url": "/admin/shift-schedules/4/edit",
+    "viewport": "tablet-s-ipad-mini",
+    "width": 768,
+    "height": 1024,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 768,
+      "clientWidth": 768
+    },
+    "smallTapTargets": 12,
+    "smallTapTargetSamples": [
+      {
+        "tag": "button",
+        "text": "Toggle navigation",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "🇬🇧 EN",
+        "w": 54,
+        "h": 30
+      },
+      {
+        "tag": "a",
+        "text": "",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "button",
+        "text": "",
+        "w": 38,
+        "h": 38
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 327,
+        "h": 42
+      },
+      {
+        "tag": "input",
+        "text": "",
+        "w": 327,
+        "h": 42
+      }
+    ],
+    "tinyText": 7,
+    "tinyTextSamples": [
+      {
+        "tag": "span",
+        "text": "🇬🇧 EN",
+        "size": 13
+      },
+      {
+        "tag": "div",
+        "text": "11:00 - 12:00",
+        "size": 10.1
+      },
+      {
+        "tag": "div",
+        "text": "drag-mpb1lmgz",
+        "size": 11.9
+      },
+      {
+        "tag": "span",
+        "text": "Copyright ©",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "2026",
+        "size": 12
+      },
+      {
+        "tag": "span",
+        "text": "FP Analyzer. All Rights Reserved.",
+        "size": 12
+      }
+    ],
+    "errors": []
+  },
+  {
+    "page": "admin-shift-edit",
+    "url": "/admin/shift-schedules/4/edit",
+    "viewport": "tablet-l-ipad-pro",
+    "width": 1024,
+    "height": 1366,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 1024,
+      "clientWidth": 1024
+    },
+    "smallTapTargets": 0,
+    "smallTapTargetSamples": [],
+    "tinyText": 0,
+    "tinyTextSamples": [],
+    "errors": []
+  },
+  {
+    "page": "admin-shift-edit",
+    "url": "/admin/shift-schedules/4/edit",
+    "viewport": "desktop-1440",
+    "width": 1440,
+    "height": 900,
+    "horizontalOverflow": {
+      "overflow": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440
+    },
+    "smallTapTargets": 26,
+    "smallTapTargetSamples": [
+      {
+        "tag": "a",
+        "text": "Administration",
+        "w": 219,
+        "h": 40
+      },
+      {
+        "tag": "button",
+        "text": "Användarhantering",
+        "w": 219,
+        "h": 36
+      },
+      {
+        "tag": "a",
+        "text": "Kategorihantering",
+        "w": 219,
+        "h": 40
+      },
+      {
+        "tag": "button",
+        "text": "Utrustningshantering",
+        "w": 219,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Flödeshantering",
+        "w": 219,
+        "h": 36
+      },
+      {
+        "tag": "button",
+        "text": "Produktionshantering",
+        "w": 219,
+        "h": 36
+      }
+    ],
+    "tinyText": 23,
+    "tinyTextSamples": [
+      {
+        "tag": "div",
+        "text": "Company User",
+        "size": 13
+      },
+      {
+        "tag": "div",
+        "text": "Online",
+        "size": 11
+      },
+      {
+        "tag": "span",
+        "text": "Administration",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Användarhantering",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Kategorihantering",
+        "size": 13
+      },
+      {
+        "tag": "span",
+        "text": "Utrustningshantering",
+        "size": 13
+      }
+    ],
+    "errors": []
+  }
+]

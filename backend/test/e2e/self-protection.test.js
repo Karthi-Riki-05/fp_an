@@ -9,6 +9,7 @@
 const request = require('supertest');
 const app = require('../../src/app');
 const { login } = require('../helpers/login');
+const { getDemoCompanyUserId } = require('../helpers/get-demo-company-user-id');
 
 const ADMIN_EMAIL = process.env.SEED_SUPERADMIN_EMAIL || 'user1@gmail.com';
 const ADMIN_PASS  = process.env.SEED_SUPERADMIN_PASSWORD || 'password123';
@@ -22,11 +23,7 @@ describe('E2 Self-protection', () => {
     const r = await login(app, ADMIN_EMAIL, ADMIN_PASS);
     adminCookie = r.cookie;
     adminId = r.userId;
-    const tenants = await request(app)
-      .get('/api/v1/admin/tenants')
-      .set('Cookie', adminCookie)
-      .expect(200);
-    tenantId = tenants.body[0].id;
+    tenantId = await getDemoCompanyUserId(app, adminCookie);
   });
 
   it('returns 403 when admin tries to soft-delete self', async () => {

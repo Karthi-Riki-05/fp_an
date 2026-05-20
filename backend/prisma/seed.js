@@ -70,6 +70,63 @@ function ensure(value) {
   return value && value.trim().length > 0 ? value.trim() : undefined;
 }
 
+/**
+ * Idempotently seed one equipment + one machines row per tenant schema for
+ * §11-S7 / flow-monitor-debug.spec.ts. The Monitor test drags the *first*
+ * draggable row from the equipment tree, saves, then asserts
+ * GET /:id/monitor-status returns ≥1 row — which only happens if the
+ * dropped equipment has a corresponding `machines` entry.
+ *
+ * Previously a manual `INSERT INTO tenant_2.machines (... equipment_id=79 ...)`
+ * kept the test green; that row was undocumented and only existed in one
+ * dev DB. This function makes the fixture reproducible.
+ *
+ * The seed equipment is parented at root with `sort_order=0` so the
+ * equipment list (sorted by `parent_id, sort_order, id`) ranks it first.
+ * Identification uses the sentinel name to make the upsert idempotent.
+ *
+ * Gated by SEED_TEST_FIXTURES=true so production seeds never plant test
+ * data into customer schemas.
+ */
+async function seedTenantTestFixtures(prisma, schemaName) {
+  if (!/^[a-z][a-z0-9_]{0,62}$/.test(schemaName)) throw new Error(`unsafe schema name: ${schemaName}`);
+  const SENTINEL_NAME = 'Seed Test Equipment';
+
+  const existingEq = await prisma.$queryRawUnsafe(
+    `SELECT id::int AS id FROM "${schemaName}".equipment WHERE name = $1 LIMIT 1`,
+    SENTINEL_NAME,
+  );
+  let equipmentId;
+  if (existingEq && existingEq[0]?.id) {
+    equipmentId = existingEq[0].id;
+  } else {
+    const inserted = await prisma.$queryRawUnsafe(
+      `INSERT INTO "${schemaName}".equipment
+         (company_id, sort_order, parent_id, type_id, name, description, icon, is_active)
+       VALUES (0, 0, 0, 0, $1, 'Seeded by prisma/seed.js for flow-monitor-debug', 'noimage.jpg', true)
+       RETURNING id::int AS id`,
+      SENTINEL_NAME,
+    );
+    equipmentId = inserted[0].id;
+  }
+
+  const existingMachine = await prisma.$queryRawUnsafe(
+    `SELECT id::int AS id FROM "${schemaName}".machines WHERE equipment_id = $1 LIMIT 1`,
+    equipmentId,
+  );
+  if (!existingMachine || existingMachine.length === 0) {
+    // Enum columns (running_status, signal_type) accept string literals via
+    // implicit cast — see tenant_template."MachineRunningStatus" definition.
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO "${schemaName}".machines
+         (equipment_id, pin_no, unit_name, running_status, unit_connected, last_online, signal_type)
+       VALUES ($1, 1, 'seed-test-unit', 'on', 'on', NOW(), 'on')`,
+      equipmentId,
+    );
+  }
+  return { equipmentId };
+}
+
 async function provisionTenantSchema(prisma, schemaName) {
   if (!/^[a-z][a-z0-9_]{0,62}$/.test(schemaName)) throw new Error(`unsafe schema name: ${schemaName}`);
   await prisma.$executeRawUnsafe(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
@@ -173,6 +230,10 @@ async function main() {
       const schemaName = `tenant_${u.id}`;
       const cloned = await provisionTenantSchema(prisma, schemaName);
       console.log(`  schema ${schemaName}: ${cloned} tables cloned`);
+      if (process.env.SEED_TEST_FIXTURES === 'true') {
+        const { equipmentId } = await seedTenantTestFixtures(prisma, schemaName);
+        console.log(`  ${schemaName}: seeded test fixture equipment id=${equipmentId} + machines row`);
+      }
     } else {
       console.log('[seed] SEED_COMPANY_EMAIL/PASSWORD not set — skipping company user');
     }

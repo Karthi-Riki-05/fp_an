@@ -1,6 +1,6 @@
 'use client';
 
-import { App, Button, Card, Checkbox, Skeleton, Space, Table, Tabs, Tag, Typography } from 'antd';
+import { App, Button, Card, Skeleton, Space, Table, Tabs, Tag, Typography } from 'antd';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -8,6 +8,7 @@ import { useMemo, useState } from 'react';
 import { toApiError } from '../../../lib/api-client';
 import { useLogout, useMe } from '../../../lib/api/auth';
 import { canAccessBackend } from '../../../lib/auth';
+import { SettingsUnitsList } from '../../../components/dashboard/SettingsUnitsList';
 
 const { Title, Text } = Typography;
 
@@ -92,28 +93,11 @@ const TILES: Tile[] = [
   { key: 'flow-analyzer', href: '/analyzer',     icon: '/dashboard-icons/flow-analyzer.png', label: 'flowAnalyzer' },
   { key: 'myresult',      href: '/myresult',     icon: '/dashboard-icons/myresult.png',      label: 'myResult' },
   { key: 'orders',        href: '/orders',       icon: '/dashboard-icons/orders.png',        label: 'orders' },
-  { key: 'password',      href: '/profile/edit', icon: '/dashboard-icons/password.png',      label: 'changePass' },
+  { key: 'password',      href: '/profile/password', icon: '/dashboard-icons/password.png', label: 'changePass' },
   { key: 'feedback',      href: '/feedback',     icon: '/dashboard-icons/feedback.png',      label: 'feedback' },
   { key: 'logout',        href: '#logout',       icon: '/dashboard-icons/logout.png',        label: 'logout' },
   { key: 'admin',         href: '/admin',        icon: '/dashboard-icons/admin.png',         label: 'admin' },
   { key: 'boards',        href: '/boards',       icon: '/dashboard-icons/dashboard.png',     label: 'boards' },
-];
-
-// Mock units for the Settings tab. Phase 4b binds to /api/v1/units.
-const MOCK_UNITS = [
-  { id: 1,  name: 'DoBot pick&place',                       signal: 'on' as const },
-  { id: 2,  name: '710',                                    signal: 'on' as const },
-  { id: 3,  name: '710',                                    signal: 'on' as const },
-  { id: 4,  name: 'Oljebad',                                signal: 'on' as const },
-  { id: 5,  name: 'Slipmaskin L1',                          signal: 'on' as const },
-  { id: 6,  name: 'Fräsmaskin L1',                          signal: 'on' as const },
-  { id: 7,  name: 'Planhyvel L1',                           signal: 'off' as const },
-  { id: 8,  name: 'NC Svarv L1',                            signal: 'on' as const },
-  { id: 9,  name: 'Planhyvel L2 (IoT timer input 4)',       signal: 'on' as const },
-  { id: 10, name: 'NC-Svarv L2 (IoT button input 2)',       signal: 'on' as const },
-  { id: 11, name: 'Fräsmaskin L2 (new iot button)',         signal: 'on' as const },
-  { id: 12, name: 'DoBot pick&place',                       signal: 'on' as const },
-  { id: 13, name: 'DoBot Transportbana',                    signal: 'warning' as const },
 ];
 
 export default function DashboardPage() {
@@ -290,7 +274,7 @@ export default function DashboardPage() {
                 <Link href="/profile/edit">
                   <Button type="primary" size="small">{t.editProfile}</Button>
                 </Link>
-                <Link href="/profile/edit?focus=password">
+                <Link href="/profile/password">
                   <Button size="small" style={{ background: '#f0ad4e', color: '#fff', borderColor: '#eea236' }}>
                     {t.changePass}
                   </Button>
@@ -312,61 +296,21 @@ export default function DashboardPage() {
   );
 
   // ---- Tab 3: Settings (units) ----
-  const [units, setUnits] = useState(MOCK_UNITS);
-  const [unchecked, setUnchecked] = useState<Set<number>>(new Set([7])); // mock: Planhyvel L1 unchecked
-  const signalLabel = (s: 'on' | 'off' | 'warning') =>
-    s === 'on' ? t.onSignal : s === 'off' ? t.offSignal : t.warningSig;
-
+  // Renders the real /api/v1/units list (already filtered to configured
+  // units server-side), with drag-to-reorder + per-unit checkbox.
+  // Selection persists via /me/settings/table → unit_web_settings.units,
+  // and is honoured by the /units page.
   const SettingsTab = (
-    <div style={{ padding: 16 }}>
-      <Title level={4} style={{ color: '#00768d', marginBottom: 16 }}>
-        {t.units}
-      </Title>
-      <Space direction="vertical" size={6} style={{ width: '100%' }}>
-        {units.map((u) => {
-          const isChecked = !unchecked.has(u.id);
-          return (
-            <div
-              key={u.id}
-              style={{
-                background: '#fff',
-                border: '1px solid #ddd',
-                padding: '10px 12px',
-                borderRadius: 4,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                cursor: 'move',
-              }}
-            >
-              <span aria-hidden style={{ color: '#999', fontSize: 14, lineHeight: 1, userSelect: 'none' }}>
-                ⋮⋮
-              </span>
-              <Checkbox
-                checked={isChecked}
-                onChange={(e) => {
-                  const next = new Set(unchecked);
-                  if (e.target.checked) next.delete(u.id); else next.add(u.id);
-                  setUnchecked(next);
-                }}
-              />
-              <Text style={{ color: '#333' }}>
-                {u.name} - {signalLabel(u.signal)}
-              </Text>
-            </div>
-          );
-        })}
-      </Space>
-      <div style={{ marginTop: 24 }}>
-        <Button
-          type="default"
-          style={{ borderColor: '#954cfe', color: '#954cfe', fontWeight: 500, padding: '0 32px', height: 40 }}
-          onClick={() => message.success(t.saved)}
-        >
-          {t.save}
-        </Button>
-      </div>
-    </div>
+    <SettingsUnitsList
+      labels={{
+        onSignal: t.onSignal,
+        offSignal: t.offSignal,
+        warningSig: t.warningSig,
+        save: t.save,
+        saved: t.saved,
+        units: t.units,
+      }}
+    />
   );
 
   return (

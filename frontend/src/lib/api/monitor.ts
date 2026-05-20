@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiClient } from '../api-client';
 
 /**
@@ -155,4 +155,142 @@ export function groupReasonsForSelect(groups: ReasonGroup[] | undefined) {
       label: r.name,
     })),
   }));
+}
+
+// ── Equipment cascade — orders ──────────────────────────────────────────────
+
+export interface EquipmentOrderOption {
+  id: number;
+  orderNo: string;
+  description?: string;
+}
+
+export function useEquipmentOrders(
+  tenantId: number | null | undefined,
+  equipmentId: number | null | undefined,
+) {
+  return useQuery({
+    queryKey: ['monitor', 'equipment-orders', tenantId, equipmentId],
+    queryFn: async () => {
+      const { data } = await apiClient.get<EquipmentOrderOption[]>(
+        `/equipment/${equipmentId}/orders`,
+        { headers: tenantHeaders(tenantId) },
+      );
+      return data;
+    },
+    enabled: !!tenantId && !!equipmentId,
+    staleTime: 30_000,
+  });
+}
+
+// ── Registration mutations (Flow Monitor click-modal) ───────────────────────
+//
+// The modal posts here on SAVE. Each mutation returns { id } on success;
+// the modal closes and shows an AntD toast. There's no list invalidation
+// because the Monitor page doesn't render a "recent activity" list — the
+// admin /results/* pages own the list views and refetch on focus.
+
+export interface CreateProductionInput {
+  flowId: number;
+  equipmentId: number;
+  partId?: number | null;
+  workShiftName?: string;
+  workShiftId?: number;
+  orderNo?: string;
+  date: string;            // YYYY-MM-DD
+  workHours?: string;      // "HH:MM"
+  partQty?: number;
+  plannedQty?: number;
+  comment?: string;
+}
+
+export interface CreateStopInput {
+  flowId: number;
+  equipmentId: number;
+  partId?: number | null;
+  workShiftName?: string;
+  workShiftId?: number;
+  orderNo?: string;
+  date: string;
+  stopTypeId: number;
+  stopReasonId: number;
+  timeHours?: number;
+  timeMinutes?: number;
+  quantity?: number;
+  comment?: string;
+  picture?: string | null;
+}
+
+export interface CreateScrapInput {
+  flowId: number;
+  equipmentId: number;
+  partId?: number | null;
+  workShiftName?: string;
+  workShiftId?: number;
+  orderNo?: string;
+  date: string;
+  scrapTypeId: number;
+  scrapReasonId: number;
+  quantity?: number;
+  comment?: string;
+  picture?: string | null;
+}
+
+export function useCreateProduction(tenantId: number | null) {
+  return useMutation({
+    mutationFn: async (input: CreateProductionInput) => {
+      const { data } = await apiClient.post<{ id: number }>(
+        '/admin/results/production',
+        input,
+        { headers: tenantHeaders(tenantId) },
+      );
+      return data;
+    },
+  });
+}
+
+export function useCreateStop(tenantId: number | null) {
+  return useMutation({
+    mutationFn: async (input: CreateStopInput) => {
+      const { data } = await apiClient.post<{ id: number }>(
+        '/admin/results/stop',
+        input,
+        { headers: tenantHeaders(tenantId) },
+      );
+      return data;
+    },
+  });
+}
+
+export function useCreateScrap(tenantId: number | null) {
+  return useMutation({
+    mutationFn: async (input: CreateScrapInput) => {
+      const { data } = await apiClient.post<{ id: number }>(
+        '/admin/results/scrap',
+        input,
+        { headers: tenantHeaders(tenantId) },
+      );
+      return data;
+    },
+  });
+}
+
+export function useUploadResultPicture(tenantId: number | null) {
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const fd = new FormData();
+      fd.append('image', file);
+      const { data } = await apiClient.post<{ filename: string; url: string }>(
+        '/admin/results/upload-picture',
+        fd,
+        {
+          headers: {
+            ...tenantHeaders(tenantId),
+            'Content-Type': 'multipart/form-data',
+          },
+        },
+      );
+      return data;
+    },
+  });
 }

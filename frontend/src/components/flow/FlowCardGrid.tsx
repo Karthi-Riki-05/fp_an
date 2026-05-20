@@ -46,7 +46,7 @@ export default function FlowCardGrid({ flows, onFlowClick, defaultView = 'grid',
               <FlowCard
                 id={flow.id}
                 name={flow.name}
-                flowData={flow.flowData ?? null}
+                svgCache={flow.svgCache ?? null}
                 onClick={() => onFlowClick(flow.id)}
               />
             </Col>

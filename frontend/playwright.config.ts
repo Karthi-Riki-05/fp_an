@@ -48,6 +48,69 @@ export default defineConfig({
       testMatch: '**/user.spec.ts',
     },
 
+    // Shift Schedule edit — drag-to-reorder + Edit popover regression spec.
+    {
+      name: 'shift-schedule-edit',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'tests/.auth/user.json',
+        viewport: { width: 1440, height: 900 },
+      },
+      dependencies: ['user-setup'],
+      testMatch: '**/shift-schedule-edit.spec.ts',
+    },
+
+    // Locale-selector removal + legacy translation merge smoke spec.
+    {
+      name: 'locale-cleanup',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'tests/.auth/user.json',
+        viewport: { width: 1440, height: 900 },
+      },
+      dependencies: ['user-setup'],
+      testMatch: '**/locale-cleanup.spec.ts',
+    },
+
+    // Round 2 fixes: sidebar SV completion, login cleanup, /profile/edit,
+    // Settings-tab unit selector backed by /api/v1/units.
+    {
+      name: 'i18n-and-profile',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'tests/.auth/user.json',
+        viewport: { width: 1440, height: 900 },
+      },
+      dependencies: ['user-setup'],
+      testMatch: '**/i18n-and-profile.spec.ts',
+    },
+
+    // Round 3 fixes: root redirect, marketing nav strip, split profile pages.
+    {
+      name: 'round3-fixes',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'tests/.auth/user.json',
+        viewport: { width: 1440, height: 900 },
+      },
+      dependencies: ['user-setup'],
+      testMatch: '**/round3-fixes.spec.ts',
+    },
+
+    // Responsive audit — data-collection only, no assertions. Generates
+    // tests/responsive-audit/{report.md,findings.json,*.png}.
+    {
+      name: 'responsive-audit',
+      // No `viewport` here: the spec itself opens contexts at each
+      // viewport from the operator's 7-row table.
+      use: { ...devices['Desktop Chrome'], storageState: 'tests/.auth/user.json' },
+      dependencies: ['user-setup'],
+      testMatch: '**/responsive-audit.spec.ts',
+      // The audit is one long-running test; retries would re-do the
+      // whole sweep on a transient blip.
+      retries: 0,
+    },
+
     // Mobile — Admin (375px iPhone 12)
     {
       name: 'mobile-admin',
@@ -83,6 +146,29 @@ export default defineConfig({
       },
       dependencies: ['user-setup'],
       testMatch: '**/flow-management.spec.ts',
+    },
+
+    // Ad-hoc debugging project for the draw.io drop investigation
+    // (delete once §11-S5 drop rendering is confirmed working).
+    {
+      name: 'flow-drop-debug',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } },
+      testMatch: '**/flow-drop-debug.spec.ts',
+    },
+    {
+      name: 'flow-thumbnail-debug',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } },
+      testMatch: '**/flow-thumbnail-debug.spec.ts',
+    },
+    {
+      name: 'flow-monitor-debug',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } },
+      testMatch: '**/flow-monitor-debug.spec.ts',
+    },
+    {
+      name: 'flow-analyzer-debug',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } },
+      testMatch: '**/flow-analyzer-debug.spec.ts',
     },
 
     // Public pages — desktop + mobile (no auth)

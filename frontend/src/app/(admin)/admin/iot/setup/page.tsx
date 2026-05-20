@@ -10,20 +10,20 @@ import {
   App,
   Button,
   Checkbox,
+  Col,
   Collapse,
   Input,
   InputNumber,
   Modal,
+  Row,
   Select,
   Space,
   Spin,
-  Table,
   Tabs,
   Tag,
   Tree,
   Typography,
 } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
 import type { DataNode } from 'antd/es/tree';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -368,191 +368,182 @@ function UnitPanel({ unit, headers, onOpenEquipPicker, onRemoveEquipment }: Unit
 
   return (
     <div style={{ paddingBottom: 8 }}>
-      {/* Installation date */}
-      <div style={rowStyle}>
-        <span style={labelStyle}>Installation Date</span>
-        <Text type="secondary">{unit.installationDate ?? '—'}</Text>
-      </div>
+      {/* 2-column layout mirrors the legacy expanded panel:
+          left column = unit + signal + filter + notification config;
+          right column = auto-stop registration + counters + actions.   */}
+      <Row gutter={[24, 0]}>
+        {/* ── Left column ─────────────────────────────────────────── */}
+        <Col xs={24} lg={14}>
+          <div style={rowStyle}>
+            <span style={labelStyle}>Installation Date</span>
+            <Text type="secondary">{unit.installationDate ?? '—'}</Text>
+          </div>
+          <div style={rowStyle}>
+            <span style={labelStyle}>Input Number</span>
+            <Text type="secondary">{unit.pinNo ?? '—'}</Text>
+          </div>
+          <div style={rowStyle}>
+            <span style={labelStyle}>Equipment Name</span>
+            <Text>{unit.equipmentName ?? '—'}</Text>
+            <Button
+              size="small"
+              type="link"
+              style={{ padding: 0 }}
+              onClick={() => onOpenEquipPicker(unit.id)}
+            >
+              Change Equipment
+            </Button>
+          </div>
+          <div style={rowStyle}>
+            <span style={labelStyle}>Signal Type</span>
+            <Select
+              size="small"
+              value={signalType}
+              options={SIGNAL_OPTIONS}
+              style={{ width: 160 }}
+              onChange={(v) => {
+                setSignalType(v);
+                patchSettings.mutate({ signalType: v });
+              }}
+            />
+          </div>
+          <div style={rowStyle}>
+            <span style={labelStyle}>Filter Time (sec)</span>
+            <InputNumber
+              size="small"
+              min={0}
+              value={filterTime}
+              style={{ width: 120 }}
+              onChange={(v) => setFilterTime(v)}
+              onBlur={() => { if (filterTime !== null) patchSettings.mutate({ filterTime }); }}
+            />
+          </div>
+          <div style={rowStyle}>
+            <span style={labelStyle}>Filter Time On (sec)</span>
+            <InputNumber
+              size="small"
+              min={0}
+              value={filterTimeOn}
+              style={{ width: 120 }}
+              onChange={(v) => setFilterTimeOn(v)}
+              onBlur={() => { if (filterTimeOn !== null) patchSettings.mutate({ filterTimeOn }); }}
+            />
+          </div>
+          <div style={rowStyle}>
+            <span style={labelStyle}>Notification Text</span>
+            <Input
+              size="small"
+              maxLength={100}
+              value={notifText}
+              style={{ width: 280 }}
+              onChange={(e) => setNotifText(e.target.value)}
+              onBlur={() => patchSettings.mutate({ customNotificationText: notifText })}
+            />
+            <Checkbox
+              checked={notifDefault}
+              onChange={(e) => {
+                setNotifDefault(e.target.checked);
+                patchSettings.mutate({ notificationDefault: e.target.checked });
+              }}
+              style={{ marginLeft: 8 }}
+            >
+              Use default
+            </Checkbox>
+          </div>
+          {signalType === 'warning' && (
+            <div style={rowStyle}>
+              <span style={labelStyle}>Log Warning</span>
+              <Checkbox
+                checked={logWarning}
+                onChange={(e) => {
+                  setLogWarning(e.target.checked);
+                  patchSettings.mutate({ logWarning: e.target.checked });
+                }}
+              />
+            </div>
+          )}
+          <div style={rowStyle}>
+            <span style={labelStyle} />
+            <Button
+              size="small"
+              onClick={() => testNotifMut.mutate()}
+              loading={testNotifMut.isPending}
+            >
+              Send test notification
+            </Button>
+          </div>
+        </Col>
 
-      {/* Pin No */}
-      <div style={rowStyle}>
-        <span style={labelStyle}>Pin No</span>
-        <Text type="secondary">{unit.pinNo ?? '—'}</Text>
-      </div>
-
-      {/* Equipment */}
-      <div style={rowStyle}>
-        <span style={labelStyle}>Equipment</span>
-        <Text>{unit.equipmentName ?? '—'}</Text>
-        <Button
-          size="small"
-          type="link"
-          style={{ padding: 0 }}
-          onClick={() => onOpenEquipPicker(unit.id)}
-        >
-          Change Equipment
-        </Button>
-      </div>
-
-      {/* Signal type */}
-      <div style={rowStyle}>
-        <span style={labelStyle}>Signal Type</span>
-        <Select
-          size="small"
-          value={signalType}
-          options={SIGNAL_OPTIONS}
-          style={{ width: 160 }}
-          onChange={(v) => {
-            setSignalType(v);
-            patchSettings.mutate({ signalType: v });
-          }}
-        />
-      </div>
-
-      {/* Cause (stop reason) — equipment-scoped, type-grouped (RESOLVED iv) */}
-      <div style={rowStyle}>
-        <span style={labelStyle}>Cause</span>
-        <Select
-          size="small"
-          allowClear
-          placeholder={equipmentId
-            ? (causeQuery.isLoading ? 'Loading…' : (causeOptions.length === 0 ? 'No causes configured for this equipment' : 'Select cause…'))
-            : 'Assign equipment first'}
-          loading={causeQuery.isLoading}
-          disabled={!equipmentId || causeQuery.isLoading}
-          options={causeOptions}
-          showSearch
-          optionFilterProp="label"
-          style={{ width: 260 }}
-        />
-      </div>
-
-      {/* Flow name — only flows containing this equipment in nodeDataArray */}
-      <div style={rowStyle}>
-        <span style={labelStyle}>Flow Name</span>
-        <Select
-          size="small"
-          allowClear
-          placeholder={equipmentId
-            ? (flowsQuery.isLoading ? 'Loading…' : (flowOptions.length === 0 ? 'No flows reference this equipment' : 'Select flow…'))
-            : 'Assign equipment first'}
-          loading={flowsQuery.isLoading}
-          disabled={!equipmentId || flowsQuery.isLoading}
-          options={flowOptions}
-          showSearch
-          optionFilterProp="label"
-          style={{ width: 260 }}
-        />
-      </div>
-
-      {/* Filter time OFF */}
-      <div style={rowStyle}>
-        <span style={labelStyle}>Filter Time (sec)</span>
-        <InputNumber
-          size="small"
-          min={0}
-          value={filterTime}
-          style={{ width: 120 }}
-          onChange={(v) => setFilterTime(v)}
-          onBlur={() => {
-            if (filterTime !== null) patchSettings.mutate({ filterTime });
-          }}
-        />
-      </div>
-
-      {/* Filter time ON */}
-      <div style={rowStyle}>
-        <span style={labelStyle}>Filter Time ON (sec)</span>
-        <InputNumber
-          size="small"
-          min={0}
-          value={filterTimeOn}
-          style={{ width: 120 }}
-          onChange={(v) => setFilterTimeOn(v)}
-          onBlur={() => {
-            if (filterTimeOn !== null) patchSettings.mutate({ filterTimeOn });
-          }}
-        />
-      </div>
-
-      {/* Notification text */}
-      <div style={rowStyle}>
-        <span style={labelStyle}>Notification Text</span>
-        <Input
-          size="small"
-          maxLength={100}
-          value={notifText}
-          style={{ width: 280 }}
-          onChange={(e) => setNotifText(e.target.value)}
-          onBlur={() => patchSettings.mutate({ customNotificationText: notifText })}
-        />
-      </div>
-
-      {/* Use default checkbox */}
-      <div style={rowStyle}>
-        <span style={labelStyle}>Use Default</span>
-        <Checkbox
-          checked={notifDefault}
-          onChange={(e) => {
-            setNotifDefault(e.target.checked);
-            patchSettings.mutate({ notificationDefault: e.target.checked });
-          }}
-        />
-      </div>
-
-      {/* Log warning — only meaningful when signal_type is warning */}
-      {signalType === 'warning' && (
-        <div style={rowStyle}>
-          <span style={labelStyle}>Log Warning</span>
-          <Checkbox
-            checked={logWarning}
-            onChange={(e) => {
-              setLogWarning(e.target.checked);
-              patchSettings.mutate({ logWarning: e.target.checked });
-            }}
-          />
-        </div>
-      )}
-
-      {/* Test notification button */}
-      <div style={rowStyle}>
-        <span style={labelStyle} />
-        <Button
-          size="small"
-          onClick={() => testNotifMut.mutate()}
-          loading={testNotifMut.isPending}
-        >
-          Send test notification
-        </Button>
-      </div>
-
-      {/* Auto registered toggle (legacy `chk_auto_reg_default`) */}
-      <div style={rowStyle}>
-        <span style={labelStyle}>Auto Registered</span>
-        <Checkbox
-          checked={isAutoRegistered}
-          onChange={(e) => {
-            setIsAutoRegistered(e.target.checked);
-            patchSettings.mutate({ isAutoRegistered: e.target.checked });
-          }}
-        />
-        {unit.isAutoRegistered === 'yes' && <Tag color="green">Auto-registered</Tag>}
-      </div>
-
-      {/* Auto stop registration time limit (legacy `time_limit` in autoRegisteredData JSON) */}
-      <div style={rowStyle}>
-        <span style={labelStyle}>Auto Stop Reg. Time Limit</span>
-        <InputNumber
-          size="small"
-          min={0}
-          value={autoStopLimit}
-          style={{ width: 120 }}
-          onChange={(v) => setAutoStopLimit(v)}
-          onBlur={() => {
-            if (autoStopLimit !== null) patchSettings.mutate({ autoStopTimeLimit: autoStopLimit });
-          }}
-        />
-      </div>
+        {/* ── Right column — Auto Stop Registration + Cause + Flow ── */}
+        <Col xs={24} lg={10}>
+          <div style={{
+            background: '#fafafa',
+            border: '1px solid #f0f0f0',
+            borderRadius: 6,
+            padding: 12,
+            marginBottom: 12,
+          }}>
+            <div style={rowStyle}>
+              <Checkbox
+                checked={isAutoRegistered}
+                onChange={(e) => {
+                  setIsAutoRegistered(e.target.checked);
+                  patchSettings.mutate({ isAutoRegistered: e.target.checked });
+                }}
+              >
+                <strong>Auto Stop Registration</strong>
+              </Checkbox>
+              {unit.isAutoRegistered === 'yes' && <Tag color="green">Active</Tag>}
+            </div>
+            <div style={rowStyle}>
+              <span style={labelStyle}>Time Limit (min)</span>
+              <InputNumber
+                size="small"
+                min={1}
+                disabled={!isAutoRegistered}
+                value={autoStopLimit}
+                style={{ width: 100 }}
+                onChange={(v) => setAutoStopLimit(v)}
+                onBlur={() => {
+                  if (autoStopLimit !== null) patchSettings.mutate({ autoStopTimeLimit: autoStopLimit });
+                }}
+              />
+            </div>
+            <div style={rowStyle}>
+              <span style={labelStyle}>Cause</span>
+              <Select
+                size="small"
+                allowClear
+                placeholder={equipmentId
+                  ? (causeQuery.isLoading ? 'Loading…' : (causeOptions.length === 0 ? 'No causes for this equipment' : 'Select cause…'))
+                  : 'Assign equipment first'}
+                loading={causeQuery.isLoading}
+                disabled={!isAutoRegistered || !equipmentId || causeQuery.isLoading}
+                options={causeOptions}
+                showSearch
+                optionFilterProp="label"
+                style={{ width: '100%' }}
+              />
+            </div>
+            <div style={rowStyle}>
+              <span style={labelStyle}>Flow Name</span>
+              <Select
+                size="small"
+                allowClear
+                placeholder={equipmentId
+                  ? (flowsQuery.isLoading ? 'Loading…' : (flowOptions.length === 0 ? 'No flows reference this equipment' : 'Select flow…'))
+                  : 'Assign equipment first'}
+                loading={flowsQuery.isLoading}
+                disabled={!isAutoRegistered || !equipmentId || flowsQuery.isLoading}
+                options={flowOptions}
+                showSearch
+                optionFilterProp="label"
+                style={{ width: '100%' }}
+              />
+            </div>
+          </div>
+        </Col>
+      </Row>
 
       {/* Counter children section */}
       <div style={{ marginTop: 12 }}>
@@ -626,6 +617,11 @@ export default function SetupUnitsPage() {
       );
       return data;
     },
+    // 5-sec live status poll — matches the legacy `startUpdateMachineStatus`
+    // interval. `refetchInterval` keeps the panel headers (status icon +
+    // runningStatus label) fresh without re-mounting any form state.
+    refetchInterval: 5_000,
+    refetchIntervalInBackground: false,
     staleTime: 15_000,
   });
 
@@ -703,12 +699,25 @@ export default function SetupUnitsPage() {
     const signalLabel = SIGNAL_LABELS[unit.signalType ?? ''] ?? unit.signalType ?? '—';
     return {
       key: String(unit.id),
+      // Match the legacy panel header: <icon> name — Input - <pin> — signal
+      // on the left, live status icon hard-right. AntD's `Collapse` puts
+      // its caret as a sibling of `label`, so we use a flex row to push
+      // the status icon to the end without breaking the click target.
       label: (
-        <Space>
-          <GoldOutlined />
-          <span>{unit.unitName} — {signalLabel}</span>
-          {statusDot(unit)}
-        </Space>
+        <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+          <Space>
+            <GoldOutlined />
+            <span style={{ fontWeight: 500 }}>{unit.unitName}</span>
+            <span style={{ color: '#999' }}>Input - {unit.pinNo ?? '—'}</span>
+            <span style={{ color: '#13c2c2' }}>{signalLabel}</span>
+          </Space>
+          <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center' }}>
+            {statusDot(unit)}
+            <span style={{ fontSize: 12, color: '#666', textTransform: 'uppercase' }}>
+              {unit.runningStatus ?? '—'}
+            </span>
+          </span>
+        </div>
       ),
       children: (
         <UnitPanel
@@ -721,41 +730,45 @@ export default function SetupUnitsPage() {
     };
   });
 
-  // ── Unconfigured tab — table ──────────────────────────────────────────────
+  // ── Unconfigured tab — accordion (matches legacy `unconfigured_unit.blade.php`)
 
-  const unconfiguredColumns: ColumnsType<UnconfiguredUnit> = [
-    {
-      title: 'S.No',
-      key: 'sno',
-      width: 70,
-      render: (_, __, i) => i + 1,
-    },
-    {
-      title: 'Unit Name',
-      dataIndex: 'unitName',
-      key: 'unitName',
-    },
-    {
-      title: 'Last Online',
-      dataIndex: 'lastOnline',
-      key: 'lastOnline',
-      render: (v: string | null) => v ? new Date(v).toLocaleString() : '—',
-    },
-    {
-      title: 'Actions',
-      key: 'actions',
-      width: 180,
-      render: (_, row) => (
-        <Button
-          size="small"
-          type="primary"
-          onClick={() => openEquipPicker(row.id)}
-        >
-          Assign Equipment
-        </Button>
-      ),
-    },
-  ];
+  const unconfiguredCollapseItems = unconfigured.map((unit) => ({
+    key: String(unit.id),
+    label: (
+      <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+        <Space>
+          <GoldOutlined />
+          <span style={{ fontWeight: 500 }}>{unit.unitName}</span>
+          <span style={{ color: '#999' }}>
+            Input - {(unit as unknown as { pinNo?: string }).pinNo ?? '—'}
+          </span>
+        </Space>
+        <span style={{ marginLeft: 'auto', fontSize: 12, color: '#999' }}>
+          {unit.lastOnline ? `last seen ${new Date(unit.lastOnline).toLocaleString()}` : 'never seen'}
+        </span>
+      </div>
+    ),
+    children: (
+      <div style={{ paddingBottom: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+          <span style={{ minWidth: 180, fontWeight: 500, color: '#555' }}>Last Online</span>
+          <Text type="secondary">{unit.lastOnline ? new Date(unit.lastOnline).toLocaleString() : '—'}</Text>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+          <span style={{ minWidth: 180, fontWeight: 500, color: '#555' }}>Equipment</span>
+          <Text type="secondary">(not assigned)</Text>
+          <Button
+            size="small"
+            type="primary"
+            onClick={() => openEquipPicker(unit.id)}
+            style={{ background: '#13c2c2', borderColor: '#13c2c2' }}
+          >
+            Add Equipment
+          </Button>
+        </div>
+      </div>
+    ),
+  }));
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -786,14 +799,13 @@ export default function SetupUnitsPage() {
             label: `Unconfigured units (${unconfigured.length})`,
             children: unitsQuery.isLoading ? (
               <Spin style={{ display: 'block', marginTop: 24 }} />
+            ) : unconfigured.length === 0 ? (
+              <Text type="secondary">No unconfigured units. Newly-pinged IoT inputs will appear here.</Text>
             ) : (
-              <Table<UnconfiguredUnit>
-                rowKey="id"
-                columns={unconfiguredColumns}
-                dataSource={unconfigured}
-                size="middle"
-                pagination={{ pageSize: 20, showSizeChanger: false, showTotal: (t) => `${t} units` }}
-                scroll={{ x: 'max-content' }}
+              <Collapse
+                accordion={false}
+                items={unconfiguredCollapseItems}
+                style={{ background: 'transparent' }}
               />
             ),
           },

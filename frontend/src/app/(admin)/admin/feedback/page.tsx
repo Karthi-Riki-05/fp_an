@@ -1,20 +1,91 @@
 'use client';
 
-import { DeleteOutlined, EyeOutlined } from '@ant-design/icons';
-import { App, Button, Modal, Popconfirm, Select, Switch, Table, Tag, Typography } from 'antd';
+import { DeleteOutlined, EyeOutlined, SendOutlined } from '@ant-design/icons';
+import { App, Button, Card, Form, Input, Modal, Popconfirm, Select, Switch, Table, Tag, Typography } from 'antd';
+import { useMutation } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { useState } from 'react';
-import { toApiError } from '../../../../lib/api-client';
+import { apiClient, toApiError } from '../../../../lib/api-client';
 import { useMe } from '../../../../lib/api/auth';
+import type { MeResponse } from '../../../../lib/api/types';
 import {
   useDeleteFeedback,
   useFeedbackList,
   useUpdateFeedback,
   type FeedbackRow,
 } from '../../../../lib/api/feedback';
-import { useTenantsList } from '../../../../lib/api/tenants';
+import { useCompaniesForPicker } from '../../../../lib/api/companies';
 
 const { Title, Text } = Typography;
+
+// ── Company-user send form ────────────────────────────────────────────────
+
+function FeedbackSendForm({ me }: { me: MeResponse }) {
+  const { message } = App.useApp();
+  const [form] = Form.useForm<{ body: string }>();
+
+  const sendMut = useMutation({
+    mutationFn: async (body: string) => {
+      await apiClient.post('/admin/feedback', { body });
+    },
+    onSuccess: () => {
+      message.success('Feedback sent!');
+      form.resetFields();
+    },
+    onError: (err) => {
+      message.error(toApiError(err).message);
+    },
+  });
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'flex-start',
+        paddingTop: 48,
+        minHeight: '60vh',
+      }}
+    >
+      <Card style={{ width: 460 }}>
+        <Typography.Paragraph strong style={{ marginBottom: 12 }}>
+          Send your feedback to admin
+        </Typography.Paragraph>
+        <Form form={form} layout="vertical" preserve={false}>
+          <Form.Item
+            name="body"
+            rules={[{ required: true, message: 'Please enter your feedback.' }]}
+          >
+            <Input.TextArea
+              rows={6}
+              placeholder="Your feedback"
+              maxLength={2000}
+            />
+          </Form.Item>
+          <div style={{ textAlign: 'right' }}>
+            <Button
+              icon={<SendOutlined />}
+              loading={sendMut.isPending}
+              style={{ borderColor: '#722ed1', color: '#722ed1' }}
+              onClick={async () => {
+                try {
+                  const { body } = await form.validateFields();
+                  sendMut.mutate(body);
+                } catch {
+                  // inline validation shown
+                }
+              }}
+            >
+              Send
+            </Button>
+          </div>
+        </Form>
+      </Card>
+    </div>
+  );
+}
+
+// ── Admin list view ────────────────────────────────────────────────────────
 
 const STATUS_LABELS: Record<number, { label: string; color: string }> = {
   0: { label: 'Resolved', color: 'default' },
@@ -25,7 +96,7 @@ const STATUS_LABELS: Record<number, { label: string; color: string }> = {
 export default function FeedbackPage() {
   const { data: me } = useMe();
   const { message } = App.useApp();
-  const tenants = useTenantsList({ enabled: !!me?.isAdmin });
+  const tenants = useCompaniesForPicker({ enabled: !!me?.isAdmin });
 
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(20);
@@ -43,6 +114,9 @@ export default function FeedbackPage() {
   const update = useUpdateFeedback();
 
   if (!me) return null;
+
+  // Company users (non-admin) see the send form; admins see the list.
+  if (!me.isAdmin) return <FeedbackSendForm me={me} />;
 
   const onDelete = async (row: FeedbackRow) => {
     try {
@@ -92,7 +166,7 @@ export default function FeedbackPage() {
               setTenantFilter(v);
               setPage(1);
             }}
-            options={(tenants.data ?? []).map((t) => ({ value: t.id, label: t.name }))}
+            options={(tenants.data ?? []).map((c) => ({ value: c.id, label: c.name }))}
           />
         )}
       </div>

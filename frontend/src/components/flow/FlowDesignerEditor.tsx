@@ -32,7 +32,7 @@
  */
 
 import { App, Spin } from 'antd';
-import { useEffect, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { apiClient } from '../../lib/api-client';
 import { useFlowDesign } from '../../lib/api/flow-designs';
 import type { TenantScope } from '../../lib/api/admin-crud';
@@ -109,6 +109,78 @@ const HIDE_AI_CSS = `
   }
 `;
 
+/**
+ * Extra CSS used only when `readOnly=true` (e.g. on the Flow Monitor).
+ * Hides every drawio chrome surface — left shape library, top menubar +
+ * toolbar, right Format panel, bottom footer/status bar — so the iframe
+ * renders as a pure read-only diagram viewer.
+ *
+ * Drawio class names can shift between minor versions. The selectors
+ * below cover the 29.x sketch UI; if a new version adds chrome with
+ * different class names, extend this list rather than scoping to a
+ * single selector — `display: none !important` is idempotent.
+ */
+const HIDE_CHROME_CSS = `
+  /* Class-name selectors — drawio v29 sketch UI surfaces */
+  .geSidebarContainer,
+  .geFormatContainer,
+  .geFormat,
+  .geSketchFormatContainer,
+  .geMenubarContainer,
+  .geMenubar,
+  .mxToolbar,
+  .geFooterContainer,
+  .geFooter,
+  .geStatusbar,
+  .geToolbarContainer,
+  .geVerticalToolbar,
+  .geHsplit,
+  .geVsplit,
+  .geSidebarFooter,
+  .geSidebarTooltip,
+  .geMenubarBackground,
+  .geFormatBackground,
+  .geShapesView,
+  .geOutline,
+  .geOutlineSketch,
+  .geSketchMenubarContainer,
+  .geSketchPicker,
+  .geShapePicker,
+  .geFloatingPicker,
+  .geSketchMainPicker,
+  /* "Floating" panels drawio mounts as siblings of the diagram surface — */
+  /* their position:absolute lives outside the chrome containers above,   */
+  /* so we additionally target their roles + aria-labels.                 */
+  div[role="dialog"][class*="Window"],
+  div[role="dialog"][class*="ge"],
+  .mxWindow,
+  .mxWindowTitle,
+  .geWindow,
+  .mxPopupMenu,
+  /* Tooltip + format-sidebar inner containers */
+  [class*="FormatContainer"],
+  [class*="ShapePicker"],
+  [class*="SketchPicker"] {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    pointer-events: none !important;
+  }
+  /* Reclaim the diagram surface — without these resets the canvas
+     stays squeezed to the right of the (now-hidden) sidebar. */
+  .geDiagramContainer,
+  .geEditor > .geDiagramContainer,
+  div.geDiagramContainer {
+    left: 0 !important;
+    right: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
+`;
+
 const HIDE_SELECTORS = [
   '[title="Generate" i]',
   '[title*="AI" i]',
@@ -157,13 +229,20 @@ function hideAiElements(doc: Document | null | undefined) {
   }
 }
 
-function injectEditorCustomisations(iframe: HTMLIFrameElement | null) {
+function injectEditorCustomisations(iframe: HTMLIFrameElement | null, readOnly: boolean) {
   const doc = iframe?.contentDocument;
   if (!doc) return;
   if (!doc.getElementById('fp-hide-ai-style')) {
     const style = doc.createElement('style');
     style.id = 'fp-hide-ai-style';
     style.textContent = HIDE_AI_CSS;
+    doc.head?.appendChild(style);
+  }
+  // Readonly viewer (Monitor, Analyzer): also strip drawio editor chrome.
+  if (readOnly && !doc.getElementById('fp-hide-chrome-style')) {
+    const style = doc.createElement('style');
+    style.id = 'fp-hide-chrome-style';
+    style.textContent = HIDE_CHROME_CSS;
     doc.head?.appendChild(style);
   }
   hideAiElements(doc);
@@ -190,6 +269,15 @@ function injectEditorCustomisations(iframe: HTMLIFrameElement | null) {
   [500, 1500, 3000].forEach((ms) => setTimeout(() => hideAiElements(doc), ms));
 }
 
+/** Cell status update for the live monitor overlay (§11-S7). Each entry
+ *  maps an equipment id to a drawio style string fragment. fp-embed.js
+ *  strips fillColor/strokeColor/fontColor from the existing style and
+ *  applies the supplied fragment in their place. */
+export interface FlowStatusUpdate {
+  equipmentId: number;
+  style: string;
+}
+
 interface Props {
   flowId: number;
   scope: TenantScope;
@@ -197,9 +285,28 @@ interface Props {
   /** Fired once the iframe responds to `init`. Monitor uses this to know
    *  when it's safe to start posting `paintStatus` updates. */
   onDiagramReady?: () => void;
+  /** Live status overlay. When set, every change re-posts `paintStatus`
+   *  to fp-embed.js inside the iframe. */
+  statusUpdates?: FlowStatusUpdate[];
+  /** Fires when the user clicks a cell inside the iframe. `equipmentId`
+   *  is null when the click landed on empty canvas (used by Analyzer to
+   *  clear its filter). */
+  onCellClick?: (equipmentId: number | null) => void;
 }
 
-export default function FlowDesignerEditor({ flowId, scope, readOnly = false, onDiagramReady }: Props) {
+/** Imperative API the Designer page calls into to drive the iframe from
+ *  the outer page chrome (Save button next to "Deactivate"). */
+export interface FlowDesignerEditorHandle {
+  /** Trigger drawio's save action inside the iframe. Same code path as
+   *  clicking a drawio toolbar Save button — fires `event:'save'` back,
+   *  which captures the XML + requests SVG export + PUTs both. */
+  triggerSave: () => void;
+}
+
+const FlowDesignerEditor = forwardRef<FlowDesignerEditorHandle, Props>(function FlowDesignerEditor(
+  { flowId, scope, readOnly = false, onDiagramReady, statusUpdates, onCellClick },
+  ref,
+) {
   const { message } = App.useApp();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [loading, setLoading] = useState(true);
@@ -213,6 +320,17 @@ export default function FlowDesignerEditor({ flowId, scope, readOnly = false, on
   // diagram ref keeps the message handler's view of flowData fresh
   // across re-renders without needing the effect to re-bind.
   const diagramRef = useRef<{ flowData: string | null } | null>(null);
+  // Set true once the iframe replies to `init`. Until then any
+  // `paintStatus` we post would race the editor and fp-embed.js' poll
+  // loop (which works but is wasteful).
+  const readyRef = useRef(false);
+  // Latest pending status updates while the editor is still booting. The
+  // `init` handshake flushes whatever sat in here.
+  const pendingStatusRef = useRef<FlowStatusUpdate[] | null>(null);
+  // Cell-click callback ref — kept fresh without re-binding the
+  // postMessage listener every render.
+  const onCellClickRef = useRef<typeof onCellClick>(onCellClick);
+  useEffect(() => { onCellClickRef.current = onCellClick; }, [onCellClick]);
 
   const { data: diagram, isLoading: diagramLoading } = useFlowDesign(scope, flowId);
   useEffect(() => {
@@ -223,11 +341,37 @@ export default function FlowDesignerEditor({ flowId, scope, readOnly = false, on
     iframeRef.current?.contentWindow?.postMessage(JSON.stringify(payload), '*');
   };
 
+  // ─── paintStatus pump ───────────────────────────────────────────────────
+  // Whenever the status array changes, push it to the iframe. Before
+  // the iframe has handshaken we stash the latest snapshot in
+  // pendingStatusRef and let the init branch flush it.
+  useEffect(() => {
+    if (!statusUpdates || statusUpdates.length === 0) return;
+    if (!readyRef.current) {
+      pendingStatusRef.current = statusUpdates;
+      return;
+    }
+    postToIframe({ action: 'paintStatus', updates: statusUpdates });
+  }, [statusUpdates]);
+
   const requestSvgExport = () => {
     isInternalSaveRef.current = true;
     wantsSvgRef.current = true;
     postToIframe({ action: 'export', format: 'svg', spin: 'Saving…' });
   };
+
+  // Reach into the iframe and trigger drawio's save action. The handler
+  // for `event:'save'` (below) does the rest — capture XML, request SVG,
+  // PUT both. Works because /draw_io/* is same-origin (served from the
+  // same Next public folder), so contentWindow access is allowed.
+  useImperativeHandle(ref, () => ({
+    triggerSave: () => {
+      const win = iframeRef.current?.contentWindow as unknown as {
+        __editorUi?: { actions?: { get?: (n: string) => { funct?: () => void } | undefined } };
+      } | null;
+      win?.__editorUi?.actions?.get?.('save')?.funct?.();
+    },
+  }), []);
 
   // ─── postMessage handler ────────────────────────────────────────────────
   useEffect(() => {
@@ -283,8 +427,20 @@ export default function FlowDesignerEditor({ flowId, scope, readOnly = false, on
     const handleMessage = (event: MessageEvent) => {
       if (!event.data || typeof event.data !== 'string') return;
       if (iframeRef.current && event.source !== iframeRef.current.contentWindow) return;
-      let msg: { event?: string; action?: string; xml?: string; data?: string; format?: string };
+      let msg: {
+        event?: string; action?: string; xml?: string; data?: string;
+        format?: string; equipmentId?: number | null;
+      };
       try { msg = JSON.parse(event.data); } catch { return; }
+
+      // 0) Cell click — fp-embed.js forwards drawio CLICK events. Used by
+      //    Analyzer (§11-S8) to filter the charts/tables.
+      if (msg.event === 'cellClick') {
+        onCellClickRef.current?.(
+          typeof msg.equipmentId === 'number' ? msg.equipmentId : null,
+        );
+        return;
+      }
 
       // 1) INIT — drawio is ready; send the diagram XML back.
       if (msg.event === 'init') {
@@ -295,6 +451,12 @@ export default function FlowDesignerEditor({ flowId, scope, readOnly = false, on
           ? stored
           : EMPTY_DIAGRAM_XML;
         postToIframe({ action: 'load', xml, autosave: readOnly ? 0 : 1 });
+        readyRef.current = true;
+        // Flush any status snapshot the Monitor pushed before init.
+        if (pendingStatusRef.current && pendingStatusRef.current.length > 0) {
+          postToIframe({ action: 'paintStatus', updates: pendingStatusRef.current });
+          pendingStatusRef.current = null;
+        }
         onDiagramReady?.();
         return;
       }
@@ -383,57 +545,24 @@ export default function FlowDesignerEditor({ flowId, scope, readOnly = false, on
     );
   }
 
-  const iframeSrc = readOnly
-    ? '/draw_io/index.html?embed=1&proto=json&spin=1&noExitBtn=1&noSaveBtn=1&sketch=1&ui=sketch&lightbox=1&chrome=0&edit=_blank&toolbar=0&nav=1'
-    : '/draw_io/index.html?embed=1&proto=json&spin=1&noExitBtn=1&noSaveBtn=1&sketch=1&ui=sketch';
+  // Note: we deliberately avoid drawio's `lightbox=1&chrome=0` viewer
+  // mode here. That path uses a synchronous bootstrap that skips the
+  // EditorUi.createUi hook over-ride.js uses to expose __editorUi, so
+  // our paintStatus / cellClick forwarders never arm. Instead we use
+  // the regular embed bootstrap and call graph.setEnabled(false) inside
+  // the onLoad callback to lock editing.
+  const iframeSrc = '/draw_io/index.html?embed=1&proto=json&spin=1&noExitBtn=1&noSaveBtn=1&sketch=1&ui=sketch';
 
-  /**
-   * Drop handler for the iframe wrapper. The Designer page renders the
-   * equipment tree as native HTML5 draggables; on drop here we read the
-   * JSON payload, compute the canvas-relative position, and post
-   * `insertNode` to the drawio iframe. fp-embed.js inside the iframe
-   * does the actual graph.insertVertex().
-   */
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    // The drop is only valid if the source set our payload.
-    const types = e.dataTransfer.types;
-    if (types && types.indexOf('application/fp-equipment') !== -1) {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'copy';
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    if (readOnly) return;
-    const raw = e.dataTransfer.getData('application/fp-equipment');
-    if (!raw) return;
-    e.preventDefault();
-    let payload: { equipmentId?: number; equipmentName?: string };
-    try { payload = JSON.parse(raw); } catch { return; }
-    if (!payload || !payload.equipmentId) return;
-
-    // Coordinates relative to the iframe wrapper. fp-embed.js inserts
-    // the cell at these graph-document coordinates — close enough for
-    // v1 (drawio's own toolbar-drag uses transformViewToDoc for pixel-
-    // perfect placement; we can polish later if it bothers users).
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.max(0, e.clientX - rect.left);
-    const y = Math.max(0, e.clientY - rect.top);
-
-    postToIframe({
-      action: 'insertNode',
-      equipmentId: payload.equipmentId,
-      label: payload.equipmentName || `Equipment #${payload.equipmentId}`,
-      x, y,
-    });
-  };
+  // Drop handling lives inside the iframe (fp-embed.js) — the iframe's
+  // document consumes drop events before they can bubble to a parent-
+  // window React handler. The equipment row's onDragStart still sets
+  // dataTransfer; fp-embed.js reads `application/fp-equipment` in
+  // capture-phase dragover/drop listeners.
 
   return (
     <div
       data-testid="flow-designer-editor"
       style={{ position: 'relative', width: '100%', height: '100%' }}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
     >
       {loading && (
         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 1 }}>
@@ -447,20 +576,55 @@ export default function FlowDesignerEditor({ flowId, scope, readOnly = false, on
         title="Flow Designer"
         onLoad={() => {
           setLoading(false);
-          injectEditorCustomisations(iframeRef.current);
+          injectEditorCustomisations(iframeRef.current, readOnly);
           if (readOnly) {
-            // Belt-and-braces: also flip graph.setEnabled(false) once the
-            // editor is ready so any edit gesture is blocked even if a
-            // lightbox URL param is missed.
+            // Belt-and-braces: lock the graph + nuke every edit affordance
+            // drawio mounts (Format panel, shape picker, popup menu, etc.).
+            // CSS alone isn't enough — drawio re-shows these on click, and
+            // the Format panel widens the chrome container which squeezes
+            // the diagram. Calling toggleFormatPanel(false) drops its
+            // width to 0 and refresh() re-lays-out the editor.
+            type ReadonlyDrawioUi = {
+              editor?: {
+                graph?: {
+                  setEnabled?: (b: boolean) => void;
+                  popupMenuHandler?: { setEnabled?: (b: boolean) => void };
+                  panningHandler?: { useLeftButtonForPanning?: boolean };
+                };
+              };
+              formatWidth?: number;
+              toggleFormatPanel?: (visible: boolean) => void;
+              toggleOutline?: () => void;
+              refresh?: () => void;
+              format?: { panel?: { setVisible?: (b: boolean) => void } };
+              outline?: { destroy?: () => void };
+              sidebar?: { container?: HTMLElement };
+            };
             const tryLock = () => {
               try {
                 const ui = (iframeRef.current?.contentWindow as unknown as {
-                  __editorUi?: { editor?: { graph?: { setEnabled?: (b: boolean) => void } } };
+                  __editorUi?: ReadonlyDrawioUi;
                 })?.__editorUi;
-                if (ui?.editor?.graph?.setEnabled) {
-                  ui.editor.graph.setEnabled(false);
-                  return true;
+                const graph = ui?.editor?.graph;
+                if (!graph?.setEnabled) return false;
+                graph.setEnabled(false);
+                // Kill the right-click context menu (mxPopupMenu).
+                graph.popupMenuHandler?.setEnabled?.(false);
+                // Drop the Format panel — it lives in a fixed-width column
+                // on the right of the diagram. formatWidth=0 + refresh()
+                // collapses it and `toggleFormatPanel(false)` removes the
+                // drawer.
+                if (ui) {
+                  ui.formatWidth = 0;
+                  try { ui.toggleFormatPanel?.(false); } catch { /* not in this UI mode */ }
+                  try { ui.refresh?.(); } catch { /* layout already current */ }
+                  // Sidebar lives in a separate container — hide it manually
+                  // (CSS-only hides the visual but leaves layout reservation).
+                  if (ui.sidebar?.container?.style) {
+                    ui.sidebar.container.style.display = 'none';
+                  }
                 }
+                return true;
               } catch { /* drawio not yet ready */ }
               return false;
             };
@@ -475,4 +639,6 @@ export default function FlowDesignerEditor({ flowId, scope, readOnly = false, on
       />
     </div>
   );
-}
+});
+
+export default FlowDesignerEditor;

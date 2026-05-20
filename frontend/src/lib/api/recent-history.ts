@@ -7,27 +7,26 @@ export interface HistoryRow {
   icon: string | null;
   class: string | null;
   entityId: number | null;
-  typeName: string;
+  entityType: string;
   actorId: number;
   actorName: string;
   actorEmail: string;
+  impersonatorId: number | null;
   createdAt: string | null;
 }
 
 export interface HistoryListResponse {
-  data: HistoryRow[];
-  total: number;
-  page: number;
-  perPage: number;
+  items: HistoryRow[];
+  next_cursor: string | null;
 }
 
-export function useRecentHistory(opts: { page?: number; perPage?: number; enabled?: boolean } = {}) {
-  const { page = 1, perPage = 50, enabled = true } = opts;
+export function useRecentHistory(opts: { limit?: number; before?: string; enabled?: boolean } = {}) {
+  const { limit = 50, before, enabled = true } = opts;
   return useQuery({
-    queryKey: ['admin', 'history', { page, perPage }],
+    queryKey: ['admin', 'history', { limit, before }],
     queryFn: async () => {
       const { data } = await apiClient.get<HistoryListResponse>('/admin/history', {
-        params: { page, perPage },
+        params: { limit, ...(before ? { before } : {}) },
       });
       return data;
     },

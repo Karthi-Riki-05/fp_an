@@ -16,7 +16,7 @@ async function list(tenant, q) {
   if (q.name) { params.push(`%${q.name}%`); where.push(`name ILIKE $${params.length}`); }
   const whereSql = `WHERE ${where.join(' AND ')}`;
   const dir = q.order === 'asc' ? 'ASC' : 'DESC';
-  return withTenant(tenant.schemaName, async (tx) => {
+  return withTenant(tenant, async (tx) => {
     const data = await tx.$queryRawUnsafe(`SELECT ${SELECT} FROM ${TABLE} ${whereSql} ORDER BY id ${dir} LIMIT ${perPage} OFFSET ${(page - 1) * perPage}`, ...params);
     const totalRows = await tx.$queryRawUnsafe(`SELECT COUNT(*)::bigint AS count FROM ${TABLE} ${whereSql}`, ...params);
     return { data, total: Number(totalRows[0]?.count ?? 0n), page, perPage };
@@ -24,7 +24,7 @@ async function list(tenant, q) {
 }
 
 async function findOne(tenant, id) {
-  const rows = await withTenant(tenant.schemaName, (tx) =>
+  const rows = await withTenant(tenant, (tx) =>
     tx.$queryRawUnsafe(`SELECT ${SELECT} FROM ${TABLE} WHERE id = $1 AND deleted_at IS NULL`, id),
   );
   if (!rows[0]) throw new NotFoundError('not-found');
@@ -32,7 +32,7 @@ async function findOne(tenant, id) {
 }
 
 async function create(tenant, dto) {
-  const rows = await withTenant(tenant.schemaName, (tx) =>
+  const rows = await withTenant(tenant, (tx) =>
     tx.$queryRawUnsafe(
       `INSERT INTO work_shifts (name, start_time, end_time, break_start_time, break_end_time, working_days, status, created_at, updated_at)
        VALUES ($1, $2::time, $3::time, $4::time, $5::time, $6, 1, now(), now())
@@ -56,7 +56,7 @@ async function update(tenant, id, dto) {
   if (sets.length === 0) return findOne(tenant, id);
   sets.push('updated_at = now()');
   values.push(id);
-  const rows = await withTenant(tenant.schemaName, (tx) =>
+  const rows = await withTenant(tenant, (tx) =>
     tx.$queryRawUnsafe(`UPDATE work_shifts SET ${sets.join(', ')} WHERE id = $${values.length} AND deleted_at IS NULL RETURNING ${SELECT}`, ...values),
   );
   if (!rows[0]) throw new NotFoundError('not-found');
@@ -67,4 +67,16 @@ function softDelete(tenant, id) {
   return tenantSoftDelete({ withTenant, tenant, table: TABLE, id });
 }
 
-module.exports = { list, findOne, create, update, softDelete };
+async function patchStatus(tenant, id) {
+  const rows = await withTenant(tenant, (tx) =>
+    tx.$queryRawUnsafe(
+      `UPDATE work_shifts SET status = CASE WHEN status = 1 THEN 0 ELSE 1 END, updated_at = now()
+       WHERE id = $1 AND deleted_at IS NULL RETURNING id, status`,
+      id,
+    ),
+  );
+  if (!rows[0]) throw new NotFoundError('not-found');
+  return rows[0];
+}
+
+module.exports = { list, findOne, create, update, softDelete, patchStatus };

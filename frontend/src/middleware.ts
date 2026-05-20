@@ -14,6 +14,23 @@ export function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
   const hasCookie = Boolean(req.cookies.get(AUTH_COOKIE));
 
+  // Legacy /feedback URL → authenticated company-user feedback page.
+  if (pathname === '/feedback') {
+    const url = req.nextUrl.clone();
+    url.pathname = '/admin/feedback';
+    return NextResponse.redirect(url);
+  }
+
+  // Root: redirect based on auth — logged-in → /dashboard, anon → /login.
+  // The old (public) "/" coming-soon page is no longer reachable; it now
+  // requires login like every other authenticated surface.
+  if (pathname === '/') {
+    const url = req.nextUrl.clone();
+    url.pathname = hasCookie ? '/dashboard' : '/login';
+    url.search = '';
+    return NextResponse.redirect(url);
+  }
+
   // /login is always accessible. If user already has a cookie, send them home.
   if (pathname.startsWith('/login')) {
     if (hasCookie) {

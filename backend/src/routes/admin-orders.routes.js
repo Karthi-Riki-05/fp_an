@@ -7,6 +7,17 @@ const svc = require('../services/admin-orders.service');
 const router = Router();
 router.use(tenantMiddleware);
 
+/**
+ * @swagger
+ * /api/v1/admin/orders:
+ *   get:
+ *     tags: ["Admin — Orders"]
+ *     summary: GET /
+ *     security:
+ *       - access_token: []
+ *     responses:
+ *       200: { description: OK }
+ */
 router.get('/', async (req, res, next) => {
   try {
     const q = {
@@ -24,18 +35,68 @@ router.get('/', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+/**
+ * @swagger
+ * /api/v1/admin/orders/{id}:
+ *   get:
+ *     tags: ["Admin — Orders"]
+ *     summary: GET /:id
+ *     security:
+ *       - access_token: []
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string } }
+ *     responses:
+ *       200: { description: OK }
+ */
 router.get('/:id', async (req, res, next) => {
   try { res.json(await svc.findOne(req.tenant, Number(req.params.id))); } catch (err) { next(err); }
 });
 
+/**
+ * @swagger
+ * /api/v1/admin/orders:
+ *   post:
+ *     tags: ["Admin — Orders"]
+ *     summary: POST /
+ *     security:
+ *       - access_token: []
+ *     responses:
+ *       200: { description: OK }
+ */
 router.post('/', async (req, res, next) => {
   try { res.status(201).json(await svc.create(req.tenant, req.body)); } catch (err) { next(err); }
 });
 
+/**
+ * @swagger
+ * /api/v1/admin/orders/{id}:
+ *   patch:
+ *     tags: ["Admin — Orders"]
+ *     summary: PATCH /:id
+ *     security:
+ *       - access_token: []
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string } }
+ *     responses:
+ *       200: { description: OK }
+ */
 router.patch('/:id', async (req, res, next) => {
   try { res.json(await svc.update(req.tenant, Number(req.params.id), req.body)); } catch (err) { next(err); }
 });
 
+/**
+ * @swagger
+ * /api/v1/admin/orders/{id}:
+ *   delete:
+ *     tags: ["Admin — Orders"]
+ *     summary: DELETE /:id
+ *     security:
+ *       - access_token: []
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string } }
+ *     responses:
+ *       200: { description: OK }
+ */
 router.delete('/:id', async (req, res, next) => {
   try { await svc.softDelete(req.tenant, Number(req.params.id)); res.status(204).send(); } catch (err) { next(err); }
 });

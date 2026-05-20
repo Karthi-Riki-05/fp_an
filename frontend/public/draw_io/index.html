@@ -68,13 +68,19 @@
 			</p>
 		</div>
 	</div>
-	<script src="js/main.js"></script>
+	<!-- over-ride.js must load BEFORE js/main.js so that
+	     EditorUi.prototype.createUi is patched the moment drawio constructs
+	     its first EditorUi. Loading it after main.js leaves a race where
+	     drawio can fire createUi before the patch is in place, leaving
+	     window.__editorUi undefined (paintStatus + cellClick then no-op).
+	     See SESSION_HANDOFF_2026-05-15.md item #1 / FLOW_MANAGEMENT_ANALYSIS.md §11. -->
 	<script src="./../custom/chart/js/over-ride.js"></script>
+	<script src="js/main.js"></script>
 	<!-- FP Analyzer integration — insertNode (equipment drop) + paintStatus
 	     (live monitor overlay). See FLOW_MANAGEMENT_ANALYSIS.md §11.4/§11.6.
 	     The ?v= query param busts drawio's service-worker cache after edits.
 	     Bump it whenever fp-embed.js changes. -->
-	<script src="./../custom/chart/js/fp-embed.js?v=3"></script>
+	<script src="./../custom/chart/js/fp-embed.js?v=11"></script>
 
 	
 </body>

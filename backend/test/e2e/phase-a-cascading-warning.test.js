@@ -12,7 +12,8 @@
 const request = require('supertest');
 const app = require('../../src/app');
 const { login } = require('../helpers/login');
-const { prisma, withTenant } = require('../../src/prisma/client');
+const { getDemoTenantContext } = require('../helpers/get-demo-company-user-id');
+const { withTenant } = require('../../src/prisma/client');
 
 const ADMIN_EMAIL = process.env.SEED_SUPERADMIN_EMAIL || 'user1@gmail.com';
 const ADMIN_PASS  = process.env.SEED_SUPERADMIN_PASSWORD || 'password123';
@@ -27,12 +28,9 @@ describe('Phase A — cascading + warning + shift-titles + filters', () => {
   beforeAll(async () => {
     const r = await login(app, ADMIN_EMAIL, ADMIN_PASS);
     adminCookie = r.cookie;
-    const tenants = await request(app).get('/api/v1/admin/tenants').set('Cookie', adminCookie).expect(200);
-    tenantId = tenants.body[0].id;
-    tenant = await prisma.tenant.findUnique({
-      where: { id: tenantId },
-      select: { id: true, schemaName: true, dbName: true, timezone: true, status: true },
-    });
+    // After Tenant removal: tenant context derived from the Company user id.
+    tenant = await getDemoTenantContext(app, adminCookie);
+    tenantId = tenant.tenantId;
 
     const eq = await request(app)
       .post('/api/v1/equipment')

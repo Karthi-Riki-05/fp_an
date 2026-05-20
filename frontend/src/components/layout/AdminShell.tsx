@@ -4,7 +4,6 @@ import {
   AppstoreOutlined,
   BarChartOutlined,
   BulbOutlined,
-  ClusterOutlined,
   CommentOutlined,
   EditOutlined,
   HomeOutlined,
@@ -20,13 +19,13 @@ import {
   ShareAltOutlined,
   TagOutlined,
   TeamOutlined,
-  ThunderboltOutlined,
   ToolOutlined,
 } from '@ant-design/icons';
 import { App, Avatar, Button, Drawer, Grid, Layout, Popover, Spin, Tag, Typography } from 'antd';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { brand } from '../../lib/assets';
 import { toApiError } from '../../lib/api-client';
@@ -41,7 +40,9 @@ const { useBreakpoint } = Grid;
 interface SidebarItem {
   key: string;
   icon?: ReactNode;
-  label: string;
+  /** i18n key resolved at render-time via texts.<labelKey>. Falls back to
+   *  this same string if no translation is registered. */
+  labelKey: string;
   href?: string;
   permission?: string;
   adminOnly?: boolean;
@@ -53,15 +54,16 @@ interface SidebarItem {
  * Global platform management only: users across all tenants, CMS, social, auth config.
  */
 const SUPERADMIN_SIDEBAR: SidebarItem[] = [
-  { key: '/admin/dashboard',    icon: <HomeOutlined />,              label: 'Administration',   href: '/admin/dashboard' },
-  { key: '/admin/access/users', icon: <TeamOutlined />,              label: 'User Management',  href: '/admin/access/users' },
-  { key: '/admin/tenants',      icon: <ClusterOutlined />,           label: 'Tenants',          href: '/admin/tenants' },
-  { key: '/admin/access/roles', icon: <SafetyCertificateOutlined />, label: 'Roles',            href: '/admin/access/roles' },
-  { key: '/admin/social',       icon: <ShareAltOutlined />,          label: 'Social Management',href: '/admin/social' },
-  { key: '/admin/cms',          icon: <ProfileOutlined />,           label: 'CMS Management',   href: '/admin/cms' },
-  { key: '/admin/sliders',      icon: <ProjectOutlined />,           label: 'Slider Management',href: '/admin/sliders' },
-  { key: '/admin/testimonials', icon: <BulbOutlined />,              label: 'Testimonials',     href: '/admin/testimonials' },
-  { key: '/admin/feedback',     icon: <CommentOutlined />,           label: 'Feedback',         href: '/admin/feedback' },
+  { key: '/admin/dashboard',    icon: <HomeOutlined />,              labelKey: 'administration',     href: '/admin/dashboard' },
+  { key: '/admin/access/users', icon: <TeamOutlined />,              labelKey: 'user_management',    href: '/admin/access/users' },
+  // Tenants page removed — a Company user IS the company. List/manage via
+  // User Management (filter by role=Company). See MIGRATION_NOTES §13.
+  { key: '/admin/access/roles', icon: <SafetyCertificateOutlined />, labelKey: 'roles',              href: '/admin/access/roles' },
+  { key: '/admin/social',       icon: <ShareAltOutlined />,          labelKey: 'social_management',  href: '/admin/social' },
+  { key: '/admin/cms',          icon: <ProfileOutlined />,           labelKey: 'cms_management',     href: '/admin/cms' },
+  { key: '/admin/sliders',      icon: <ProjectOutlined />,           labelKey: 'slider_management',  href: '/admin/sliders' },
+  { key: '/admin/testimonials', icon: <BulbOutlined />,              labelKey: 'testimonials',       href: '/admin/testimonials' },
+  { key: '/admin/feedback',     icon: <CommentOutlined />,           labelKey: 'feedback',           href: '/admin/feedback' },
 ];
 
 /**
@@ -69,79 +71,103 @@ const SUPERADMIN_SIDEBAR: SidebarItem[] = [
  * Tenant-scoped operational management: equipment, flows, production, results, boards.
  */
 const COMPANY_SIDEBAR: SidebarItem[] = [
-  { key: '/admin/dashboard', icon: <HomeOutlined />, label: 'Administration', href: '/admin/dashboard' },
+  { key: '/admin/dashboard', icon: <HomeOutlined />, labelKey: 'administration', href: '/admin/dashboard' },
   {
     key: 'user-mgmt',
     icon: <TeamOutlined />,
-    label: 'User Management',
+    labelKey: 'user_management',
     children: [
-      { key: '/admin/access/users',         label: 'Users',        href: '/admin/access/users' },
-      { key: '/admin/access/salary-groups', label: 'Salary Group', href: '/admin/access/salary-groups' },
+      { key: '/admin/access/users',         labelKey: 'users',         href: '/admin/access/users' },
+      { key: '/admin/access/salary-groups', labelKey: 'salary_group',  href: '/admin/access/salary-groups' },
     ],
   },
-  { key: '/admin/types', icon: <TagOutlined />, label: 'Type Management', href: '/admin/types' },
+  { key: '/admin/types', icon: <TagOutlined />, labelKey: 'type_management', href: '/admin/types' },
   {
     key: 'equipment-mgmt',
     icon: <ToolOutlined />,
-    label: 'Equipment Management',
+    labelKey: 'equipment_management',
     children: [
-      { key: '/admin/equipment',               label: 'Equipment List',      href: '/admin/equipment' },
-      { key: '/admin/equipment/tree',          label: 'Equipment Structure', href: '/admin/equipment/tree' },
-      { key: '/admin/equipment/stop-reasons',  label: 'Stop Reasons',        href: '/admin/equipment/stop-reasons' },
-      { key: '/admin/equipment/scrap-reasons', label: 'Scrap Reasons',       href: '/admin/equipment/scrap-reasons' },
+      { key: '/admin/equipment',               labelKey: 'equipment_list',      href: '/admin/equipment' },
+      { key: '/admin/equipment/tree',          labelKey: 'equipment_structure', href: '/admin/equipment/tree' },
+      { key: '/admin/equipment/stop-reasons',  labelKey: 'stop_reasons',        href: '/admin/equipment/stop-reasons' },
+      { key: '/admin/equipment/scrap-reasons', labelKey: 'scrap_reasons',       href: '/admin/equipment/scrap-reasons' },
     ],
   },
   {
     key: 'flow-mgmt',
     icon: <NodeIndexOutlined />,
-    label: 'Flow Management',
+    labelKey: 'flow_management',
     children: [
-      { key: '/admin/flow-designs',  label: 'Flow Designer', href: '/admin/flow-designs' },
-      { key: '/admin/flow-monitor',  label: 'Flow Monitor',  href: '/admin/flow-monitor' },
-      { key: '/admin/flow-analyzer', label: 'Flow Analyzer', href: '/admin/flow-analyzer' },
+      { key: '/admin/flow-designs',  labelKey: 'flow_designer', href: '/admin/flow-designs' },
+      { key: '/admin/monitor',       labelKey: 'flow_monitor',  href: '/admin/monitor' },
+      { key: '/admin/analyzer',      labelKey: 'flow_analyzer', href: '/admin/analyzer' },
     ],
   },
   {
     key: 'production-mgmt',
     icon: <AppstoreOutlined />,
-    label: 'Production Management',
+    labelKey: 'production_management',
     children: [
-      { key: '/admin/orders',          label: 'Order List',     href: '/admin/orders' },
-      { key: '/admin/parts',           label: 'Parts List',     href: '/admin/parts' },
-      { key: '/admin/work-shifts',     label: 'Work Shifts',    href: '/admin/work-shifts' },
-      { key: '/admin/shift-schedules', label: 'Shift Schedule', href: '/admin/shift-schedules' },
+      { key: '/admin/orders',          labelKey: 'order_list',     href: '/admin/orders' },
+      { key: '/admin/parts',           labelKey: 'parts_list',     href: '/admin/parts' },
+      { key: '/admin/work-shifts',     labelKey: 'work_shifts',    href: '/admin/work-shifts' },
+      { key: '/admin/shift-schedules', labelKey: 'shift_schedule', href: '/admin/shift-schedules' },
     ],
   },
   {
     key: 'result-mgmt',
     icon: <BarChartOutlined />,
-    label: 'Result Management',
+    labelKey: 'result_management',
     children: [
-      { key: '/admin/results/production', label: 'Production data', href: '/admin/results/production' },
-      { key: '/admin/results/scrap',      label: 'Scrap data',      href: '/admin/results/scrap' },
-      { key: '/admin/results/stop',       label: 'Stop data',       href: '/admin/results/stop' },
-      { key: '/admin/results/warning',    label: 'Warning data',    href: '/admin/results/warning' },
+      { key: '/admin/results/production', labelKey: 'production_data', href: '/admin/results/production' },
+      { key: '/admin/results/scrap',      labelKey: 'scrap_data',      href: '/admin/results/scrap' },
+      { key: '/admin/results/stop',       labelKey: 'stop_data',       href: '/admin/results/stop' },
+      { key: '/admin/results/warning',    labelKey: 'warning_data',    href: '/admin/results/warning' },
     ],
   },
   {
     key: 'boards',
     icon: <LineChartOutlined />,
-    label: 'Board',
+    labelKey: 'board',
     children: [
-      { key: '/admin/boards', label: 'Dashboard creator', href: '/admin/boards' },
+      { key: '/admin/boards', labelKey: 'dashboard_creator', href: '/admin/boards' },
     ],
   },
-  {
-    key: 'loss-model',
-    icon: <ThunderboltOutlined />,
-    label: 'Loss Model',
-    children: [
-      { key: '/admin/loss-model', label: 'Loss by order no', href: '/admin/loss-model' },
-    ],
-  },
-  { key: '/admin/iot/setup', icon: <SettingOutlined />, label: 'Setup units', href: '/admin/iot/setup' },
-  { key: '/admin/feedback',  icon: <CommentOutlined />, label: 'Feedback',    href: '/admin/feedback' },
+  // "Loss Model" group removed per operator request — re-add here if the
+  // Loss by Order No. report needs to come back into the sidebar.
+  { key: '/admin/iot/setup', icon: <SettingOutlined />, labelKey: 'setup_units', href: '/admin/iot/setup' },
+  { key: '/admin/feedback',  icon: <CommentOutlined />, labelKey: 'feedback',    href: '/admin/feedback' },
 ];
+
+// ── Locale switcher ───────────────────────────────────────────────────────
+// Reads and writes the NEXT_LOCALE cookie on the client; page reload causes
+// the server to re-read it via i18n/request.ts and serve the correct locale.
+function LocaleSwitcher() {
+  const [locale, setLocale] = useState<'sv' | 'en'>(() => {
+    if (typeof document === 'undefined') return 'sv';
+    const m = document.cookie.match(/NEXT_LOCALE=([^;]+)/);
+    return (m?.[1] === 'en' ? 'en' : 'sv');
+  });
+
+  const toggle = () => {
+    const next = locale === 'sv' ? 'en' : 'sv';
+    document.cookie = `NEXT_LOCALE=${next}; path=/; max-age=31536000; SameSite=Lax`;
+    setLocale(next);
+    window.location.reload();
+  };
+
+  return (
+    <Button
+      type="text"
+      size="small"
+      onClick={toggle}
+      title={locale === 'sv' ? 'Switch to English' : 'Byt till Svenska'}
+      style={{ fontWeight: 600, fontSize: 13, color: '#555', padding: '0 8px' }}
+    >
+      {locale === 'sv' ? '🇬🇧 EN' : '🇸🇪 SV'}
+    </Button>
+  );
+}
 
 interface AdminShellProps {
   children: ReactNode;
@@ -157,6 +183,10 @@ export function AdminShell({ children, pageTitle }: AdminShellProps) {
   const pathname = usePathname();
   const screens = useBreakpoint();
   const isMobile = !screens.lg;
+  // All translatable strings in this shell live under the `texts.*`
+  // namespace in messages/{en,sv}.json (the legacy `custom.texts.*`
+  // bundle merged via scripts/merge-legacy-translations.mjs).
+  const t = useTranslations('texts');
 
   const { data: me, isLoading, isError } = useMe();
   const logout = useLogout();
@@ -200,14 +230,16 @@ export function AdminShell({ children, pageTitle }: AdminShellProps) {
   const matchedTitle = useMemo(() => {
     if (pageTitle) return pageTitle;
     for (const item of visibleSidebar) {
-      if (item.href === pathname) return item.label;
+      if (item.href === pathname) return t(item.labelKey);
       const child = item.children?.find((c) => c.href === pathname);
       if (child) {
         // Show parent title for sub-pages (e.g. "Equipment Management" for "Equipment List")
-        return child.label;
+        return t(child.labelKey);
       }
     }
-    return 'Administration';
+    return t('administration');
+    // `t` is a stable reference from next-intl; safe to omit from deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, visibleSidebar, pageTitle]);
 
   if (isLoading) {
@@ -225,13 +257,17 @@ export function AdminShell({ children, pageTitle }: AdminShellProps) {
   const onLogout = async () => {
     try {
       await logout.mutateAsync();
-      message.success('Signed out.');
+      message.success(t('signed_out'));
       router.replace('/login');
     } catch (err) {
       message.error(toApiError(err).message);
     }
   };
 
+  // activeTenantId: for Company users = their own user.id;
+  //                 for sub-Users = their companyId (the Company user's id);
+  //                 for Administrators = the X-Tenant-Id header value (Company user id).
+  // `tenants[]` is a one-row synthetic array post Tenant removal — see MIGRATION_NOTES §13.
   const tenant = me.tenants.find((t) => t.id === me.activeTenantId) ?? me.tenants[0];
 
   // -------- sidebar (custom — AntD Menu's selected style is too aggressive for this look) --------
@@ -265,7 +301,7 @@ export function AdminShell({ children, pageTitle }: AdminShellProps) {
             </div>
             <div style={{ marginTop: 4, fontSize: 11, color: '#999', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#52c41a', display: 'inline-block' }} />
-              Online
+              {t('online')}
             </div>
           </>
         )}
@@ -293,6 +329,7 @@ export function AdminShell({ children, pageTitle }: AdminShellProps) {
                     alignItems: 'center',
                     width: '100%',
                     padding: '10px 16px',
+                    minHeight: 44,
                     border: 0,
                     background: 'transparent',
                     cursor: 'pointer',
@@ -309,7 +346,7 @@ export function AdminShell({ children, pageTitle }: AdminShellProps) {
                   </span>
                   {!(collapsed && !isMobile) && (
                     <>
-                      <span style={{ flex: 1 }}>{item.label}</span>
+                      <span style={{ flex: 1 }}>{t(item.labelKey)}</span>
                       <RightOutlined
                         style={{
                           fontSize: 10,
@@ -333,7 +370,8 @@ export function AdminShell({ children, pageTitle }: AdminShellProps) {
                           style={{
                             display: 'flex',
                             alignItems: 'center',
-                            padding: '8px 16px 8px 44px',
+                            padding: '10px 16px 10px 40px',
+                            minHeight: 44,
                             color: childActive ? '#01b9d0' : '#666',
                             fontSize: 13,
                             fontWeight: childActive ? 600 : 400,
@@ -352,7 +390,7 @@ export function AdminShell({ children, pageTitle }: AdminShellProps) {
                               display: 'inline-block',
                             }}
                           />
-                          {child.label}
+                          {t(child.labelKey)}
                         </Link>
                       );
                     })}
@@ -371,6 +409,7 @@ export function AdminShell({ children, pageTitle }: AdminShellProps) {
                 display: 'flex',
                 alignItems: 'center',
                 padding: '10px 16px',
+                minHeight: 44,
                 color: isLeafActive ? '#01b9d0' : '#555',
                 fontSize: 13,
                 fontWeight: isLeafActive ? 600 : 500,
@@ -383,7 +422,7 @@ export function AdminShell({ children, pageTitle }: AdminShellProps) {
               <span style={{ fontSize: 16, color: isLeafActive ? '#01b9d0' : '#888', minWidth: 16, display: 'inline-flex' }}>
                 {item.icon}
               </span>
-              {!(collapsed && !isMobile) && <span>{item.label}</span>}
+              {!(collapsed && !isMobile) && <span>{t(item.labelKey)}</span>}
             </Link>
           );
         })}
@@ -414,7 +453,7 @@ export function AdminShell({ children, pageTitle }: AdminShellProps) {
           </button>
         </div>
         <Button type="text" icon={<LogoutOutlined />} onClick={onLogout} style={{ color: '#dd4b39' }}>
-          Logout
+          {t('logout')}
         </Button>
       </div>
     </div>
@@ -445,7 +484,10 @@ export function AdminShell({ children, pageTitle }: AdminShellProps) {
         placement="left"
         width={SIDEBAR_WIDTH}
         onClose={() => setDrawerOpen(false)}
-        styles={{ body: { padding: 0 }, header: { display: 'none' } }}
+        styles={{
+          body: { padding: 0, paddingBottom: 'env(safe-area-inset-bottom, 0px)' },
+          header: { display: 'none' },
+        }}
       >
         {sidebarMarkup}
       </Drawer>
@@ -475,18 +517,21 @@ export function AdminShell({ children, pageTitle }: AdminShellProps) {
             />
             <Text strong style={{ fontSize: 18, color: '#333' }}>{matchedTitle}</Text>
           </div>
-          <Popover content={profilePopover} placement="bottomRight" trigger="click">
-            <Avatar
-              size={36}
-              style={{ background: '#f5f7fa', border: '1px solid #eef0f3', cursor: 'pointer' }}
-              src={brand.logoSmall}
-              alt={me.name}
-            />
-          </Popover>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <LocaleSwitcher />
+            <Popover content={profilePopover} placement="bottomRight" trigger="click">
+              <Avatar
+                size={36}
+                style={{ background: '#f5f7fa', border: '1px solid #eef0f3', cursor: 'pointer' }}
+                src={brand.logoSmall}
+                alt={me.name}
+              />
+            </Popover>
+          </div>
         </Header>
 
         <ImpersonationBanner />
-        <Content style={{ padding: 24, background: '#f5f7fa' }}>
+        <Content style={{ padding: isMobile ? 16 : 24, background: '#f5f7fa' }}>
           {children}
         </Content>
 
@@ -494,7 +539,7 @@ export function AdminShell({ children, pageTitle }: AdminShellProps) {
           style={{
             borderTop: '1px solid #eef0f3',
             background: '#fff',
-            padding: '12px 24px',
+            padding: isMobile ? '12px 16px' : '12px 24px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',

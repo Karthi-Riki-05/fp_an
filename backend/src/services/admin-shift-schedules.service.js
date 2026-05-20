@@ -170,6 +170,41 @@ async function createEvent(tenant, scheduleId, dto) {
   return rows[0];
 }
 
+async function updateEvent(tenant, eventId, dto) {
+  // Update any subset of fields. Used by:
+  //   - calendar drag-to-reorder (only start/end change)
+  //   - edit-popover save (every field can change)
+  const fields = [];
+  const params = [eventId];
+  const push = (col, val, cast) => {
+    params.push(val);
+    fields.push(`${col} = $${params.length}${cast ? `::${cast}` : ''}`);
+  };
+  if (dto.title !== undefined)            push('title', dto.title);
+  if (dto.start !== undefined)            push('start', dto.start, 'timestamp');
+  if (dto.end !== undefined)              push('"end"', dto.end, 'timestamp');
+  if (dto.textColor !== undefined)        push('text_color', dto.textColor);
+  if (dto.backgroundColor !== undefined)  push('background_color', dto.backgroundColor);
+  if (dto.isRecurring !== undefined)      push('is_recurring', dto.isRecurring);
+  if (dto.rcData !== undefined)           push('rc_data', dto.rcData ? JSON.stringify(dto.rcData) : null);
+  if (fields.length === 0) {
+    return { id: eventId, updated: false };
+  }
+  fields.push('updated_at = now()');
+  const rows = await withTenant(tenant, (tx) =>
+    tx.$queryRawUnsafe(
+      `UPDATE shift_schedule_data SET ${fields.join(', ')}
+         WHERE id = $1
+         RETURNING id, title, start::text, "end"::text,
+                   text_color AS "textColor", background_color AS "backgroundColor",
+                   is_recurring AS "isRecurring", rc_data AS "rcData"`,
+      ...params,
+    ),
+  );
+  if (rows.length === 0) throw new NotFoundError('shift-schedule-event-not-found');
+  return rows[0];
+}
+
 async function deleteEvent(tenant, eventId) {
   await withTenant(tenant, (tx) =>
     tx.$executeRawUnsafe(`DELETE FROM shift_schedule_data WHERE id = $1`, eventId),
@@ -236,4 +271,4 @@ async function getTitlesForEquipment(tenant, equipmentId, dateStr) {
   });
 }
 
-module.exports = { list, findOne, create, update, patchStatus, softDelete, getEvents, createEvent, deleteEvent, getTitlesForEquipment };
+module.exports = { list, findOne, create, update, patchStatus, softDelete, getEvents, createEvent, updateEvent, deleteEvent, getTitlesForEquipment };

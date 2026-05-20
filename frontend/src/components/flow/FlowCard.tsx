@@ -1,23 +1,30 @@
 'use client';
 
 import { Card, Typography } from 'antd';
-import GoJsLicensePlaceholder from './GoJsLicensePlaceholder';
+import EmptyDiagramPlaceholder from './EmptyDiagramPlaceholder';
 
 const { Text } = Typography;
 
 interface Props {
   id: number;
   name: string;
-  flowData: string | null;
+  svgCache?: string | null;
   onClick: () => void;
 }
 
 /**
- * One flow card with thumbnail + name. Today the thumbnail is the
- * GoJsLicensePlaceholder; when Plan B lands the same slot renders a
- * read-only GoJS diagram via .makeSvg().
+ * One flow card with thumbnail + name. When the backend has a cached SVG
+ * (captured on each explicit save by the drawio editor — see §11-S6) we
+ * render it inline via `dangerouslySetInnerHTML`; otherwise the empty
+ * placeholder ships.
+ *
+ * The SVG payload is server-trusted (validated in admin-flow-designs.service
+ * to start with `<svg` and capped at 500KB) so inline injection is safe;
+ * we additionally constrain the viewport with width/height styles on the
+ * wrapper so an oversized export can't break card layout.
  */
-export default function FlowCard({ name, flowData, onClick }: Props) {
+export default function FlowCard({ name, svgCache, onClick }: Props) {
+  const hasSvg = typeof svgCache === 'string' && svgCache.trimStart().startsWith('<svg');
   return (
     <Card
       hoverable
@@ -30,12 +37,29 @@ export default function FlowCard({ name, flowData, onClick }: Props) {
       <Text style={{ display: 'block', textAlign: 'center', fontSize: 14, marginBottom: 8 }}>
         {name}
       </Text>
-      {/* The placeholder ignores flowData; Plan B's <FlowThumbnailCanvas/> will use it. */}
-      <GoJsLicensePlaceholder compact height={200} />
-      {flowData && (
-        <Text type="secondary" style={{ display: 'block', textAlign: 'center', fontSize: 10, marginTop: 4 }}>
-          {(() => { try { const p = JSON.parse(flowData); return `${p?.nodeDataArray?.length ?? 0} nodes`; } catch { return ''; } })()}
-        </Text>
+      {hasSvg ? (
+        <div
+          data-testid="flow-card-thumbnail"
+          style={{
+            width: '100%',
+            height: 200,
+            background: '#fff',
+            border: '1px solid #f0f0f0',
+            borderRadius: 4,
+            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          dangerouslySetInnerHTML={{
+            __html: svgCache!.replace(
+              /<svg([^>]*)>/i,
+              '<svg$1 style="max-width:100%;max-height:100%;width:auto;height:auto;display:block;">',
+            ),
+          }}
+        />
+      ) : (
+        <EmptyDiagramPlaceholder compact height={200} />
       )}
     </Card>
   );

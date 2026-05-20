@@ -12,7 +12,8 @@ import { App, Alert, Button, Card, Input, Space, Typography } from 'antd';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useTranslations } from 'next-intl';
+import { useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { brand } from '../../../lib/assets';
@@ -20,10 +21,12 @@ import { apiClient, toApiError } from '../../../lib/api-client';
 import { useLogin } from '../../../lib/api/auth';
 import type { MeResponse } from '../../../lib/api/types';
 import { PublicShell } from '../../../components/layout/PublicShell';
+import { PublicLocaleSwitcher } from '../../../components/layout/PublicLocaleSwitcher';
 
 const { Title, Text } = Typography;
 
 function ResendConfirmLink({ email }: { email: string }) {
+  const t = useTranslations('texts');
   const { message } = App.useApp();
   const [sent, setSent] = useState(false);
 
@@ -31,13 +34,13 @@ function ResendConfirmLink({ email }: { email: string }) {
     try {
       await apiClient.post('/auth/confirm/resend', { email });
       setSent(true);
-      message.success('Confirmation email resent. Check your inbox.');
+      message.success(t('confirmation_resent'));
     } catch {
-      message.error('Failed to resend. Try again later.');
+      message.error(t('confirmation_resend_failed'));
     }
   };
 
-  if (sent) return <span style={{ color: '#52c41a' }}>Sent!</span>;
+  if (sent) return <span style={{ color: '#52c41a' }}>{t('confirmation_resent_short')}</span>;
   return (
     <button
       type="button"
@@ -45,16 +48,12 @@ function ResendConfirmLink({ email }: { email: string }) {
       style={{ background: 'none', border: 'none', color: '#1677ff', cursor: 'pointer', padding: 0, fontSize: 'inherit' }}
     >
       <MailOutlined style={{ marginRight: 4 }} />
-      Resend confirmation email
+      {t('resend_confirmation_email')}
     </button>
   );
 }
 
-const loginSchema = z.object({
-  email: z.string().email({ message: 'Enter a valid email' }),
-  password: z.string().min(1, { message: 'Password is required' }),
-});
-type LoginValues = z.infer<typeof loginSchema>;
+type LoginValues = { email: string; password: string };
 
 export default function LoginPage() {
   const router = useRouter();
@@ -64,6 +63,18 @@ export default function LoginPage() {
   const { message } = App.useApp();
   const [submitting, setSubmitting] = useState(false);
   const [unconfirmedEmail, setUnconfirmedEmail] = useState('');
+  const t = useTranslations('texts');
+
+  // Build the Zod schema with translated error messages. Memoising on
+  // `t` keeps the resolver stable until the locale (and thus `t`) changes.
+  const loginSchema = useMemo(
+    () =>
+      z.object({
+        email: z.string().email({ message: t('validation_email_invalid') }),
+        password: z.string().min(1, { message: t('validation_password_required') }),
+      }),
+    [t],
+  );
 
   const { control, handleSubmit, formState: { errors } } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -76,14 +87,14 @@ export default function LoginPage() {
     try {
       await login.mutateAsync(values);
       const { data: me } = await apiClient.get<MeResponse>('/me');
-      message.success('Signed in.');
+      message.success(t('signed_in'));
       router.push(me.isAdmin ? '/admin/dashboard' : next);
     } catch (err) {
       const e = toApiError(err);
       if (e.status === 403 && e.message === 'account_not_confirmed') {
         setUnconfirmedEmail(values.email);
       } else {
-        message.error(e.status === 401 ? 'Invalid email or password.' : e.message);
+        message.error(e.status === 401 ? t('invalid_email_or_password') : e.message);
       }
     } finally {
       setSubmitting(false);
@@ -92,6 +103,9 @@ export default function LoginPage() {
 
   return (
     <PublicShell minimal>
+      {/* Floating EN/SV switch — fixed top-right of the viewport so it
+          doesn't compete with the centred card for space. */}
+      <PublicLocaleSwitcher />
       <main
         style={{
           minHeight: 'calc(100vh - 64px - 90px)',
@@ -108,7 +122,7 @@ export default function LoginPage() {
         >
           <Link
             href="/"
-            aria-label="Back to home"
+            aria-label={t('back')}
             style={{
               color: 'rgba(0,0,0,0.45)',
               fontSize: 13,
@@ -118,7 +132,7 @@ export default function LoginPage() {
               marginBottom: 16,
             }}
           >
-            <ArrowLeftOutlined /> Back
+            <ArrowLeftOutlined /> {t('back')}
           </Link>
 
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
@@ -131,7 +145,7 @@ export default function LoginPage() {
               style={{ height: 48, width: 'auto' }}
             />
             <Title level={4} style={{ marginTop: 16, marginBottom: 4, fontWeight: 500 }}>
-              Sign in to your account
+              {t('sign_in_to_your_account')}
             </Title>
           </div>
 
@@ -141,10 +155,10 @@ export default function LoginPage() {
               icon={<WarningOutlined />}
               showIcon
               style={{ marginBottom: 16 }}
-              message="Your account is not yet confirmed."
+              message={t('account_not_confirmed_title')}
               description={
                 <>
-                  Check your email for the confirmation link.{' '}
+                  {t('account_not_confirmed_body')}{' '}
                   <ResendConfirmLink email={unconfirmedEmail} />
                 </>
               }
@@ -155,7 +169,7 @@ export default function LoginPage() {
             <Space direction="vertical" size="middle" style={{ width: '100%' }}>
               <div>
                 <label htmlFor="email" style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500 }}>
-                  Email
+                  {t('email')}
                 </label>
                 <Controller
                   control={control}
@@ -169,7 +183,7 @@ export default function LoginPage() {
                       autoComplete="email"
                       autoFocus
                       prefix={<UserOutlined style={{ color: 'rgba(0,0,0,0.25)' }} />}
-                      placeholder="you@company.com"
+                      placeholder={t('email_placeholder')}
                       status={errors.email ? 'error' : ''}
                       aria-invalid={Boolean(errors.email)}
                       aria-describedby={errors.email ? 'email-error' : undefined}
@@ -185,7 +199,7 @@ export default function LoginPage() {
 
               <div>
                 <label htmlFor="password" style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 500 }}>
-                  Password
+                  {t('password')}
                 </label>
                 <Controller
                   control={control}
@@ -211,13 +225,13 @@ export default function LoginPage() {
                 )}
                 <div style={{ textAlign: 'right', marginTop: 6 }}>
                   <Link href="/password/reset" style={{ fontSize: 12 }}>
-                    Forgot your password?
+                    {t('forgot_your_password')}
                   </Link>
                 </div>
               </div>
 
               <Button type="primary" size="large" htmlType="submit" loading={submitting} block>
-                Sign in
+                {t('sign_in')}
               </Button>
             </Space>
           </form>
@@ -226,25 +240,10 @@ export default function LoginPage() {
             type="secondary"
             style={{ display: 'block', textAlign: 'center', marginTop: 24, fontSize: 12 }}
           >
-            Need an account? Email <a href="mailto:info@fpanalyzer.se">info@fpanalyzer.se</a>
+            {t('need_an_account')} <a href="mailto:info@fpanalyzer.se">info@fpanalyzer.se</a>
           </Text>
 
-          <div
-            style={{
-              marginTop: 16,
-              padding: 12,
-              background: '#f5f7f9',
-              borderRadius: 6,
-              fontSize: 11,
-              color: '#666',
-            }}
-          >
-            <strong>Dev credentials:</strong>
-            <ul style={{ margin: '4px 0 0', paddingLeft: 16 }}>
-              <li><code>user1@gmail.com</code> / <code>password123</code> — Administrator</li>
-              <li><code>user2@gmail.com</code> / <code>password123</code> — Company (demo tenant)</li>
-            </ul>
-          </div>
+          {/* Dev credentials hint block removed per operator request. */}
         </Card>
       </main>
     </PublicShell>

@@ -1,38 +1,24 @@
 'use client';
 
-import { App, Button, DatePicker, Form, Input, InputNumber, Modal, Select, Table, Typography } from 'antd';
+import { App, Button, Modal, Select, Table, Typography } from 'antd';
 import { EditOutlined, FileExcelOutlined, PaperClipOutlined } from '@ant-design/icons';
-import dayjs, { type Dayjs } from 'dayjs';
-import { useEffect, useState } from 'react';
+import dayjs from 'dayjs';
+import { useState } from 'react';
 import { useMe } from '../../../../../lib/api/auth';
 import {
   useScrapList,
   useUpdateScrap,
   type ScrapRow,
-  type UpdateScrapInput,
 } from '../../../../../lib/api/admin-results';
 import { DateRangeStrip } from '../../../../../components/result/DateRangeStrip';
 import {
-  usePartsForSelect,
-  useReasonTypes,
-  useReasonsForType,
-} from '../../../../../components/result/EditModalHooks';
-import { WorkShiftDualSource } from '../../../../../components/result/WorkShiftDualSource';
+  ScrapDataForm,
+  scrapFormToInput,
+  type ScrapFormShape,
+} from '../../../../../components/result/ScrapDataForm';
 import { toApiError } from '../../../../../lib/api-client';
 
 const { Title, Text } = Typography;
-
-interface ScrapFormShape {
-  partId?: number;
-  workShiftId?: number;
-  workShiftName?: string;
-  scrapTypeId?: number;
-  reasonId?: number;
-  orderNo?: string;
-  quantity?: number;
-  comment?: string;
-  date?: Dayjs | null;
-}
 
 function todayYMD(): string {
   const d = new Date();
@@ -62,83 +48,34 @@ export default function ScrapPage() {
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
   const [editing, setEditing] = useState<ScrapRow | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [form] = Form.useForm<ScrapFormShape>();
 
   const { data, isFetching } = useScrapList(tenantId, { page, perPage, from, to });
-  const { data: parts } = usePartsForSelect(tenantId);
-  const { data: scrapTypes } = useReasonTypes(tenantId, 'ScrapReason');
   const updateMut = useUpdateScrap(tenantId);
 
-  // Watch the cascading parent to drive the reason Select query.
-  const watchedScrapTypeId = Form.useWatch('scrapTypeId', form);
-  const { data: scrapReasons, isLoading: reasonsLoading } = useReasonsForType(
-    tenantId,
-    'scrap-reasons',
-    watchedScrapTypeId ?? null,
-  );
+  const initialValues: Partial<ScrapFormShape> | undefined = editing ? {
+    partId: editing.partId ?? undefined,
+    workShiftId: editing.workShiftId && editing.workShiftId > 0 ? editing.workShiftId : undefined,
+    workShiftName: editing.workShiftId && editing.workShiftId > 0 ? undefined : editing.shiftName ?? undefined,
+    scrapTypeId: editing.scrapTypeId ?? undefined,
+    reasonId: editing.reasonId ?? undefined,
+    orderNo: editing.orderNo ?? '',
+    quantity: editing.quantity ?? undefined,
+    comment: editing.comment ?? '',
+    date: editing.selectedDate ? dayjs(editing.selectedDate) : null,
+  } : undefined;
 
-  // Pre-populate the form once the edit target is set. Reasons cascade hook
-  // re-fires after scrapTypeId lands so the child Select gets options and
-  // can display the pre-selected reason as a label, not a numeric id.
-  useEffect(() => {
-    if (!editing) return;
-    form.setFieldsValue({
-      partId: editing.partId ?? undefined,
-      workShiftId: editing.workShiftId && editing.workShiftId > 0 ? editing.workShiftId : undefined,
-      workShiftName: editing.workShiftId && editing.workShiftId > 0 ? undefined : editing.shiftName ?? undefined,
-      scrapTypeId: editing.scrapTypeId ?? undefined,
-      reasonId: editing.reasonId ?? undefined,
-      orderNo: editing.orderNo ?? '',
-      quantity: editing.quantity ?? undefined,
-      comment: editing.comment ?? '',
-      date: editing.selectedDate ? dayjs(editing.selectedDate) : null,
-    });
-  }, [editing, form]);
-
-  const closeModal = () => {
-    setEditing(null);
-    form.resetFields();
-  };
-
-  const onSubmit = async () => {
+  async function handleSubmit(values: ScrapFormShape) {
     try {
-      const values = await form.validateFields();
-      setSubmitting(true);
-      const input: UpdateScrapInput = {
-        partId: values.partId,
-        scrapTypeId: values.scrapTypeId,
-        reasonId: values.reasonId,
-        orderNo: values.orderNo,
-        quantity: values.quantity,
-        comment: values.comment,
-        date: values.date ? values.date.format('YYYY-MM-DD') : undefined,
-      };
-      if (values.workShiftId !== undefined) input.workShiftId = values.workShiftId;
-      else if (values.workShiftName) input.workShiftName = values.workShiftName;
-      await updateMut.mutateAsync({ id: editing!.id, input });
+      await updateMut.mutateAsync({ id: editing!.id, input: scrapFormToInput(values) });
       message.success('Scrap row updated.');
-      closeModal();
+      setEditing(null);
     } catch (err) {
-      if (err && typeof err === 'object' && 'errorFields' in err) return;
       message.error(toApiError(err).message);
-    } finally {
-      setSubmitting(false);
     }
-  };
+  }
 
   if (!me) return null;
   if (!tenantId) return <Text type="secondary">Pick a tenant first.</Text>;
-
-  function handleRangeChange(f: string, t: string) {
-    setFrom(f);
-    setTo(t);
-    setPage(1);
-  }
-
-  const partOptions = (parts ?? []).map((p) => ({ value: p.id, label: p.partNo ? `${p.partNo} — ${p.name}` : p.name }));
-  const scrapTypeOptions = (scrapTypes ?? []).map((t) => ({ value: t.id, label: t.name ?? `#${t.id}` }));
-  const reasonOptions = (scrapReasons ?? []).map((r) => ({ value: r.id, label: r.name ?? `#${r.id}` }));
 
   const PER_PAGE_OPTIONS = [
     { value: 10, label: 'Show 10 entries' },
@@ -166,26 +103,15 @@ export default function ScrapPage() {
       title: 'Bilaga',
       dataIndex: 'attachment',
       width: 80,
-      render: (v: unknown) =>
-        v ? (
-          <a href={String(v)} target="_blank" rel="noreferrer">
-            <PaperClipOutlined />
-          </a>
-        ) : (
-          <Text type="secondary">—</Text>
-        ),
+      render: (v: unknown) => v ? (
+        <a href={String(v)} target="_blank" rel="noreferrer"><PaperClipOutlined /></a>
+      ) : <Text type="secondary">—</Text>,
     },
     {
       title: 'Actions',
       width: 80,
       render: (_: unknown, row: ScrapRow) => (
-        <Button
-          type="text"
-          size="small"
-          icon={<EditOutlined style={{ color: '#01b9d0' }} />}
-          title="Edit"
-          onClick={() => setEditing(row)}
-        />
+        <Button type="text" size="small" icon={<EditOutlined style={{ color: '#01b9d0' }} />} title="Edit" onClick={() => setEditing(row)} />
       ),
     },
   ];
@@ -193,92 +119,45 @@ export default function ScrapPage() {
   return (
     <div>
       <Title level={4} style={{ margin: '0 0 12px' }}>Registrerade avvikelser</Title>
-
-      <DateRangeStrip value={{ from, to }} onChange={handleRangeChange} />
-
+      <DateRangeStrip value={{ from, to }} onChange={(f, t) => { setFrom(f); setTo(t); setPage(1); }} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 16, marginBottom: 8 }}>
-        <Select
-          value={perPage}
-          onChange={(v) => { setPerPage(v); setPage(1); }}
-          options={PER_PAGE_OPTIONS}
-          style={{ width: 160 }}
-          size="small"
-        />
+        <Select value={perPage} onChange={(v) => { setPerPage(v); setPage(1); }} options={PER_PAGE_OPTIONS} style={{ width: 160 }} size="small" />
         <div style={{ flex: 1 }} />
-        <Button
-          icon={<FileExcelOutlined />}
-          style={{ background: '#16a34a', borderColor: '#16a34a', color: '#fff' }}
-          size="small"
-          onClick={() => message.info('Export not yet implemented')}
-        >
-          Excel
-        </Button>
+        <Button icon={<FileExcelOutlined />} style={{ background: '#16a34a', borderColor: '#16a34a', color: '#fff' }} size="small"
+          onClick={() => message.info('Export not yet implemented')}>Excel</Button>
       </div>
-
       <Table<ScrapRow>
-        rowKey="id"
-        loading={isFetching}
-        dataSource={data?.data ?? []}
-        columns={columns}
-        scroll={{ x: 'max-content' }}
-        size="small"
+        rowKey="id" loading={isFetching} dataSource={data?.data ?? []} columns={columns}
+        scroll={{ x: 'max-content' }} size="small"
         pagination={{
           current: page,
           pageSize: perPage === 9999 ? (data?.total ?? 10) : perPage,
-          total: data?.total ?? 0,
-          showSizeChanger: false,
+          total: data?.total ?? 0, showSizeChanger: false,
           showTotal: (total) => `Total ${total} records`,
           onChange: (p) => setPage(p),
         }}
       />
-
       <Modal
         open={editing !== null}
         title={`Edit scrap row #${editing?.id ?? ''}`}
-        onCancel={closeModal}
-        onOk={onSubmit}
-        okText="Save"
-        confirmLoading={submitting}
-        width={560}
-        destroyOnClose
-        maskClosable={false}
+        onCancel={() => setEditing(null)}
+        footer={null}
+        width={560} destroyOnClose maskClosable={false}
       >
-        <Form<ScrapFormShape> form={form} layout="vertical">
-          <Form.Item name="partId" label="Part">
-            <Select options={partOptions} showSearch optionFilterProp="label" allowClear placeholder="Pick a part" />
-          </Form.Item>
-          <WorkShiftDualSource
+        {editing && (
+          <ScrapDataForm
             tenantId={tenantId}
-            date={editing?.selectedDate ? String(editing.selectedDate).slice(0, 10) : null}
-            equipmentId={editing?.equipmentId ?? null}
-            initiallyShowFallback={
+            equipmentId={editing.equipmentId}
+            selectedDate={editing.selectedDate ? String(editing.selectedDate).slice(0, 10) : null}
+            initialValues={initialValues}
+            initiallyShowShiftFallback={
               !!(editing && (!editing.workShiftId || editing.workShiftId === 0) && editing.shiftName)
             }
+            onSubmit={handleSubmit}
+            onCancel={() => setEditing(null)}
+            isLoading={updateMut.isPending}
           />
-          <Form.Item name="scrapTypeId" label="Scrap type" rules={[{ required: true, message: 'Scrap type is required' }]}>
-            <Select
-              options={scrapTypeOptions}
-              showSearch
-              optionFilterProp="label"
-              placeholder="Pick a scrap type"
-              onChange={() => form.setFieldValue('reasonId', undefined)}
-            />
-          </Form.Item>
-          <Form.Item name="reasonId" label="Scrap reason" rules={[{ required: true, message: 'Reason is required' }]}>
-            <Select
-              options={reasonOptions}
-              loading={reasonsLoading}
-              disabled={!watchedScrapTypeId || reasonsLoading}
-              showSearch
-              optionFilterProp="label"
-              placeholder={watchedScrapTypeId ? (reasonOptions.length === 0 && !reasonsLoading ? 'No reasons configured for this type' : 'Pick a reason') : 'Pick a scrap type first'}
-            />
-          </Form.Item>
-          <Form.Item name="orderNo" label="Order #"><Input maxLength={255} /></Form.Item>
-          <Form.Item name="quantity" label="Quantity"><InputNumber min={0} style={{ width: '100%' }} /></Form.Item>
-          <Form.Item name="comment" label="Comment"><Input.TextArea rows={3} maxLength={255} /></Form.Item>
-          <Form.Item name="date" label="Date"><DatePicker style={{ width: '100%' }} /></Form.Item>
-        </Form>
+        )}
       </Modal>
     </div>
   );

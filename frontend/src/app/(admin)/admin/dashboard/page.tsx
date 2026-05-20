@@ -14,6 +14,7 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 dayjs.extend(relativeTime);
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { useMe } from '../../../../lib/api/auth';
 import { useRecentHistory, type HistoryRow } from '../../../../lib/api/recent-history';
@@ -108,7 +109,7 @@ function historyIcon(row: HistoryRow): React.ReactNode {
 }
 
 function RecentHistoryFeed() {
-  const { data, isLoading, isError } = useRecentHistory({ perPage: 50 });
+  const { data, isLoading, isError } = useRecentHistory({ limit: 50 });
   if (isLoading) {
     return (
       <Card style={{ borderRadius: 8 }}>
@@ -119,13 +120,13 @@ function RecentHistoryFeed() {
   if (isError || !data) {
     return <Empty description="Could not load recent history." />;
   }
-  if (data.data.length === 0) {
+  if (data.items.length === 0) {
     return <Empty description="No activity yet." />;
   }
   return (
     <Card title={<span style={{ fontSize: 18, fontWeight: 600 }}>Recent History</span>} style={{ borderRadius: 8 }} bodyStyle={{ padding: 0 }}>
       <List
-        dataSource={data.data}
+        dataSource={data.items}
         renderItem={(row) => (
           <List.Item style={{ padding: '14px 24px' }}>
             <List.Item.Meta
@@ -141,7 +142,7 @@ function RecentHistoryFeed() {
               }
               description={
                 <span style={{ fontSize: 11, color: '#999' }}>
-                  {row.createdAt ? dayjs(row.createdAt).fromNow() : ''} · {row.typeName}
+                  {row.createdAt ? dayjs(row.createdAt).fromNow() : ''} · {row.entityType}
                 </span>
               }
             />
@@ -157,8 +158,13 @@ export default function AdminDashboardPage() {
   const [from, setFrom] = useState<Dayjs>(dayjs().subtract(90, 'day').startOf('day'));
   const [to,   setTo]   = useState<Dayjs>(dayjs().endOf('day'));
 
+  // activeTenantId: for Company users = their own user.id;
+  //                 for sub-Users = their companyId (the Company user's id);
+  //                 for Administrators = the X-Tenant-Id header value (Company user id).
+  // `tenants[]` is a one-row synthetic array — see MIGRATION_NOTES §13.
   const tenant = me?.tenants.find((t) => t.id === me.activeTenantId) ?? me?.tenants[0];
   const data = mockSeries(from, to);
+  const t = useTranslations('texts');
 
   // Super Admin gets the Recent History feed (matches legacy "Adminpanelen" screen).
   // Tenant admin gets the KPI + analyzer dashboard.
@@ -166,10 +172,10 @@ export default function AdminDashboardPage() {
     return (
       <div>
         <Title level={4} style={{ margin: 0, fontWeight: 500 }}>
-          Welcome back <span style={{ fontWeight: 700 }}>{me.name}</span>
+          {t('welcome_back')} <span style={{ fontWeight: 700 }}>{me.name}</span>
         </Title>
         <Text type="secondary" style={{ fontSize: 12 }}>
-          Platform-wide activity feed · last 50 events
+          {t('platform_activity_feed')}
         </Text>
         <div style={{ marginTop: 20 }}>
           <RecentHistoryFeed />
@@ -181,28 +187,28 @@ export default function AdminDashboardPage() {
   return (
     <div>
       <Title level={4} style={{ margin: 0, fontWeight: 500 }}>
-        Welcome back <span style={{ fontWeight: 700 }}>{tenant?.name ?? me?.name ?? '…'}</span>
+        {t('welcome_back')} <span style={{ fontWeight: 700 }}>{tenant?.name ?? me?.name ?? '…'}</span>
       </Title>
       <Text type="secondary" style={{ fontSize: 12 }}>
-        Administrative overview {tenant ? `· ${tenant.timezone}` : ''}
+        {t('administrative_overview')} {tenant ? `· ${tenant.timezone}` : ''}
       </Text>
 
       {/* ----- KPI cards ----- */}
       <Row gutter={[16, 16]} style={{ marginTop: 20 }}>
         <Col xs={24} sm={12} lg={8}>
           <KpiCard
-            title="Flow Monitor"
+            title={t('flow_monitor')}
             value={KPIS.flowMonitor}
             icon={<DesktopOutlined />}
             color="#01b9d0"
-            href="/admin/flow-monitor"
+            href="/admin/monitor"
           />
         </Col>
         <Col xs={24} sm={12} lg={8}>
           <KpiCard
-            title="Production data"
+            title={t('production_data')}
             value={KPIS.productionEntries}
-            unit="entries"
+            unit={t('entries')}
             icon={<PlayCircleOutlined />}
             color="#f39c12"
             href="/admin/results/production"
@@ -210,9 +216,9 @@ export default function AdminDashboardPage() {
         </Col>
         <Col xs={24} sm={12} lg={8}>
           <KpiCard
-            title="Stop data"
+            title={t('stop_data')}
             value={KPIS.stopEntries}
-            unit="entries"
+            unit={t('entries')}
             icon={<PauseCircleOutlined />}
             color="#dd4b39"
             href="/admin/results/stop"
@@ -222,7 +228,7 @@ export default function AdminDashboardPage() {
 
       {/* ----- Flow Analyzer ----- */}
       <Card
-        title={<span style={{ fontSize: 18, fontWeight: 600 }}>Flow Analyzer</span>}
+        title={<span style={{ fontSize: 18, fontWeight: 600 }}>{t('flow_analyzer')}</span>}
         style={{ marginTop: 24, borderRadius: 8 }}
         bodyStyle={{ padding: 0 }}
       >
@@ -235,7 +241,7 @@ export default function AdminDashboardPage() {
             <Col xs={24} md={8} style={{ borderRight: '1px solid #eef0f3', padding: 24 }}>
               <Space direction="vertical" size="large" style={{ width: '100%' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ width: 36, fontSize: 13, color: '#666' }}>From</span>
+                  <span style={{ width: 36, fontSize: 13, color: '#666' }}>{t('from')}</span>
                   <DatePicker
                     value={from}
                     onChange={(v) => v && setFrom(v.startOf('day'))}
@@ -245,7 +251,7 @@ export default function AdminDashboardPage() {
                   />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ width: 36, fontSize: 13, color: '#666' }}>To</span>
+                  <span style={{ width: 36, fontSize: 13, color: '#666' }}>{t('to')}</span>
                   <DatePicker
                     value={to}
                     onChange={(v) => v && setTo(v.endOf('day'))}
@@ -256,9 +262,9 @@ export default function AdminDashboardPage() {
                 </div>
 
                 <div style={{ marginTop: 12, borderTop: '1px solid #eef0f3', paddingTop: 16 }}>
-                  <Statistic title="Total Production" value={ANALYTICS.totalProduction} valueStyle={{ color: '#01b9d0', fontSize: 22 }} />
-                  <Statistic title="Total Scrap Data" value={ANALYTICS.totalScrap} valueStyle={{ color: '#f39c12', fontSize: 22 }} style={{ marginTop: 8 }} />
-                  <Statistic title="Total Stop Times" value={ANALYTICS.totalStopMinutes} suffix="mins" valueStyle={{ color: '#dd4b39', fontSize: 22 }} style={{ marginTop: 8 }} />
+                  <Statistic title={t('total_production')} value={ANALYTICS.totalProduction} valueStyle={{ color: '#01b9d0', fontSize: 22 }} />
+                  <Statistic title={t('total_scrap_data')} value={ANALYTICS.totalScrap} valueStyle={{ color: '#f39c12', fontSize: 22 }} style={{ marginTop: 8 }} />
+                  <Statistic title={t('total_stop_times')} value={ANALYTICS.totalStopMinutes} suffix={t('mins')} valueStyle={{ color: '#dd4b39', fontSize: 22 }} style={{ marginTop: 8 }} />
                 </div>
               </Space>
             </Col>

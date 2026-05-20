@@ -50,7 +50,7 @@ const adminMachinesRoutes = require('./routes/admin-machines.routes');
 const adminMachineFilesRoutes = require('./routes/admin-machine-files.routes');
 const adminMachineProgrammesRoutes = require('./routes/admin-machine-programmes.routes');
 const adminWorkstationsRoutes = require('./routes/admin-workstations.routes');
-const resultsRoutes = require('./routes/results.routes');
+const myresultRoutes = require('./routes/myresult.routes');
 const unitsRoutes = require('./routes/units.routes');
 
 const app = express();
@@ -102,6 +102,8 @@ const swaggerSpec = swaggerJsdoc({
   apis: ['./src/routes/*.js'],
 });
 
+// Raw OpenAPI JSON (handy for client codegen / smoke verification).
+app.get('/api/docs.json', (_req, res) => res.json(swaggerSpec));
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   swaggerOptions: { persistAuthorization: true, withCredentials: true, tagsSorter: 'alpha', operationsSorter: 'alpha' },
   customSiteTitle: 'FP Analyzer API',
@@ -115,6 +117,19 @@ app.use('/uploads', express.static(localDir));
 // Public routes — no auth required
 app.use('/api/v1/health', healthRoutes);
 app.use('/api/v1/auth', authRoutes);
+// Public mobile auth flows (OTP password-reset + demo signup). Sits
+// BEFORE the JWT middleware so unauthenticated callers can reach the
+// forgot-password and signup endpoints.
+const mobileAuthRoutes = require('./routes/mobile-auth.routes');
+app.use('/api/v1/auth/mobile', mobileAuthRoutes);
+
+// Legacy IoT firmware shim — installV1 / saveStopDataV1 accept either
+// a JWT or the legacy `company_email_id` body field. Mounted BEFORE the
+// global JWT middleware so unauthenticated field units can reach it.
+// All OTHER /api/v1/machine/* endpoints live on the JWT-protected router
+// below (mobile-machine.routes.js).
+const mobileMachineIotRoutes = require('./routes/mobile-machine-iot.routes');
+app.use('/api/v1/machine', mobileMachineIotRoutes);
 
 // Apply JWT auth middleware for all subsequent routes
 app.use(authMiddleware);
@@ -155,10 +170,21 @@ app.use('/api/v1/admin/machines', adminMachinesRoutes);
 app.use('/api/v1/admin/machine-files', adminMachineFilesRoutes);
 app.use('/api/v1/admin/machine-programmes', adminMachineProgrammesRoutes);
 app.use('/api/v1/admin/workstations', adminWorkstationsRoutes);
-// User-scoped result endpoints (E1): list & PATCH the caller's own rows only.
-app.use('/api/v1/results', resultsRoutes);
+// "My Result" — operator-scoped tables (Production / Scrap / Stop /
+// Warning / Unregistered). Ports the legacy /myresult Laravel page.
+app.use('/api/v1/myresult', myresultRoutes);
 // Operator units page (E2): list units, list unregistered buckets, batch register stops.
 app.use('/api/v1/units', unitsRoutes);
+
+// Mobile / IoT legacy-compatible aliases (Phase A). These wrap the existing
+// admin services with the legacy `{success, msg, data}` envelope and the
+// legacy `/api/v1/user/*` + `/api/v1/machine/*` paths so old mobile builds
+// can speak to the new backend without a client release. All routes
+// require JWT (the standard /auth/login flow).
+const mobileUserRoutes = require('./routes/mobile-user.routes');
+const mobileMachineRoutes = require('./routes/mobile-machine.routes');
+app.use('/api/v1/user', mobileUserRoutes);
+app.use('/api/v1/machine', mobileMachineRoutes);
 
 // 404
 app.use((req, res) => {

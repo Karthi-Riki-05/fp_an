@@ -5,7 +5,9 @@ const fileStorage = require('./file-storage.service');
 const { withTenant } = require('../prisma/client');
 const { BadRequestError, ConflictError, NotFoundError } = require('../errors');
 
-const SELECT = `id, name, status, flow_data AS "flowData", created_at AS "createdAt", updated_at AS "updatedAt"`;
+const SELECT = `id, name, status, flow_data AS "flowData",
+  flow_format AS "flowFormat", svg_cache AS "svgCache",
+  created_at AS "createdAt", updated_at AS "updatedAt"`;
 
 /**
  * Returns true if a flow's serialized GoJS `flow_data` JSON contains a node
@@ -319,16 +321,33 @@ async function listWithData(tenant) {
  */
 async function getMonitorStatus(tenant, id) {
   const flow = await getDiagram(tenant, id);
-  let nodes = [];
+  let equipmentIds = [];
   if (flow.flowData) {
-    try {
-      const parsed = JSON.parse(flow.flowData);
-      if (Array.isArray(parsed?.nodeDataArray)) nodes = parsed.nodeDataArray;
-    } catch { /* malformed flow — treat as empty */ }
+    const trimmed = flow.flowData.trimStart();
+    if (trimmed.startsWith('<')) {
+      // drawio XML — Designer's equipment drops attach the FK to a
+      // `equipment-id` attribute on the UserObject (see fp-embed.js).
+      const re = /equipment-id="(\d+)"/g;
+      const ids = new Set();
+      let match;
+      while ((match = re.exec(trimmed)) !== null) {
+        const n = Number(match[1]);
+        if (Number.isInteger(n) && n > 0) ids.add(n);
+      }
+      equipmentIds = [...ids];
+    } else if (trimmed.startsWith('{')) {
+      // Legacy GoJS — kept for read-back on rows that haven't been
+      // re-saved since the drawio migration. Drops out of the parse
+      // path the moment someone saves once.
+      try {
+        const parsed = JSON.parse(flow.flowData);
+        const nodes = Array.isArray(parsed?.nodeDataArray) ? parsed.nodeDataArray : [];
+        equipmentIds = [...new Set(nodes
+          .map((n) => Number(n?.key))
+          .filter((k) => Number.isInteger(k) && k > 0))];
+      } catch { /* malformed legacy flow — treat as empty */ }
+    }
   }
-  const equipmentIds = [...new Set(nodes
-    .map((n) => Number(n?.key))
-    .filter((k) => Number.isInteger(k) && k > 0))];
   if (equipmentIds.length === 0) return [];
 
   return withTenant(tenant, async (tx) => {
@@ -382,6 +401,35 @@ function parseDateOnly(s, fallback) {
 }
 
 /**
+ * Parse the Analyzer filter query params into a normalised object.
+ * Shared by /analyzer-data and /line-chart so filters mean the same
+ * thing on both endpoints.
+ *
+ *   workShift         filter by work_shift_name (exact match — operator
+ *                     selects from the same list)
+ *   partId            filter by part_id (production / scrap)
+ *   orderNo           filter by order_no (ILIKE, partial)
+ *   includeExcluded   stop tab: when false, drop rows whose
+ *                     stop_category.is_active = false
+ *   showUnregistered  stop tab: when false, drop rows where
+ *                     reason = 0 (operator never picked a reason)
+ *   groupBy           production tab: 'Part' | 'Equipment' |
+ *                     'WorkShift' | 'Order'. Drives both the
+ *                     `analyzer-data` aggregation key and the
+ *                     `line-chart` series split.
+ */
+function parseAnalyzerFilters(q) {
+  return {
+    workShift:        q.workShift && String(q.workShift).trim() ? String(q.workShift).trim() : null,
+    partId:           q.partId !== undefined && q.partId !== '' && Number.isFinite(Number(q.partId)) ? Number(q.partId) : null,
+    orderNo:          q.orderNo && String(q.orderNo).trim() ? String(q.orderNo).trim() : null,
+    includeExcluded:  q.includeExcluded === '1' || q.includeExcluded === 'true' || q.includeExcluded === true,
+    showUnregistered: q.showUnregistered === '1' || q.showUnregistered === 'true' || q.showUnregistered === true,
+    groupBy:          (['Part', 'Equipment', 'WorkShift', 'Order'].includes(q.groupBy)) ? q.groupBy : 'Part',
+  };
+}
+
+/**
  * Analyzer dashboard data. Aggregates production / scrap / stop per
  * equipment for the flow over a date range. Mirrors legacy
  * CompanyUserController::getFlowAnalyzer/getFlowData (`:1692+`).
@@ -391,58 +439,113 @@ async function getAnalyzerData(tenant, id, q = {}) {
   const startDate = parseDateOnly(q.startDate, today);
   const endDate   = parseDateOnly(q.endDate, today);
   const flowKey   = q.flowKey !== undefined && q.flowKey !== '' ? Number(q.flowKey) : null;
+  const f         = parseAnalyzerFilters(q);
 
   await findOne(tenant, id);
   return withTenant(tenant, async (tx) => {
-    // Production aggregated per equipment (flow_object_key).
-    const productionWhere = [`pd.flow_id = $1`, `pd.date BETWEEN $2::date AND $3::date`];
-    const productionParams = [id, startDate, endDate];
-    if (flowKey !== null) { productionParams.push(flowKey); productionWhere.push(`pd.flow_object_key = $${productionParams.length}`); }
-    const production = await tx.$queryRawUnsafe(
-      `SELECT pd.flow_object_key::int AS "equipmentId",
-              SUM(pd.part_qty)::int  AS "okQty",
-              SUM(pd.planned_qty)::int AS "plannedQty",
-              SUM(CASE WHEN pd.work_hours ~ '^[0-9]+$' THEN pd.work_hours::int ELSE 0 END)::int AS "workedHoursMin"
-         FROM production_data pd
-        WHERE ${productionWhere.join(' AND ')} AND pd.status = 1
-        GROUP BY pd.flow_object_key`,
-      ...productionParams,
-    );
-
-    // Stops aggregated per (equipment, reason).
-    const stopWhere = [`sd.flow_id = $1`, `sd.date BETWEEN $2::date AND $3::date`, `sd.deleted_at IS NULL`];
+    // ── Stops aggregated per (equipment, reason) with category info. ────
+    // includeExcluded=false → drop rows whose stop_category.is_active=false
+    // showUnregistered=false → drop rows where reason=0 (no operator pick)
+    const stopWhere  = [`sd.flow_id = $1`, `sd.date BETWEEN $2::date AND $3::date`, `sd.deleted_at IS NULL`];
     const stopParams = [id, startDate, endDate];
-    if (flowKey !== null) { stopParams.push(flowKey); stopWhere.push(`sd.flow_object_key = $${stopParams.length}`); }
+    const pushStop = (sql, val) => { stopParams.push(val); stopWhere.push(sql.replace('$?', `$${stopParams.length}`)); };
+    if (flowKey !== null)      pushStop(`sd.flow_object_key = $?`, flowKey);
+    if (f.workShift)           pushStop(`sd.work_shift_name = $?`, f.workShift);
+    if (f.partId !== null)     pushStop(`sd.part_id = $?`, f.partId);
+    if (f.orderNo)             pushStop(`sd.order_no ILIKE $?`, `%${f.orderNo}%`);
+    if (!f.showUnregistered)   stopWhere.push(`sd.reason > 0`);
+    if (!f.includeExcluded)    stopWhere.push(`(sc.is_active IS NULL OR sc.is_active = true)`);
     const stops = await tx.$queryRawUnsafe(
       `SELECT sd.flow_object_key::int AS "equipmentId",
               sd.reason::int         AS "stopReasonId",
               sr.name                AS "stopReasonName",
-              SUM(sd.quantity)::int  AS "count",
+              sr.type_id::int        AS "stopCategoryId",
+              sc.name                AS "stopCategoryName",
+              SUM(sd.quantity)::int                AS "count",
               SUM(sd.hours * 60 + sd.minutes)::int AS "totalMinutes"
          FROM stop_data sd
-         LEFT JOIN stop_reasons sr ON sr.id = sd.reason
+         LEFT JOIN stop_reasons  sr ON sr.id = sd.reason
+         LEFT JOIN stop_category sc ON sc.id = sr.type_id
         WHERE ${stopWhere.join(' AND ')}
-        GROUP BY sd.flow_object_key, sd.reason, sr.name
+        GROUP BY sd.flow_object_key, sd.reason, sr.name, sr.type_id, sc.name
         ORDER BY "totalMinutes" DESC NULLS LAST`,
       ...stopParams,
     );
 
-    // Scrap aggregated per (equipment, reason).
-    const scrapWhere = [`scd.flow_id = $1`, `scd.date BETWEEN $2::date AND $3::date`, `scd.deleted_at IS NULL`];
+    // ── Scraps aggregated per (equipment, reason) with category info. ───
+    const scrapWhere  = [`scd.flow_id = $1`, `scd.date BETWEEN $2::date AND $3::date`, `scd.deleted_at IS NULL`];
     const scrapParams = [id, startDate, endDate];
-    if (flowKey !== null) { scrapParams.push(flowKey); scrapWhere.push(`scd.flow_object_key = $${scrapParams.length}`); }
+    const pushScrap = (sql, val) => { scrapParams.push(val); scrapWhere.push(sql.replace('$?', `$${scrapParams.length}`)); };
+    if (flowKey !== null)  pushScrap(`scd.flow_object_key = $?`, flowKey);
+    if (f.workShift)       pushScrap(`scd.work_shift_name = $?`, f.workShift);
+    if (f.partId !== null) pushScrap(`scd.part_id = $?`, f.partId);
+    if (f.orderNo)         pushScrap(`scd.order_no ILIKE $?`, `%${f.orderNo}%`);
     const scraps = await tx.$queryRawUnsafe(
       `SELECT scd.flow_object_key::int AS "equipmentId",
               scd.reason::int         AS "scrapReasonId",
               scr.name                AS "scrapReasonName",
+              t.id::int               AS "scrapCategoryId",
+              t.name                  AS "scrapCategoryName",
               SUM(scd.quantity)::int  AS "totalQty",
               COUNT(*)::int           AS "count"
          FROM scrap_data scd
          LEFT JOIN scrap_reasons scr ON scr.id = scd.reason
+         LEFT JOIN types         t   ON t.id = scr.type_id AND t.entity = 'ScrapReason'
         WHERE ${scrapWhere.join(' AND ')}
-        GROUP BY scd.flow_object_key, scd.reason, scr.name
+        GROUP BY scd.flow_object_key, scd.reason, scr.name, t.id, t.name
         ORDER BY "totalQty" DESC NULLS LAST`,
       ...scrapParams,
+    );
+
+    // ── Production aggregated per groupBy bucket. ───────────────────────
+    // groupBy=Part → (part_id, parts.name); Equipment → flow_object_key
+    // joined to equipment.name; WorkShift → work_shift_name; Order →
+    // order_no. The frontend renders one bar chart over the `label`s.
+    const prodWhere  = [`pd.flow_id = $1`, `pd.date BETWEEN $2::date AND $3::date`, `pd.status = 1`];
+    const prodParams = [id, startDate, endDate];
+    const pushProd = (sql, val) => { prodParams.push(val); prodWhere.push(sql.replace('$?', `$${prodParams.length}`)); };
+    if (flowKey !== null) pushProd(`pd.flow_object_key = $?`, flowKey);
+    if (f.workShift)      pushProd(`pd.work_shift_name = $?`, f.workShift);
+    if (f.partId !== null) pushProd(`pd.part_id = $?`, f.partId);
+    if (f.orderNo)        pushProd(`pd.order_no ILIKE $?`, `%${f.orderNo}%`);
+
+    let prodSelect, prodGroupBy, prodOrderBy, prodJoin = '';
+    switch (f.groupBy) {
+      case 'Equipment':
+        prodSelect  = `pd.flow_object_key::int AS "key", COALESCE(e.name, 'Equipment #' || pd.flow_object_key) AS label`;
+        prodJoin    = `LEFT JOIN equipment e ON e.id = pd.flow_object_key`;
+        prodGroupBy = `pd.flow_object_key, e.name`;
+        prodOrderBy = `label`;
+        break;
+      case 'WorkShift':
+        prodSelect  = `0::int AS "key", COALESCE(NULLIF(pd.work_shift_name, ''), '—') AS label`;
+        prodGroupBy = `pd.work_shift_name`;
+        prodOrderBy = `label`;
+        break;
+      case 'Order':
+        prodSelect  = `0::int AS "key", COALESCE(NULLIF(pd.order_no, ''), '—') AS label`;
+        prodGroupBy = `pd.order_no`;
+        prodOrderBy = `label`;
+        break;
+      case 'Part':
+      default:
+        prodSelect  = `pd.part_id::int AS "key", COALESCE(p.part_no || ' - ' || p.name, '—') AS label`;
+        prodJoin    = `LEFT JOIN parts p ON p.id = pd.part_id`;
+        prodGroupBy = `pd.part_id, p.part_no, p.name`;
+        prodOrderBy = `label`;
+        break;
+    }
+    const production = await tx.$queryRawUnsafe(
+      `SELECT ${prodSelect},
+              SUM(pd.part_qty)::int    AS "okQty",
+              SUM(pd.planned_qty)::int AS "plannedQty",
+              SUM(CASE WHEN pd.work_hours ~ '^[0-9]+$' THEN pd.work_hours::int ELSE 0 END)::int AS "workedHoursMin"
+         FROM production_data pd
+         ${prodJoin}
+        WHERE ${prodWhere.join(' AND ')}
+        GROUP BY ${prodGroupBy}
+        ORDER BY ${prodOrderBy}`,
+      ...prodParams,
     );
 
     return { production, stops, scraps, startDate, endDate, flowKey };
@@ -450,90 +553,113 @@ async function getAnalyzerData(tenant, id, q = {}) {
 }
 
 /**
- * HighCharts series data for a single metric over time. Mirrors legacy
- * CompanyUserController::getLineChart (`:1987-2087`). `type` ∈ scrap|production|stop.
+ * HighCharts series data for a metric over time. `type ∈ stop|scrap|production`.
+ *
+ * Returns the HighCharts-friendly shape the tabbed Analyzer renders directly:
+ *   { categories: ['YYYY-MM-DD', …], series: [{ name, data: [n, …] }] }
+ *
+ * - stop / scrap: one series per reason (matching the bar chart's bins),
+ *   data[i] = count on that date.
+ * - production: 1–N series depending on groupBy. Default groupBy=Part →
+ *   two series "OK parts qty" and "Planned Qty". groupBy=Equipment/
+ *   WorkShift/Order behave the same — single grouping dimension over time.
+ *
+ * Filters mirror /analyzer-data exactly (parseAnalyzerFilters).
  */
 async function getLineChart(tenant, id, q = {}) {
   const today = new Date().toISOString().slice(0, 10);
   const startDate = parseDateOnly(q.startDate, today);
   const endDate   = parseDateOnly(q.endDate, today);
-  const type      = q.type || 'stop';
+  const type      = ['stop', 'scrap', 'production'].includes(q.type) ? q.type : 'stop';
   const flowKey   = q.flowKey !== undefined && q.flowKey !== '' ? Number(q.flowKey) : null;
-  const name      = q.name || '';
-  const prodGroup = q.prodGroup || 'equipment';
+  const f         = parseAnalyzerFilters(q);
 
   await findOne(tenant, id);
   return withTenant(tenant, async (tx) => {
-    if (type === 'scrap') {
-      let reasonId = null;
-      if (name) {
-        const r = await tx.$queryRawUnsafe(
-          `SELECT id::int FROM scrap_reasons WHERE name = $1 AND status = 1 LIMIT 1`, name,
-        );
-        reasonId = r[0]?.id ?? null;
-      }
-      const where = [`flow_id = $1`, `date BETWEEN $2::date AND $3::date`, `deleted_at IS NULL`];
+    if (type === 'stop' || type === 'scrap') {
+      const table = type === 'stop' ? 'stop_data' : 'scrap_data';
+      const reasonTable = type === 'stop' ? 'stop_reasons' : 'scrap_reasons';
+      const reasonAlias = type === 'stop' ? 'sr' : 'scr';
+      const where  = [`d.flow_id = $1`, `d.date BETWEEN $2::date AND $3::date`, `d.deleted_at IS NULL`];
       const params = [id, startDate, endDate];
-      if (flowKey !== null) { params.push(flowKey); where.push(`flow_object_key = $${params.length}`); }
-      if (reasonId !== null) { params.push(reasonId); where.push(`reason = $${params.length}`); }
-      return tx.$queryRawUnsafe(
-        `SELECT date::text AS d, SUM(quantity)::int AS quantity
-           FROM scrap_data WHERE ${where.join(' AND ')}
-          GROUP BY d ORDER BY d`,
+      const push = (sql, val) => { params.push(val); where.push(sql.replace('$?', `$${params.length}`)); };
+      if (flowKey !== null)   push(`d.flow_object_key = $?`, flowKey);
+      if (f.workShift)        push(`d.work_shift_name = $?`, f.workShift);
+      if (f.partId !== null)  push(`d.part_id = $?`, f.partId);
+      if (f.orderNo)          push(`d.order_no ILIKE $?`, `%${f.orderNo}%`);
+      if (type === 'stop') {
+        if (!f.showUnregistered) where.push(`d.reason > 0`);
+        if (!f.includeExcluded)  where.push(`(sc.is_active IS NULL OR sc.is_active = true)`);
+      }
+      const rows = await tx.$queryRawUnsafe(
+        `SELECT d.date::text AS day,
+                COALESCE(${reasonAlias}.name, 'Unregistered') AS series,
+                SUM(d.quantity)::int AS qty
+           FROM ${table} d
+           LEFT JOIN ${reasonTable} ${reasonAlias} ON ${reasonAlias}.id = d.reason
+           ${type === 'stop' ? `LEFT JOIN stop_category sc ON sc.id = sr.type_id` : ''}
+          WHERE ${where.join(' AND ')}
+          GROUP BY d.date, ${reasonAlias}.name
+          ORDER BY d.date`,
         ...params,
       );
+      return pivotIntoSeries(rows);
     }
-    if (type === 'production') {
-      const where = [`flow_id = $1`, `date BETWEEN $2::date AND $3::date`];
-      const params = [id, startDate, endDate];
-      if (flowKey !== null) { params.push(flowKey); where.push(`flow_object_key = $${params.length}`); }
-      if (name) {
-        if (prodGroup === 'part') {
-          const partNo = name.split('-')[0].trim();
-          const r = await tx.$queryRawUnsafe(`SELECT id::int FROM parts WHERE part_no = $1 LIMIT 1`, partNo);
-          const partId = r[0]?.id;
-          if (partId) { params.push(partId); where.push(`part_id = $${params.length}`); }
-        } else if (prodGroup === 'equipment') {
-          const r = await tx.$queryRawUnsafe(`SELECT id::int FROM equipment WHERE name = $1 AND is_active = true LIMIT 1`, name);
-          const eqId = r[0]?.id;
-          if (eqId) { params.push(eqId); where.push(`flow_object_key = $${params.length}`); }
-        } else if (prodGroup === 'work_shift') {
-          params.push(name.trim()); where.push(`work_shift_name = $${params.length}`);
-        } else {
-          params.push(name.trim()); where.push(`order_no = $${params.length}`);
-        }
-      }
-      return tx.$queryRawUnsafe(
-        `SELECT date::text AS d,
-                SUM(part_qty)::int    AS "okQty",
-                SUM(planned_qty)::int AS "plannedQty"
-           FROM production_data WHERE ${where.join(' AND ')}
-          GROUP BY d ORDER BY d`,
-        ...params,
-      );
-    }
-    // type === 'stop'
-    let reasonId = null;
-    if (name) {
-      const r = await tx.$queryRawUnsafe(
-        `SELECT id::int FROM stop_reasons WHERE name = $1 AND status = 1 LIMIT 1`, name,
-      );
-      reasonId = r[0]?.id ?? null;
-    }
-    const where = [`flow_id = $1`, `date BETWEEN $2::date AND $3::date`, `deleted_at IS NULL`];
+
+    // type === 'production' — split by groupBy bucket; default is two series
+    // (OK + Planned). For non-Part groupings we still emit two series but
+    // also one bucket-per-label so the chart legend mirrors the bar chart.
+    const where  = [`pd.flow_id = $1`, `pd.date BETWEEN $2::date AND $3::date`, `pd.status = 1`];
     const params = [id, startDate, endDate];
-    if (flowKey !== null) { params.push(flowKey); where.push(`flow_object_key = $${params.length}`); }
-    if (reasonId !== null) { params.push(reasonId); where.push(`reason = $${params.length}`); }
-    return tx.$queryRawUnsafe(
-      `SELECT date::text AS d,
-              SUM(quantity)::int AS quantity,
-              SUM(hours)::int    AS hours,
-              SUM(minutes)::int  AS minutes
-         FROM stop_data WHERE ${where.join(' AND ')}
-        GROUP BY d ORDER BY d`,
+    const push = (sql, val) => { params.push(val); where.push(sql.replace('$?', `$${params.length}`)); };
+    if (flowKey !== null)  push(`pd.flow_object_key = $?`, flowKey);
+    if (f.workShift)       push(`pd.work_shift_name = $?`, f.workShift);
+    if (f.partId !== null) push(`pd.part_id = $?`, f.partId);
+    if (f.orderNo)         push(`pd.order_no ILIKE $?`, `%${f.orderNo}%`);
+
+    const rows = await tx.$queryRawUnsafe(
+      `SELECT pd.date::text AS day,
+              SUM(pd.part_qty)::int    AS "okQty",
+              SUM(pd.planned_qty)::int AS "plannedQty"
+         FROM production_data pd
+        WHERE ${where.join(' AND ')}
+        GROUP BY pd.date
+        ORDER BY pd.date`,
       ...params,
     );
+    const categories = rows.map((r) => r.day);
+    return {
+      categories,
+      series: [
+        { name: 'OK parts qty', data: rows.map((r) => Number(r.okQty ?? 0)) },
+        { name: 'Planned Qty',  data: rows.map((r) => Number(r.plannedQty ?? 0)) },
+      ],
+    };
   });
+}
+
+/**
+ * Turn `[{ day, series, qty }]` (one row per day-and-series) into
+ * `{ categories: [day…], series: [{ name, data: [qty per day] }] }`,
+ * filling missing combinations with 0. Used by stop+scrap line charts.
+ */
+function pivotIntoSeries(rows) {
+  const dayOrder = [];
+  const daySeen = new Set();
+  const seriesNames = new Set();
+  const byDayThenSeries = new Map();
+  for (const r of rows) {
+    if (!daySeen.has(r.day)) { daySeen.add(r.day); dayOrder.push(r.day); }
+    seriesNames.add(r.series);
+    const inner = byDayThenSeries.get(r.day) ?? new Map();
+    inner.set(r.series, Number(r.qty ?? 0));
+    byDayThenSeries.set(r.day, inner);
+  }
+  const series = Array.from(seriesNames).sort().map((name) => ({
+    name,
+    data: dayOrder.map((d) => byDayThenSeries.get(d)?.get(name) ?? 0),
+  }));
+  return { categories: dayOrder, series };
 }
 
 /**

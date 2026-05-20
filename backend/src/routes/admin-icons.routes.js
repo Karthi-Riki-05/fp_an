@@ -56,6 +56,17 @@ function loadOnce() {
 
 const router = Router();
 
+/**
+ * @swagger
+ * /api/v1/admin/icons:
+ *   get:
+ *     tags: ["Admin — Icons"]
+ *     summary: GET /
+ *     security:
+ *       - access_token: []
+ *     responses:
+ *       200: { description: OK }
+ */
 router.get('/', (req, res, next) => {
   try {
     const icons = loadOnce();
@@ -69,6 +80,17 @@ router.get('/', (req, res, next) => {
  * Upload an icon. Stored under equipment-icons/ with a sanitized,
  * collision-safe filename. Returns { filename } so the caller can write it
  * straight into a Type/Equipment record.
+ */
+/**
+ * @swagger
+ * /api/v1/admin/icons/upload:
+ *   post:
+ *     tags: ["Admin — Icons"]
+ *     summary: POST /upload
+ *     security:
+ *       - access_token: []
+ *     responses:
+ *       200: { description: OK }
  */
 router.post('/upload', upload.single('icon'), (req, res, next) => {
   try {

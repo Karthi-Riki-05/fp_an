@@ -3,6 +3,19 @@
 const { prisma } = require('../prisma/client');
 const { NotFoundError, ForbiddenError } = require('../errors');
 
+// `feedback.tenantId` column now stores the Company user's id
+// (legacy field name kept per TENANT_REMOVAL decision 4 — see
+// MIGRATION_NOTES §13). For an actor:
+//   Administrator → null (sees all when isAdmin; can filter via ?tenantId=)
+//   Company       → actor.id
+//   User          → actor.companyId
+function actorCompanyUserId(actor) {
+  if (!actor) return null;
+  if (actor.isAdmin) return null;
+  if (Array.isArray(actor.roles) && actor.roles.includes('Company')) return actor.id;
+  return actor.companyId || null;
+}
+
 const SORT_MAP = { id: 'id', status: 'status', createdAt: 'createdAt', tenantId: 'tenantId' };
 
 function toRow(r) {
@@ -17,8 +30,9 @@ async function list(actor, q) {
   const where = { deletedAt: null };
 
   if (!actor.isAdmin) {
-    if (actor.tenantId == null) return { data: [], total: 0, page, perPage };
-    where.tenantId = actor.tenantId;
+    const cid = actorCompanyUserId(actor);
+    if (cid == null) return { data: [], total: 0, page, perPage };
+    where.tenantId = cid;
     where.visibleToTenant = true;
   } else if (q.tenantId !== undefined) {
     where.tenantId = Number(q.tenantId);
@@ -43,18 +57,22 @@ async function findOne(actor, id) {
   const row = await prisma.feedback.findFirst({ where: { id, deletedAt: null } });
   if (!row) throw new NotFoundError('feedback-not-found');
   if (!actor.isAdmin) {
-    if (row.tenantId !== actor.tenantId || !row.visibleToTenant) throw new NotFoundError('feedback-not-found');
+    const cid = actorCompanyUserId(actor);
+    if (row.tenantId !== cid || !row.visibleToTenant) throw new NotFoundError('feedback-not-found');
   }
   return toRow(row);
 }
 
 async function create(actor, dto) {
-  const tenantId = actor.isAdmin && dto.tenantId !== undefined ? dto.tenantId : actor.tenantId ?? null;
+  const tenantId = actor.isAdmin && dto.tenantId !== undefined
+    ? Number(dto.tenantId)
+    : actorCompanyUserId(actor);
   let tenantNameSnap = '';
   if (tenantId !== null) {
-    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
-    if (!tenant) throw new NotFoundError('tenant-not-found');
-    tenantNameSnap = tenant.name;
+    // Snapshot the Company user's display name (= the company name).
+    const companyUser = await prisma.user.findUnique({ where: { id: tenantId }, select: { name: true } });
+    if (!companyUser) throw new NotFoundError('company-not-found');
+    tenantNameSnap = companyUser.name;
   }
   const row = await prisma.feedback.create({ data: { body: dto.body, status: 1, tenantId, tenantNameSnap, userId: actor.id, userEmailSnap: actor.email, userNameSnap: actor.name } });
   return toRow(row);

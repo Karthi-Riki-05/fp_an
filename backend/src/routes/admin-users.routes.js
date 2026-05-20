@@ -5,7 +5,6 @@ const { tenantMiddleware } = require('../middleware/tenant');
 const { requirePermission } = require('../middleware/requirePermission');
 const { requireRole } = require('../middleware/requireRole');
 const svc = require('../services/admin-users.service');
-const tenantsSvc = require('../services/tenants.service');
 const authSvc = require('../services/auth.service');
 
 const ACCESS_COOKIE = 'access_token';
@@ -15,9 +14,24 @@ function cookieOpts(maxAgeSeconds) {
 }
 
 const router = Router();
+
+// Tenant model removed. Creating a Company user now auto-provisions
+// tenant_${newUser.id} inside admin-users.service.create() — no separate
+// "new tenant" body fields, no upfront pre-handler. See MIGRATION_NOTES §13.
 router.use(tenantMiddleware, requirePermission('manage-users'));
 
 // GET /summary — column stats for DataTable summary row (Section B.6)
+/**
+ * @swagger
+ * /api/v1/admin/users/summary:
+ *   get:
+ *     tags: ["Admin — Users"]
+ *     summary: GET /summary
+ *     security:
+ *       - access_token: []
+ *     responses:
+ *       200: { description: OK }
+ */
 router.get('/summary', async (req, res, next) => {
   try {
     const q = {
@@ -28,6 +42,17 @@ router.get('/summary', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+/**
+ * @swagger
+ * /api/v1/admin/users:
+ *   get:
+ *     tags: ["Admin — Users"]
+ *     summary: GET /
+ *     security:
+ *       - access_token: []
+ *     responses:
+ *       200: { description: OK }
+ */
 router.get('/', async (req, res, next) => {
   try {
     const filters = [];
@@ -53,6 +78,17 @@ router.get('/', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+/**
+ * @swagger
+ * /api/v1/admin/users/deactivated:
+ *   get:
+ *     tags: ["Admin — Users"]
+ *     summary: GET /deactivated
+ *     security:
+ *       - access_token: []
+ *     responses:
+ *       200: { description: OK }
+ */
 router.get('/deactivated', async (req, res, next) => {
   try {
     const q = {
@@ -65,6 +101,17 @@ router.get('/deactivated', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+/**
+ * @swagger
+ * /api/v1/admin/users/deleted:
+ *   get:
+ *     tags: ["Admin — Users"]
+ *     summary: GET /deleted
+ *     security:
+ *       - access_token: []
+ *     responses:
+ *       200: { description: OK }
+ */
 router.get('/deleted', async (req, res, next) => {
   try {
     const q = {
@@ -76,25 +123,71 @@ router.get('/deleted', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+/**
+ * @swagger
+ * /api/v1/admin/users/{id}:
+ *   get:
+ *     tags: ["Admin — Users"]
+ *     summary: GET /:id
+ *     security:
+ *       - access_token: []
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string } }
+ *     responses:
+ *       200: { description: OK }
+ */
 router.get('/:id', async (req, res, next) => {
   try { res.json(await svc.findOne(req.tenant, Number(req.params.id))); } catch (err) { next(err); }
 });
 
+/**
+ * @swagger
+ * /api/v1/admin/users:
+ *   post:
+ *     tags: ["Admin — Users"]
+ *     summary: POST /
+ *     security:
+ *       - access_token: []
+ *     responses:
+ *       200: { description: OK }
+ */
 router.post('/', async (req, res, next) => {
   try {
-    // If newTenantName is provided, auto-provision a new tenant for the user (role=Company flow)
-    if (req.body.newTenantName) {
-      return res.status(201).json(await svc.createWithNewTenant(req.user, req.body, tenantsSvc));
-    }
     res.status(201).json(await svc.create(req.tenant, req.user, req.body));
   } catch (err) { next(err); }
 });
 
+/**
+ * @swagger
+ * /api/v1/admin/users/{id}:
+ *   patch:
+ *     tags: ["Admin — Users"]
+ *     summary: PATCH /:id
+ *     security:
+ *       - access_token: []
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string } }
+ *     responses:
+ *       200: { description: OK }
+ */
 router.patch('/:id', async (req, res, next) => {
   try { res.json(await svc.update(req.tenant, req.user, Number(req.params.id), req.body)); } catch (err) { next(err); }
 });
 
 // DELETE /:id — soft delete by default; ?permanent=true does hard delete (only if already soft-deleted)
+/**
+ * @swagger
+ * /api/v1/admin/users/{id}:
+ *   delete:
+ *     tags: ["Admin — Users"]
+ *     summary: DELETE /:id
+ *     security:
+ *       - access_token: []
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string } }
+ *     responses:
+ *       200: { description: OK }
+ */
 router.delete('/:id', async (req, res, next) => {
   try {
     if (req.query.permanent === 'true') {
@@ -107,11 +200,37 @@ router.delete('/:id', async (req, res, next) => {
 });
 
 // Keep legacy route for backward compatibility
+/**
+ * @swagger
+ * /api/v1/admin/users/{id}/permanent:
+ *   delete:
+ *     tags: ["Admin — Users"]
+ *     summary: DELETE /:id/permanent
+ *     security:
+ *       - access_token: []
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string } }
+ *     responses:
+ *       200: { description: OK }
+ */
 router.delete('/:id/permanent', async (req, res, next) => {
   try { await svc.permanentDelete(req.tenant, req.user, Number(req.params.id)); res.status(204).send(); } catch (err) { next(err); }
 });
 
 // PATCH /:id/status — accepts { status: 1|0 } or { active: true|false }
+/**
+ * @swagger
+ * /api/v1/admin/users/{id}/status:
+ *   patch:
+ *     tags: ["Admin — Users"]
+ *     summary: PATCH /:id/status
+ *     security:
+ *       - access_token: []
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string } }
+ *     responses:
+ *       200: { description: OK }
+ */
 router.patch('/:id/status', async (req, res, next) => {
   try {
     const active = req.body.active !== undefined ? !!req.body.active : req.body.status === 1;
@@ -119,22 +238,87 @@ router.patch('/:id/status', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+/**
+ * @swagger
+ * /api/v1/admin/users/{id}/confirm:
+ *   patch:
+ *     tags: ["Admin — Users"]
+ *     summary: PATCH /:id/confirm
+ *     security:
+ *       - access_token: []
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string } }
+ *     responses:
+ *       200: { description: OK }
+ */
 router.patch('/:id/confirm', async (req, res, next) => {
   try { res.json(await svc.toggleConfirm(req.tenant, req.user, Number(req.params.id), !!req.body.confirmed)); } catch (err) { next(err); }
 });
 
+/**
+ * @swagger
+ * /api/v1/admin/users/{id}/password:
+ *   post:
+ *     tags: ["Admin — Users"]
+ *     summary: POST /:id/password
+ *     security:
+ *       - access_token: []
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string } }
+ *     responses:
+ *       200: { description: OK }
+ */
 router.post('/:id/password', async (req, res, next) => {
   try { res.json(await svc.changePassword(req.tenant, req.user, Number(req.params.id), req.body.password)); } catch (err) { next(err); }
 });
 
+/**
+ * @swagger
+ * /api/v1/admin/users/{id}/restore:
+ *   post:
+ *     tags: ["Admin — Users"]
+ *     summary: POST /:id/restore
+ *     security:
+ *       - access_token: []
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string } }
+ *     responses:
+ *       200: { description: OK }
+ */
 router.post('/:id/restore', async (req, res, next) => {
   try { res.json(await svc.restore(req.tenant, req.user, Number(req.params.id))); } catch (err) { next(err); }
 });
 
+/**
+ * @swagger
+ * /api/v1/admin/users/{id}/confirm/resend:
+ *   post:
+ *     tags: ["Admin — Users"]
+ *     summary: POST /:id/confirm/resend
+ *     security:
+ *       - access_token: []
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string } }
+ *     responses:
+ *       200: { description: OK }
+ */
 router.post('/:id/confirm/resend', async (req, res, next) => {
   try { res.status(202).json(await svc.resendConfirmation(req.tenant, req.user, Number(req.params.id))); } catch (err) { next(err); }
 });
 
+/**
+ * @swagger
+ * /api/v1/admin/users/{id}/impersonate:
+ *   post:
+ *     tags: ["Admin — Users"]
+ *     summary: POST /:id/impersonate
+ *     security:
+ *       - access_token: []
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string } }
+ *     responses:
+ *       200: { description: OK }
+ */
 router.post('/:id/impersonate', requireRole('Administrator'), requirePermission('impersonate-users'), async (req, res, next) => {
   try {
     const result = await authSvc.issueImpersonationToken({ targetUserId: Number(req.params.id), impersonatorUserId: req.user.id });

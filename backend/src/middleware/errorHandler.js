@@ -15,8 +15,12 @@ function errorHandler(err, req, res, next) {
     return res.status(409).json({ statusCode: 409, message: 'conflict' });
   }
 
-  console.error(err);
-  res.status(500).json({ statusCode: 500, message: 'internal-server-error' });
+  console.error('[error] %s %s :', req.method, req.path, err.message, '\n', err.stack ?? err);
+  res.status(500).json({
+    statusCode: 500,
+    message: 'internal-server-error',
+    ...(process.env.NODE_ENV !== 'production' && { debug: err.message }),
+  });
 }
 
 module.exports = { errorHandler };

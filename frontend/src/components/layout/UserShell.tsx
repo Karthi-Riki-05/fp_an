@@ -40,7 +40,10 @@ export function UserShell({ children, locale = 'sv' }: Props) {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <MarketingHeader locale={locale} />
+      {/* Authenticated user pages — strip the marketing nav links per
+          operator request; only logo + user dropdown remain. The same
+          MarketingHeader serves PublicShell with its nav intact. */}
+      <MarketingHeader locale={locale} hideNav />
       <ImpersonationBanner />
       <Content style={{ background: '#ecf0f5' }}>{children}</Content>
       <MarketingFooter locale={locale} />

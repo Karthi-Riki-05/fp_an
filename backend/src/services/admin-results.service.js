@@ -2,6 +2,7 @@
 
 const { withTenant } = require('../prisma/client');
 const { NotFoundError } = require('../errors');
+const fileStorage = require('./file-storage.service');
 
 /**
  * Build WHERE clause parts from an array of column filter descriptors.
@@ -426,4 +427,157 @@ async function updateStop(tenant, id, dto) {
   });
 }
 
-module.exports = { listProduction, listScrap, listStop, updateProduction, updateScrap, updateStop };
+// ─── Picture upload (Flow Monitor click-modal) ─────────────────────────────
+
+/**
+ * Upload a stop/scrap photo to tenant-scoped storage and return a filename
+ * the client passes back in the create payload. We persist just the
+ * filename (the legacy `scrap_data.picture` / `stop_data.picture` columns
+ * are `varchar(255)`) so we don't bake an absolute URL into the row.
+ */
+async function uploadResultPicture(tenant, file) {
+  if (!file || !file.buffer) {
+    const err = new Error('file-required');
+    err.statusCode = 400;
+    throw err;
+  }
+  const stored = await fileStorage.put(
+    `tenant-${tenant.tenantId}/result-pictures`,
+    file.originalname,
+    file.buffer,
+    file.mimetype,
+  );
+  const filename = stored.key.split('/').pop();
+  return { filename, url: stored.url };
+}
+
+// ─── Create: Production / Scrap / Stop (Flow Monitor click-modal) ──────────
+//
+// Operators register from the Flow Monitor by clicking an equipment node;
+// the 4-step modal posts here. Each row gets:
+//   - flow_id           the flow being monitored
+//   - flow_object_key   the equipment id (legacy column name; equipment FK)
+//   - work_shift_id /
+//     work_shift_name   dual-source — either explicit name (legacy free
+//                       text) or id → resolve name from work_shifts.
+//   - created_by / _email / _name  authorship denormalised on the row,
+//                       matches the columns the list queries surface.
+
+async function resolveShiftCols(tx, dto) {
+  if (dto.workShiftId !== undefined && dto.workShiftName !== undefined) {
+    const err = new Error('work-shift-mutually-exclusive');
+    err.statusCode = 400;
+    throw err;
+  }
+  if (dto.workShiftId !== undefined && dto.workShiftId !== null) {
+    const id = Number(dto.workShiftId);
+    const name = await resolveWorkShiftName(tx, id);
+    return { workShiftId: id, workShiftName: name };
+  }
+  return { workShiftId: 0, workShiftName: String(dto.workShiftName ?? '') };
+}
+
+async function createProduction(tenant, user, dto) {
+  return withTenant(tenant, async (tx) => {
+    const shift = await resolveShiftCols(tx, dto);
+    const rows = await tx.$queryRawUnsafe(
+      `INSERT INTO production_data
+         (flow_id, flow_object_key, part_id, work_shift_id, work_shift_name,
+          work_hours, part_qty, planned_qty, order_no, date, comment,
+          created_by, created_by_email, created_by_name)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::date,$11,$12,$13,$14)
+       RETURNING id`,
+      Number(dto.flowId) || 0,
+      Number(dto.equipmentId) || 0,
+      dto.partId == null ? 0 : Number(dto.partId),
+      shift.workShiftId,
+      shift.workShiftName,
+      String(dto.workHours ?? ''),
+      Number(dto.partQty ?? 0),
+      Number(dto.plannedQty ?? 0),
+      String(dto.orderNo ?? ''),
+      String(dto.date),
+      String(dto.comment ?? ''),
+      Number(user?.id) || 0,
+      String(user?.email ?? ''),
+      String(user?.name ?? ''),
+    );
+    return { id: rows[0].id };
+  });
+}
+
+async function createScrap(tenant, user, dto) {
+  return withTenant(tenant, async (tx) => {
+    const shift = await resolveShiftCols(tx, dto);
+    const rows = await tx.$queryRawUnsafe(
+      `INSERT INTO scrap_data
+         (flow_id, flow_object_key, part_id, work_shift_id, work_shift_name,
+          order_no, quantity, reason, scrap_type_id, date, comment, picture,
+          created_by, created_by_email, created_by_name)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::date,$11,$12,$13,$14,$15)
+       RETURNING id`,
+      Number(dto.flowId) || 0,
+      Number(dto.equipmentId) || 0,
+      dto.partId == null ? 0 : Number(dto.partId),
+      shift.workShiftId,
+      shift.workShiftName,
+      String(dto.orderNo ?? ''),
+      Number(dto.quantity ?? 0),
+      Number(dto.scrapReasonId ?? dto.reasonId ?? 0),
+      Number(dto.scrapTypeId ?? 0),
+      String(dto.date),
+      String(dto.comment ?? ''),
+      dto.picture ? String(dto.picture) : null,
+      Number(user?.id) || 0,
+      String(user?.email ?? ''),
+      String(user?.name ?? ''),
+    );
+    return { id: rows[0].id };
+  });
+}
+
+async function createStop(tenant, user, dto) {
+  return withTenant(tenant, async (tx) => {
+    const shift = await resolveShiftCols(tx, dto);
+    const hours = Number(dto.timeHours ?? 0);
+    const minutes = Number(dto.timeMinutes ?? 0);
+    const sumOfTime = hours * 60 + minutes;
+    const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    const rows = await tx.$queryRawUnsafe(
+      `INSERT INTO stop_data
+         (flow_id, flow_object_key, part_id, work_shift_id, work_shift_name,
+          order_no, hours, minutes, "time", sum_of_time, quantity, reason,
+          stop_type_id, date, comment, picture,
+          created_by, created_by_email, created_by_name)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14::date,$15,$16,$17,$18,$19)
+       RETURNING id`,
+      Number(dto.flowId) || 0,
+      Number(dto.equipmentId) || 0,
+      dto.partId == null ? 0 : Number(dto.partId),
+      shift.workShiftId,
+      shift.workShiftName,
+      String(dto.orderNo ?? ''),
+      hours,
+      minutes,
+      timeStr,
+      sumOfTime,
+      Number(dto.quantity ?? 0),
+      Number(dto.stopReasonId ?? dto.reasonId ?? 0),
+      Number(dto.stopTypeId ?? 0),
+      String(dto.date),
+      String(dto.comment ?? ''),
+      dto.picture ? String(dto.picture) : null,
+      Number(user?.id) || 0,
+      String(user?.email ?? ''),
+      String(user?.name ?? ''),
+    );
+    return { id: rows[0].id };
+  });
+}
+
+module.exports = {
+  listProduction, listScrap, listStop,
+  updateProduction, updateScrap, updateStop,
+  createProduction, createScrap, createStop,
+  uploadResultPicture,
+};

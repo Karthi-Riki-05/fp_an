@@ -1,18 +1,21 @@
 'use strict';
 
 /**
- * E7 — Tenant isolation.
- * - Super Admin sees tenant-1 users when X-Tenant-Id: 1.
- * - Super Admin sees tenant-2 users separately (no crossover if seed has none).
- * - Company user (tenant-1) cannot set X-Tenant-Id: 2 → 403.
- * - Company user with no override gets only their own tenant data.
- * Design decision (per SUPER_ADMIN_PORT.md): non-admin cross-tenant header → 403.
+ * E7 — Tenant isolation, post Tenant-removal (MIGRATION_NOTES §13).
+ *
+ * The "tenant" is a Company user. Administrator routes to a Company's
+ * workspace via X-Tenant-Id = Company user id. The new tenantMiddleware
+ * derives the schema purely from the authenticated user — so for a
+ * Company-role caller, X-Tenant-Id is *ignored* (they always see their
+ * own schema). That's stronger than the old 403 behavior but equivalent
+ * in security (cannot cross-tenant).
  */
 
 const request = require('supertest');
 const app = require('../../src/app');
 const { prisma } = require('../../src/prisma/client');
 const { login } = require('../helpers/login');
+const { getDemoCompanyUserId } = require('../helpers/get-demo-company-user-id');
 
 const ADMIN_EMAIL   = process.env.SEED_SUPERADMIN_EMAIL  || 'user1@gmail.com';
 const ADMIN_PASS    = process.env.SEED_SUPERADMIN_PASSWORD || 'password123';
@@ -22,79 +25,100 @@ const COMPANY_PASS  = process.env.SEED_COMPANY_PASSWORD  || 'password123';
 describe('E7 Tenant isolation', () => {
   let adminCookie;
   let companyCookie;
-  let tenant1Id;
-  let tenant2Id;
-  let tenant2Created = false;
+  let company1Id;       // Company user A (the seed Company)
+  let company2Id;       // Company user B (provisioned in beforeAll)
+  let company2SchemaName;
 
   beforeAll(async () => {
-    adminCookie  = (await login(app, ADMIN_EMAIL, ADMIN_PASS)).cookie;
+    adminCookie   = (await login(app, ADMIN_EMAIL, ADMIN_PASS)).cookie;
     companyCookie = (await login(app, COMPANY_EMAIL, COMPANY_PASS)).cookie;
+    company1Id    = await getDemoCompanyUserId(app, adminCookie);
 
-    const tenants = await request(app)
-      .get('/api/v1/admin/tenants')
+    // Provision a second Company user — this auto-creates tenant_<id> schema.
+    const res = await request(app)
+      .post('/api/v1/admin/users')
       .set('Cookie', adminCookie)
-      .expect(200);
-    tenant1Id = tenants.body[0].id;
-
-    // Create a second tenant for isolation checks
-    const t2res = await request(app)
-      .post('/api/v1/admin/tenants')
-      .set('Cookie', adminCookie)
-      .send({ slug: `isolation-${Date.now()}`, name: `Isolation Tenant ${Date.now()}` })
+      .set('X-Tenant-Id', String(company1Id))
+      .send({
+        name: `Isolation Co ${Date.now()}`,
+        email: `isolation-co-${Date.now()}@e2e.test`,
+        password: 'Password123',
+        roles: ['Company'],
+        confirmed: true,
+      })
       .expect(201);
-    tenant2Id = t2res.body.id;
-    tenant2Created = true;
+    company2Id = res.body.id;
+    company2SchemaName = `tenant_${company2Id}`;
   });
 
   afterAll(async () => {
-    if (tenant2Created && tenant2Id) {
-      const t = await prisma.tenant.findUnique({ where: { id: tenant2Id }, select: { schemaName: true } }).catch(() => null);
-      if (t) await prisma.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${t.schemaName}" CASCADE`).catch(() => {});
-      await prisma.tenant.deleteMany({ where: { id: tenant2Id } }).catch(() => {});
+    if (company2SchemaName) {
+      await prisma.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${company2SchemaName}" CASCADE`).catch(() => {});
+    }
+    if (company2Id) {
+      await prisma.userRole.deleteMany({ where: { userId: company2Id } }).catch(() => {});
+      await prisma.user.deleteMany({ where: { id: company2Id } }).catch(() => {});
     }
     await prisma.$disconnect();
   });
 
-  it('admin sees tenant-1 users', async () => {
+  it('admin sees Company-A users when X-Tenant-Id=company1Id', async () => {
     const res = await request(app)
       .get('/api/v1/admin/users?perPage=200')
       .set('Cookie', adminCookie)
-      .set('X-Tenant-Id', String(tenant1Id))
+      .set('X-Tenant-Id', String(company1Id))
       .expect(200);
-    expect(res.body.total).toBeGreaterThanOrEqual(1);
+    // The seed Company user itself is always in the list.
+    expect(res.body.data.some((u) => u.id === company1Id)).toBe(true);
   });
 
-  it('admin sees tenant-2 users separately (empty — no users seeded there)', async () => {
-    const t1 = await request(app)
+  it('admin sees Company-B separately (no Company-A users crossover)', async () => {
+    const a = await request(app)
       .get('/api/v1/admin/users?perPage=200')
       .set('Cookie', adminCookie)
-      .set('X-Tenant-Id', String(tenant1Id))
+      .set('X-Tenant-Id', String(company1Id))
       .expect(200);
-    const t2 = await request(app)
+    const b = await request(app)
       .get('/api/v1/admin/users?perPage=200')
       .set('Cookie', adminCookie)
-      .set('X-Tenant-Id', String(tenant2Id))
+      .set('X-Tenant-Id', String(company2Id))
       .expect(200);
 
-    const t1Ids = new Set(t1.body.data.map((u) => u.id));
-    for (const u of t2.body.data) {
-      expect(t1Ids.has(u.id)).toBe(false);
-    }
+    const aIds = new Set(a.body.data.map((u) => u.id));
+    // Company-B only contains itself (just provisioned, no sub-users yet)
+    expect(b.body.data.length).toBe(1);
+    expect(b.body.data[0].id).toBe(company2Id);
+    expect(aIds.has(company2Id)).toBe(false);
   });
 
-  it('company user cannot access tenant-2 by setting the header → 403', async () => {
-    const res = await request(app)
-      .get('/api/v1/admin/users')
-      .set('Cookie', companyCookie)
-      .set('X-Tenant-Id', String(tenant2Id));
-    expect(res.status).toBe(403);
-  });
-
-  it('company user with no override gets only their own tenant data', async () => {
-    const res = await request(app)
-      .get('/api/v1/admin/users')
+  it('Company user cannot cross-scope: passing X-Tenant-Id is ignored', async () => {
+    // Caller is Company-A (the seed). Passing a different tenant header
+    // must NOT escape their own schema. New tenantMiddleware derives the
+    // schema from the user's own row, so the header is silently ignored.
+    const meBefore = await request(app)
+      .get('/api/v1/me')
       .set('Cookie', companyCookie)
       .expect(200);
+    const ownTenantId = meBefore.body.activeTenantId;
+    expect(ownTenantId).toBe(company1Id);
+
+    const res = await request(app)
+      .get('/api/v1/admin/users?perPage=200')
+      .set('Cookie', companyCookie)
+      .set('X-Tenant-Id', String(company2Id))
+      .expect(200);
+    // None of the returned users belong to Company-B's schema; in particular
+    // company2Id is not in the response.
+    expect(res.body.data.some((u) => u.id === company2Id)).toBe(false);
+  });
+
+  it('Company user with no header gets only their own tenant data', async () => {
+    const res = await request(app)
+      .get('/api/v1/admin/users?perPage=200')
+      .set('Cookie', companyCookie)
+      .expect(200);
     expect(res.body.total).toBeGreaterThanOrEqual(1);
+    // Caller's own row must be in the result.
+    expect(res.body.data.some((u) => u.id === company1Id)).toBe(true);
   });
 });

@@ -2,7 +2,7 @@
   "cookies": [
     {
       "name": "access_token",
-      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjIsImVtYWlsIjoidXNlcjJAZ21haWwuY29tIiwidGVuYW50SWQiOjEsInJvbGVzIjpbIkNvbXBhbnkiXSwia2luZCI6IndlYiIsImlhdCI6MTc3ODM0NTQ4MSwiZXhwIjoxNzc4MzQ2MzgxfQ.KFk7RASLlg1S1D-9eneetCMqX_R-c7ygJP8awx4ztcU",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjIsImVtYWlsIjoidXNlcjJAZ21haWwuY29tIiwicm9sZXMiOlsiQ29tcGFueSJdLCJraW5kIjoid2ViIiwiaWF0IjoxNzc5MTMzOTIyLCJleHAiOjE3NzkxMzQ4MjJ9.F9LxKAkPAOUCY-0Nz7YHtHcfcquRwDHfLNCcXGF25bU",
       "domain": "fptest.com",
       "path": "/",
       "expires": -1,
@@ -12,7 +12,7 @@
     },
     {
       "name": "access_token",
-      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjIsImVtYWlsIjoidXNlcjJAZ21haWwuY29tIiwidGVuYW50SWQiOjEsInJvbGVzIjpbIkNvbXBhbnkiXSwia2luZCI6IndlYiIsImlhdCI6MTc3ODM0NTQ4MSwiZXhwIjoxNzc4MzQ2MzgxfQ.KFk7RASLlg1S1D-9eneetCMqX_R-c7ygJP8awx4ztcU",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjIsImVtYWlsIjoidXNlcjJAZ21haWwuY29tIiwicm9sZXMiOlsiQ29tcGFueSJdLCJraW5kIjoid2ViIiwiaWF0IjoxNzc5MTMzOTIyLCJleHAiOjE3NzkxMzQ4MjJ9.F9LxKAkPAOUCY-0Nz7YHtHcfcquRwDHfLNCcXGF25bU",
       "domain": "api.fptest.com",
       "path": "/",
       "expires": -1,

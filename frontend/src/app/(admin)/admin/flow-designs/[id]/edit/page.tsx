@@ -4,8 +4,8 @@ import { ApartmentOutlined, ArrowLeftOutlined, CaretDownOutlined, CaretRightOutl
 import { App, Button, Input, Skeleton, Space, Spin, Tag, Typography } from 'antd';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import FlowDesignerEditor from '../../../../../../components/flow/FlowDesignerEditor';
+import { useEffect, useRef, useState } from 'react';
+import FlowDesignerEditor, { type FlowDesignerEditorHandle } from '../../../../../../components/flow/FlowDesignerEditor';
 import { useMe } from '../../../../../../lib/api/auth';
 import { useEquipmentTree, type EquipmentTreeNode } from '../../../../../../lib/api/equipment';
 import {
@@ -65,6 +65,30 @@ function EquipmentRow({
         // are sensible (no functional impact — we read the json type).
         e.dataTransfer.setData('text/plain', node.name);
         e.dataTransfer.effectAllowed = 'copy';
+
+        // Custom drag image — a small floating pill instead of a snapshot
+        // of the whole row (which captures the icon + indent + hover and
+        // looks janky against the canvas). The element must live in the
+        // DOM at the moment of setDragImage; remove it on the next tick.
+        const ghost = document.createElement('div');
+        ghost.textContent = node.name;
+        Object.assign(ghost.style, {
+          position: 'absolute',
+          top: '-9999px',
+          left: '-9999px',
+          padding: '4px 10px',
+          background: '#1677ff',
+          color: '#fff',
+          fontSize: '12px',
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+          borderRadius: '14px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+          whiteSpace: 'nowrap',
+          pointerEvents: 'none',
+        });
+        document.body.appendChild(ghost);
+        e.dataTransfer.setDragImage(ghost, 12, 12);
+        setTimeout(() => ghost.remove(), 0);
       }}
       style={{
         display: 'flex',
@@ -145,6 +169,13 @@ export default function FlowDesignerPage() {
   const [name, setName] = useState('');
   useEffect(() => { if (flowQ.data?.name) setName(flowQ.data.name); }, [flowQ.data?.name]);
 
+  // Imperative handle into the drawio iframe. Lets the Save button below
+  // trigger drawio's save action — necessary because the iframe's
+  // toolbar Save button is hidden (`noSaveBtn=1` in iframe URL) and
+  // autosave writes XML only, so without an explicit Save the
+  // FlowCard thumbnail (svgCache) never populates.
+  const editorRef = useRef<FlowDesignerEditorHandle | null>(null);
+
   if (flowQ.isLoading || flowId === null) return <Skeleton active />;
   if (!flowQ.data) return <div>Flow not found.</div>;
 
@@ -192,8 +223,14 @@ export default function FlowDesignerPage() {
 
         <Space>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            Save via the toolbar in the canvas; autosave runs every 5s.
+            Autosave runs every 5s — click Save to refresh the thumbnail.
           </Text>
+          <Button
+            type="primary"
+            onClick={() => editorRef.current?.triggerSave()}
+          >
+            Save
+          </Button>
           <Button
             onClick={async () => {
               if (!flowId) return;
@@ -248,7 +285,7 @@ export default function FlowDesignerPage() {
             overflow: 'hidden',
           }}
         >
-          <FlowDesignerEditor flowId={flowId} scope={scope} readOnly={false} />
+          <FlowDesignerEditor ref={editorRef} flowId={flowId} scope={scope} readOnly={false} />
         </div>
       </div>
     </div>

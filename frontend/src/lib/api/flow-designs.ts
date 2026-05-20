@@ -11,6 +11,13 @@ export interface FlowDesignRow {
   name: string;
   status: number;
   flowData?: string | null;
+  /** Cached SVG rendering of the diagram, captured on each explicit save
+   *  (see backend admin-flow-designs.service.js / §11-S2). Used by FlowCard
+   *  for the grid thumbnail so we don't have to re-render the whole iframe. */
+  svgCache?: string | null;
+  /** "drawio" (current) or "gojs" (legacy). Set by the save endpoint based
+   *  on the leading character of flowData. */
+  flowFormat?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -29,19 +36,37 @@ export interface FlowAnalyzerData {
   startDate: string;
   endDate: string;
   flowKey: number | null;
-  production: Array<{ equipmentId: number; okQty: number; plannedQty: number; workedHoursMin: number }>;
-  stops: Array<{ equipmentId: number; stopReasonId: number | null; stopReasonName: string | null; count: number; totalMinutes: number }>;
-  scraps: Array<{ equipmentId: number; scrapReasonId: number | null; scrapReasonName: string | null; totalQty: number; count: number }>;
+  /** Aggregated per groupBy bucket (Part/Equipment/WorkShift/Order). `key`
+   *  is the id when groupBy is Part or Equipment, 0 otherwise. */
+  production: Array<{ key: number; label: string; okQty: number; plannedQty: number; workedHoursMin: number }>;
+  stops: Array<{
+    equipmentId: number;
+    stopReasonId: number | null; stopReasonName: string | null;
+    stopCategoryId: number | null; stopCategoryName: string | null;
+    count: number; totalMinutes: number;
+  }>;
+  scraps: Array<{
+    equipmentId: number;
+    scrapReasonId: number | null; scrapReasonName: string | null;
+    scrapCategoryId: number | null; scrapCategoryName: string | null;
+    totalQty: number; count: number;
+  }>;
 }
 
-export interface FlowLineChartPoint {
-  date?: string;
-  d?: string;
-  quantity?: number;
-  hours?: number;
-  minutes?: number;
-  okQty?: number;
-  plannedQty?: number;
+/** Shared filter set accepted by /analyzer-data and /line-chart. */
+export interface AnalyzerFilters {
+  workShift?: string;
+  partId?: number | null;
+  orderNo?: string;
+  includeExcluded?: boolean;
+  showUnregistered?: boolean;
+  groupBy?: 'Part' | 'Equipment' | 'WorkShift' | 'Order';
+}
+
+/** HighCharts-friendly shape returned by /line-chart. */
+export interface FlowLineChart {
+  categories: string[];
+  series: Array<{ name: string; data: number[] }>;
 }
 
 export interface FlowQuantTime {
@@ -174,14 +199,18 @@ export function useFlowAnalyzerData(
   scope: { tenantId: number | null; isAdmin: boolean },
   id: number | null,
   range: { startDate: string; endDate: string },
-  flowKey?: number,
+  flowKey?: number | null,
+  filters?: AnalyzerFilters,
 ) {
   return useQuery({
-    queryKey: ['flow-analyzer-data', scope.tenantId, id, range, flowKey] as const,
+    queryKey: ['flow-analyzer-data', scope.tenantId, id, range, flowKey, filters] as const,
     queryFn: async () => {
       const { data } = await apiClient.get<FlowAnalyzerData>(
         `/admin/flow-designs/${id}/analyzer-data`,
-        { params: { ...range, flowKey }, headers: tenantHeaders(scope.tenantId, scope.isAdmin) },
+        {
+          params: { ...range, ...(flowKey != null ? { flowKey } : {}), ...flattenFilters(filters) },
+          headers: tenantHeaders(scope.tenantId, scope.isAdmin),
+        },
       );
       return data;
     },
@@ -193,20 +222,37 @@ export function useFlowAnalyzerData(
 export function useFlowLineChart(
   scope: { tenantId: number | null; isAdmin: boolean },
   id: number | null,
-  params: { type: 'production' | 'stop' | 'scrap'; startDate: string; endDate: string; name?: string; flowKey?: number; prodGroup?: string },
+  params: { type: 'production' | 'stop' | 'scrap'; startDate: string; endDate: string; flowKey?: number | null } & AnalyzerFilters,
 ) {
   return useQuery({
     queryKey: ['flow-line-chart', scope.tenantId, id, params] as const,
     queryFn: async () => {
-      const { data } = await apiClient.get<FlowLineChartPoint[]>(
+      const { type, startDate, endDate, flowKey, ...filters } = params;
+      const { data } = await apiClient.get<FlowLineChart>(
         `/admin/flow-designs/${id}/line-chart`,
-        { params, headers: tenantHeaders(scope.tenantId, scope.isAdmin) },
+        {
+          params: { type, startDate, endDate, ...(flowKey != null ? { flowKey } : {}), ...flattenFilters(filters) },
+          headers: tenantHeaders(scope.tenantId, scope.isAdmin),
+        },
       );
       return data;
     },
     enabled: id !== null,
     staleTime: 30_000,
   });
+}
+
+/** Drop nullish / empty filter values so they don't show up in the URL. */
+function flattenFilters(f?: AnalyzerFilters): Record<string, string | number | boolean> {
+  if (!f) return {};
+  const out: Record<string, string | number | boolean> = {};
+  if (f.workShift)       out.workShift = f.workShift;
+  if (f.partId != null)  out.partId = f.partId;
+  if (f.orderNo)         out.orderNo = f.orderNo;
+  if (f.includeExcluded) out.includeExcluded = true;
+  if (f.showUnregistered) out.showUnregistered = true;
+  if (f.groupBy)         out.groupBy = f.groupBy;
+  return out;
 }
 
 export function useFlowQuantTime(

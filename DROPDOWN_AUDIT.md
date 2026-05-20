@@ -775,3 +775,21 @@ ix.  ✅ Canonical `counter_date` = 9 legacy values with corrected spelling `"ye
 ---
 
 **End of audit. Awaiting your review before any fix is started.**
+
+---
+
+## E2 — Pre-implementation analysis (Units stop form)
+
+Date: 2026-05-14. Source files inspected: `frontend/units/stop_form.blade.php`, `Frontend/CompanyUserController.php` (getUnitStopSaveDlg @594, saveUnitStopData @1130), `Frontend/User/DashboardController.php` (units @1131, getUnitStopData @1206, getUnits @1233, getUnitShiftSelectDlgContent @1447).
+
+1. **Equipment ↔ unit link:** the equipment_id (`equip_id`) is stored *directly on the unit row* — `tbl_machines.equip_id` is the FK, resolved via `LEFT JOIN equipments e ON e.id=m.equip_id`. No machine_assignments table involved in this flow.
+
+2. **What triggers the stop form:** a JS button click on a unit card *after* the operator selects one-or-more **un-registered** MachineData buckets in the unit's child list (`getUnitStopData` returns `MachineData WHERE is_registered='no' AND is_valid_data='yes' AND end_time IS NOT NULL`). Two entry paths: (a) normal (registers a past stop), (b) `type='pre-reg'` (queues a stop on an ongoing run with no end_time). IoT signals don't open the form — they just populate buckets.
+
+3. **Cascade order (top → bottom in the modal):** flow_id (filtered to flows that *reference this equipment* in their `flow_data.nodeDataArray`) → stop_reason (grouped select; value is `"<type_id>-<reason_id>"`, split on submit into hidden `stop_type_id`/`stop_reason_id`) → work_shift (opened via a *separate* sub-modal — see Q4) → part_id (filtered to parts whose type_id ∈ `EquipmentPart.part_type_id` for this equipment) → order_no (either free text OR a select from equipment-scoped orders, controlled by `EquipmentProperty.order_selection`) → comment → stop_picture (multipart file).
+
+4. **`getUnitShiftSelectDlgContent`:** renders `frontend/units/shift_select` partial. Receives `stop_ids[]`, `equipment`, `machine_id`. The user picks a shift *per stop bucket* — output is encoded as JSON `{ <machineStopId>: { id: <workShiftId>, name: <shiftName>, type?: 'sc' } }` and stored in the hidden `work_shift_name` field. So one form submission can carry N shift assignments (one per selected bucket).
+
+5. **`saveUnitStopData` payload (multipart, `POST /saveUnitStopData`):** `flow_id` (int), `flow_key` (int = equipment_id), `qty` (int, currently hard-coded 1), `part_id` (int), `order_no` (string), `stop_type_id` + `stop_reason_id` (ints, split from the grouped reason value), `stop_times` (string, comma-joined `<machine_stop_id>::<start>::<end>` tuples), `comment_st` (string), `stop_type` (`'pre-reg'` or empty), `work_shift_name` (JSON string — the per-bucket shift map from Q4), `work_shift_id` (legacy fallback int, used when no schedule), `machine_id` (string), `stop_picture` (file). For each entry in the decoded JSON map the controller writes **one StopData row** (so one form submit → N rows).
+
+**Confirm this analysis is accurate before any E2 code is written.**

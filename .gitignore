@@ -1,56 +1,129 @@
-# OS
+# =============================================================
+# OS metadata
+# =============================================================
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+desktop.ini
 
-# Node
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-.pnpm-store/
-
-# Build output
-dist/
-build/
-.next/
-.turbo/
-out/
-*.tsbuildinfo
-
-# Env files (NEVER commit real secrets)
-.env
-.env.local
-.env.development
-.env.production
-.env.*.local
-!.env.example
-
-# Logs
-*.log
-logs/
-
-# Editor
+# =============================================================
+# Editors / IDEs
+# =============================================================
 .idea/
 .vscode/
 !.vscode/extensions.json
 !.vscode/settings.json
+*.sublime-project
+*.sublime-workspace
+.history/
+.fleet/
+*.swp
+*.swo
+*~
 
-# Docker volumes
+# =============================================================
+# Logs
+# =============================================================
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# =============================================================
+# Dependency directories
+# =============================================================
+node_modules/
+jspm_packages/
+bower_components/
+vendor/
+.pnpm-store/
+.yarn/cache
+.yarn/install-state.gz
+
+# =============================================================
+# Build / compiled output
+# =============================================================
+dist/
+build/
+out/
+.next/
+.nuxt/
+.turbo/
+.cache/
+.parcel-cache/
+.svelte-kit/
+.vercel/
+.netlify/
+.serverless/
+*.tsbuildinfo
+*.pyc
+__pycache__/
+*.class
+target/
+bin/
+obj/
+
+# =============================================================
+# Environment / secrets (NEVER commit real secrets)
+# =============================================================
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+*.pfx
+secrets.json
+secrets.yml
+secrets.yaml
+
+# =============================================================
+# Test / coverage output
+# =============================================================
+coverage/
+.nyc_output/
+.pytest_cache/
+.tox/
+htmlcov/
+playwright-report/
+test-results/
+playwright/.cache/
+
+# =============================================================
+# Docker / data volumes
+# =============================================================
 docker/data/
 docker/postgres-data/
 docker/redis-data/
 
-# Coverage
-coverage/
+# =============================================================
+# Storage / uploads (dev mode)
+# =============================================================
+storage/
+uploads/
+tmp/
+temp/
 
-# Prisma
+# =============================================================
+# Prisma scratch
+# =============================================================
 backend/prisma/migrations/.tmp/
 
-# Storage (file uploads in dev mode)
-storage/
-
-# Macros
-*.swp
-*.swo
-*~
+# =============================================================
+# Misc
+# =============================================================
+*.bak
+*.orig
+*.rej
+*.tmp
+.coverage
+*.tgz
+*.zip

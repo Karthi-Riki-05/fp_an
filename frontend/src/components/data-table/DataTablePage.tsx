@@ -13,6 +13,7 @@ import {
   Checkbox,
   Dropdown,
   Empty,
+  Grid,
   Input,
   Pagination,
   Select,
@@ -22,6 +23,7 @@ import {
   Tooltip,
   Typography,
 } from 'antd';
+const { useBreakpoint } = Grid;
 import type { ColumnsType, ColumnType } from 'antd/es/table';
 import { ReactNode, useMemo, useState } from 'react';
 
@@ -99,6 +101,12 @@ export function DataTablePage<T extends object>(props: DataTablePageProps<T>) {
 
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
   const [filterRowVisible, setFilterRowVisible] = useState(true);
+  // Below the AntD `md` breakpoint (768px) the multi-column data-table
+  // pattern is unusable — column widths shrink to ~30px and text wraps
+  // character-by-character. Switch to a stacked card list instead; the
+  // table comes back automatically on tablet+.
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
 
   const visibleColumns = useMemo<ColumnsType<T>>(() => {
     return columns
@@ -250,33 +258,43 @@ export function DataTablePage<T extends object>(props: DataTablePageProps<T>) {
         )}
       </div>
 
-      {/* table */}
-      <div style={{ overflowX: 'auto' }}>
-        <Table<T>
-          rowKey={rowKey as never}
+      {/* table — desktop/tablet; card list — mobile */}
+      {isMobile ? (
+        <MobileCardList<T>
+          rows={rows}
+          rowKey={rowKey}
           columns={visibleColumns}
-          dataSource={rows}
-          loading={loading ? { indicator: <Spin /> } : false}
-          pagination={false}
-          size="middle"
-          locale={{ emptyText: emptyText ?? <Empty description="No entries" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
-          components={
-            filterRow
-              ? {
-                  header: {
-                    wrapper: ({ children, ...rest }: { children: ReactNode }) => (
-                      <thead {...rest}>
-                        {children}
-                        {filterRow}
-                      </thead>
-                    ),
-                  },
-                }
-              : undefined
-          }
-          sticky
+          loading={loading}
+          emptyText={emptyText}
         />
-      </div>
+      ) : (
+        <div style={{ overflowX: 'auto' }}>
+          <Table<T>
+            rowKey={rowKey as never}
+            columns={visibleColumns}
+            dataSource={rows}
+            loading={loading ? { indicator: <Spin /> } : false}
+            pagination={false}
+            size="middle"
+            locale={{ emptyText: emptyText ?? <Empty description="No entries" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
+            components={
+              filterRow
+                ? {
+                    header: {
+                      wrapper: ({ children, ...rest }: { children: ReactNode }) => (
+                        <thead {...rest}>
+                          {children}
+                          {filterRow}
+                        </thead>
+                      ),
+                    },
+                  }
+                : undefined
+            }
+            sticky
+          />
+        </div>
+      )}
 
       {/* footer */}
       <div
@@ -316,6 +334,104 @@ export function DataTablePage<T extends object>(props: DataTablePageProps<T>) {
         />
       </div>
     </Card>
+  );
+}
+
+/**
+ * Mobile (<md) renderer — stacks each row as a card with vertical
+ * label/value pairs. Reuses each column's `title` as the label and its
+ * `render`/`dataIndex` as the value, so all callers automatically get
+ * a usable mobile view without duplicating column definitions.
+ *
+ * Why a separate render path (not just AntD Table with scroll-x):
+ *   horizontal scroll inside a list is awful UX on mobile — users
+ *   can't see all fields at once, and stacked cards match every other
+ *   admin pattern in the app.
+ */
+interface MobileCardListProps<T> {
+  rows: T[];
+  rowKey: keyof T | ((row: T) => string | number);
+  columns: ColumnsType<T>;
+  loading?: boolean;
+  emptyText?: ReactNode;
+}
+
+function MobileCardList<T extends object>({ rows, rowKey, columns, loading, emptyText }: MobileCardListProps<T>) {
+  const getKey = (row: T, idx: number) => {
+    if (typeof rowKey === 'function') return rowKey(row);
+    return (row[rowKey] as unknown as string | number) ?? idx;
+  };
+  if (loading) {
+    return (
+      <div style={{ padding: 48, textAlign: 'center' }}>
+        <Spin />
+      </div>
+    );
+  }
+  if (rows.length === 0) {
+    return (
+      <div style={{ padding: 32 }}>
+        {emptyText ?? <Empty description="No entries" image={Empty.PRESENTED_IMAGE_SIMPLE} />}
+      </div>
+    );
+  }
+  return (
+    <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {rows.map((row, idx) => (
+        <div
+          key={getKey(row, idx)}
+          style={{
+            background: '#fff',
+            border: '1px solid #eef0f3',
+            borderRadius: 8,
+            padding: '12px 14px',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+          }}
+        >
+          {columns.map((col, ci) => {
+            const c = col as ColumnType<T>;
+            // Skip pure-control columns with no title (e.g. action chip
+            // gutters from antd table layout).
+            const label = c.title;
+            const value = (() => {
+              // Apply the column's render() if present; otherwise read by dataIndex.
+              const dataKey = (c.dataIndex ?? null) as keyof T | null;
+              const raw = dataKey != null ? (row[dataKey] as unknown) : undefined;
+              if (typeof c.render === 'function') {
+                return (c.render as (v: unknown, r: T, i: number) => ReactNode)(raw, row, idx);
+              }
+              return raw as ReactNode;
+            })();
+            // Skip rows with no meaningful content — keeps action-only
+            // columns from leaving empty rows.
+            if (label == null && (value == null || value === '')) return null;
+            return (
+              <div
+                key={ci}
+                style={{
+                  display: 'flex',
+                  gap: 12,
+                  padding: '6px 0',
+                  borderBottom: ci < columns.length - 1 ? '1px dashed #f0f0f0' : 'none',
+                  alignItems: 'flex-start',
+                }}
+              >
+                {label != null && (
+                  <div style={{ flex: '0 0 40%', maxWidth: 140 }}>
+                    <Text strong style={{ fontSize: 13, color: '#555' }}>
+                      {label as ReactNode}
+                    </Text>
+                  </div>
+                )}
+                <div style={{ flex: 1, minWidth: 0, wordBreak: 'break-word', fontSize: 14 }}>
+                  {value as ReactNode}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </div>
   );
 }
 

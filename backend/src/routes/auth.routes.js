@@ -26,6 +26,26 @@ function clearCookieOpts() {
 const router = Router();
 
 // POST /auth/login
+/**
+ * @swagger
+ * /api/v1/auth/login:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Email + password login. Sets `access_token` HTTP-only cookie.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password]
+ *             properties:
+ *               email: { type: string, format: email }
+ *               password: { type: string }
+ *     responses:
+ *       200: { description: Logged in }
+ *       401: { description: Invalid credentials }
+ */
 router.post('/login', loginRateLimiter, async (req, res, next) => {
   try {
     const { email, password } = req.body;
@@ -43,12 +63,30 @@ router.post('/login', loginRateLimiter, async (req, res, next) => {
 });
 
 // POST /auth/logout
+/**
+ * @swagger
+ * /api/v1/auth/logout:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Clear the `access_token` cookie.
+ *     responses:
+ *       200: { description: OK }
+ */
 router.post('/logout', (req, res) => {
   res.clearCookie(ACCESS_COOKIE, clearCookieOpts());
   res.status(204).send();
 });
 
 // POST /auth/impersonate/stop — requires auth + active impersonation token
+/**
+ * @swagger
+ * /api/v1/auth/impersonate/stop:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Drop an active impersonation and return to the super-admin session.
+ *     security:
+ *       - access_token: []
+ */
 router.post('/impersonate/stop', authMiddleware, async (req, res, next) => {
   try {
     const actor = req.user;
@@ -63,6 +101,15 @@ router.post('/impersonate/stop', authMiddleware, async (req, res, next) => {
 });
 
 // GET /auth/confirm/:token — confirm account via email link
+/**
+ * @swagger
+ * /api/v1/auth/confirm/{token}:
+ *   get:
+ *     tags: [Auth]
+ *     summary: Confirm a newly-created account using the emailed token.
+ *     parameters:
+ *       - { in: path, name: token, required: true, schema: { type: string } }
+ */
 router.get('/confirm/:token', async (req, res, next) => {
   try {
     const { token } = req.params;
@@ -80,6 +127,21 @@ router.get('/confirm/:token', async (req, res, next) => {
 });
 
 // POST /auth/confirm/resend — resend confirmation email
+/**
+ * @swagger
+ * /api/v1/auth/confirm/resend:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Resend the account-confirmation email.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email: { type: string, format: email }
+ */
 router.post('/confirm/resend', async (req, res, next) => {
   try {
     const { email } = req.body;
@@ -103,6 +165,24 @@ router.post('/confirm/resend', async (req, res, next) => {
 });
 
 // POST /auth/verify-password — D5: re-confirm identity before destructive actions
+/**
+ * @swagger
+ * /api/v1/auth/verify-password:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Confirm the authenticated user's password (used for sensitive ops).
+ *     security:
+ *       - access_token: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [password]
+ *             properties:
+ *               password: { type: string }
+ */
 router.post('/verify-password', authMiddleware, async (req, res, next) => {
   try {
     const { password } = req.body;

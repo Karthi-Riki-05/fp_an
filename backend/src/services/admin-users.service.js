@@ -5,12 +5,11 @@ const { prisma } = require('../prisma/client');
 const { hash } = require('./password.service');
 const { record } = require('./history.service');
 const { sendConfirmationEmail } = require('./mail.service');
+const { provisionSchema, dropSchema } = require('./tenant-schema.service');
 const { ConflictError, ForbiddenError, NotFoundError, BadRequestError } = require('../errors');
 const { Prisma } = require('@prisma/client');
 
 const SORT_COL = { id: 'id', name: 'name', email: 'email', confirmed: 'confirmed', status: 'status', createdAt: 'createdAt' };
-
-// Filterable string columns on User
 const FILTER_COLS = new Set(['name', 'email', 'image', 'confirmationCode']);
 
 function mapUser(u) {
@@ -23,10 +22,6 @@ function mapUser(u) {
   };
 }
 
-/**
- * Build a Prisma field filter from one of the 8 DataTable operators.
- * Boolean/numeric columns fall through to simple equality.
- */
 function buildOperatorFilter(column, operator, value) {
   switch (operator) {
     case 'equal':        return { equals: value };
@@ -41,10 +36,6 @@ function buildOperatorFilter(column, operator, value) {
   }
 }
 
-/**
- * Resolve an array of role names to role ids.
- * Falls back to the fallbackName if the array is empty.
- */
 async function resolveRoleIds(roleNames, fallbackName) {
   if (!roleNames || roleNames.length === 0) {
     const fallback = await prisma.role.findUnique({ where: { name: fallbackName }, select: { id: true } });
@@ -60,29 +51,34 @@ async function resolveRoleIds(roleNames, fallbackName) {
   return roles.map((r) => r.id);
 }
 
+/**
+ * Tenant-membership predicate, post Tenant-removal.
+ * `tenant.tenantId` here is the Company user's id (legacy field name kept).
+ * A user belongs to the company iff:
+ *   - they ARE the Company user (id === companyUserId), OR
+ *   - their companyId points to the Company user
+ */
+function companyMembershipFilter(companyUserId) {
+  return { OR: [{ id: companyUserId }, { companyId: companyUserId }] };
+}
+
 async function list(tenant, q) {
   const page = q.page ?? 1; const perPage = q.perPage ?? 10;
   const sort = q.sort ?? 'id'; const order = q.order ?? 'desc';
-  const where = {
-    deletedAt: null,
-    tenantUsers: { some: { tenantId: tenant.tenantId, status: true } },
-  };
-  if (q.search) where.OR = [
+  const where = { deletedAt: null, ...companyMembershipFilter(tenant.tenantId) };
+  if (q.search) where.AND = [{ OR: [
     { name: { contains: q.search, mode: 'insensitive' } },
     { email: { contains: q.search, mode: 'insensitive' } },
-  ];
+  ] }];
   if (q.name) where.name = { contains: q.name, mode: 'insensitive' };
   if (q.email) where.email = { contains: q.email, mode: 'insensitive' };
   if (q.confirmed !== undefined) where.confirmed = q.confirmed === 'true';
   if (q.active !== undefined) where.status = q.active === 'true' ? 1 : 0;
 
-  // Per-column operator filters from DataTable (Section B.5)
   if (Array.isArray(q.filters)) {
     for (const f of q.filters) {
       if (!f.column || !f.operator) continue;
-      if (FILTER_COLS.has(f.column)) {
-        where[f.column] = buildOperatorFilter(f.column, f.operator, f.value ?? '');
-      }
+      if (FILTER_COLS.has(f.column)) where[f.column] = buildOperatorFilter(f.column, f.operator, f.value ?? '');
     }
   }
 
@@ -97,31 +93,21 @@ async function list(tenant, q) {
   return { data: rows.map(mapUser), total, page, perPage };
 }
 
-/**
- * Summary counts per column — Section B.6.
- * type: 'empty' | 'non-empty' | 'distinct'
- * columns: string[] — subset of FILTER_COLS
- */
 async function summary(tenant, q) {
   const type = q.type ?? 'non-empty';
   const columns = (q.columns ?? [...FILTER_COLS]).filter((c) => FILTER_COLS.has(c));
-  const baseWhere = { deletedAt: null, tenantUsers: { some: { tenantId: tenant.tenantId, status: true } } };
+  const baseWhere = { deletedAt: null, ...companyMembershipFilter(tenant.tenantId) };
   const result = {};
-
   for (const col of columns) {
     if (type === 'empty') {
       result[col] = await prisma.user.count({ where: { ...baseWhere, [col]: { in: ['', null] } } });
     } else if (type === 'non-empty') {
       result[col] = await prisma.user.count({ where: { ...baseWhere, [col]: { notIn: ['', null] } } });
     } else if (type === 'distinct') {
-      // Count distinct non-null values
       const rows = await prisma.$queryRawUnsafe(
         `SELECT COUNT(DISTINCT "${col}") AS cnt FROM public.users
          WHERE deleted_at IS NULL
-           AND id IN (
-             SELECT user_id FROM public.tenant_users
-             WHERE tenant_id = $1 AND status = true
-           )
+           AND (id = $1 OR company_id = $1)
            AND "${col}" IS NOT NULL AND "${col}" != ''`,
         tenant.tenantId,
       );
@@ -135,38 +121,45 @@ async function summary(tenant, q) {
 
 async function listAll(q) {
   const page = q.page ?? 1; const perPage = q.perPage ?? 25;
-  // deleted=true → show soft-deleted rows; otherwise hide them
   const where = q.deleted === 'true' ? { deletedAt: { not: null } } : { deletedAt: null };
   if (q.search) where.OR = [{ name: { contains: q.search, mode: 'insensitive' } }, { email: { contains: q.search, mode: 'insensitive' } }];
   if (q.name) where.name = { contains: q.name, mode: 'insensitive' };
   if (q.email) where.email = { contains: q.email, mode: 'insensitive' };
   if (q.confirmed !== undefined) where.confirmed = q.confirmed === 'true';
   if (q.active !== undefined && q.deleted !== 'true') where.status = q.active === 'true' ? 1 : 0;
+  if (Array.isArray(q.roles) && q.roles.length) {
+    where.userRoles = { some: { role: { name: { in: q.roles } } } };
+  }
   const [rows, total] = await prisma.$transaction([
     prisma.user.findMany({
       where,
       orderBy: { [SORT_COL[q.sort ?? 'id'] ?? 'id']: q.order ?? 'asc' },
       skip: (page - 1) * perPage, take: perPage,
-      include: {
-        userRoles: { include: { role: { select: { name: true } } } },
-        tenantUsers: { where: { status: true }, include: { tenant: { select: { id: true, name: true } } }, take: 1 },
-      },
+      include: { userRoles: { include: { role: { select: { name: true } } } } },
     }),
     prisma.user.count({ where }),
   ]);
+  // companyName: look up the Company-role user named by u.companyId
+  // (or by u.id itself if the user IS a Company user).
+  const ids = Array.from(new Set(rows.map((u) => {
+    const isCompany = u.userRoles.some((ur) => ur.role.name === 'Company');
+    return isCompany ? u.id : (u.companyId || 0);
+  }).filter(Boolean)));
+  const companies = ids.length ? await prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } }) : [];
+  const nameById = new Map(companies.map((c) => [c.id, c.name]));
   return {
-    data: rows.map((u) => ({
-      ...mapUser(u),
-      companyId: u.tenantUsers[0]?.tenant?.id ?? u.companyId,
-      companyName: u.tenantUsers[0]?.tenant?.name ?? '',
-    })),
+    data: rows.map((u) => {
+      const isCompany = u.userRoles.some((ur) => ur.role.name === 'Company');
+      const companyId = isCompany ? u.id : (u.companyId || null);
+      return { ...mapUser(u), companyId, companyName: companyId ? (nameById.get(companyId) ?? '') : '' };
+    }),
     total, page, perPage,
   };
 }
 
 async function findOne(tenant, id) {
   const u = await prisma.user.findFirst({
-    where: { id, deletedAt: null, tenantUsers: { some: { tenantId: tenant.tenantId, status: true } } },
+    where: { id, deletedAt: null, ...companyMembershipFilter(tenant.tenantId) },
     include: { userRoles: { include: { role: { select: { name: true } } } } },
   });
   if (!u) throw new NotFoundError('user-not-found');
@@ -175,7 +168,7 @@ async function findOne(tenant, id) {
 
 async function findUserInTenantOrThrow(tenant, id) {
   const u = await prisma.user.findFirst({
-    where: { id, deletedAt: null, tenantUsers: { some: { tenantId: tenant.tenantId, status: true } } },
+    where: { id, deletedAt: null, ...companyMembershipFilter(tenant.tenantId) },
     select: { id: true, email: true },
   });
   if (!u) throw new NotFoundError('user-not-found');
@@ -183,9 +176,13 @@ async function findUserInTenantOrThrow(tenant, id) {
 }
 
 /**
- * Create a user and add them to the current tenant.
- * Supports multi-role via dto.roles[] (array of role names).
- * A13: firstName defaults to name if not provided (legacy parity).
+ * Create a user attached to the current company.
+ *   role=Company  → the new user IS a new company. Their schema (tenant_<id>)
+ *                   is provisioned in the same transaction. If schema
+ *                   provisioning fails the user create is rolled back.
+ *   role=User     → companyId is set to the calling Company's id (or to the
+ *                   explicit companyId in the dto if Super Admin is creating
+ *                   under a specific company).
  */
 async function create(tenant, actor, dto) {
   const existing = await prisma.user.findUnique({ where: { email: dto.email }, select: { id: true, deletedAt: true } });
@@ -200,8 +197,10 @@ async function create(tenant, actor, dto) {
       })()]
     : await resolveRoleIds(roleNames, 'User');
 
-  const passwordHash = await hash(dto.password);
+  const isCompany = roleNames.includes('Company');
+  const subUserCompanyId = isCompany ? 0 : (dto.companyId ?? tenant.tenantId ?? 0);
 
+  const passwordHash = await hash(dto.password);
   const wantsConfirmEmail = dto.sendConfirmationEmail === true && !dto.confirmed;
   const confirmCode = wantsConfirmEmail ? randomUUID() : '';
 
@@ -210,10 +209,12 @@ async function create(tenant, actor, dto) {
       const user = await tx.user.create({
         data: {
           name: dto.name,
-          firstName: dto.firstName ?? dto.name,  // A13: firstName = name on create
+          firstName: dto.firstName ?? dto.name,
           lastName: dto.lastName ?? '',
           email: dto.email,
           password: passwordHash,
+          companyId: subUserCompanyId,
+          timezone: dto.timezone ?? 'Europe/Stockholm',
           confirmed: dto.confirmed ?? false,
           confirmationCode: confirmCode,
           status: dto.active === false || dto.status === 0 ? 0 : 1,
@@ -225,93 +226,31 @@ async function create(tenant, actor, dto) {
         data: roleIds.map((roleId) => ({ userId: user.id, roleId })),
         skipDuplicates: true,
       });
-      await tx.tenantUser.create({ data: { tenantId: tenant.tenantId, userId: user.id, roleId: roleIds[0], status: true } });
+      // Provision the per-Company schema in the same transaction. If this
+      // fails the user insert rolls back automatically.
+      if (isCompany) {
+        await provisionSchema(tx, user.id);
+      }
       return user;
     });
-    await record({ actor, typeName: 'User', entityId: created.id, text: `created user ${created.email}`, icon: 'user', cssClass: 'user' });
+    await record({ actor, typeName: 'User', entityId: created.id, text: `created user ${created.email}${isCompany ? ' (Company — tenant schema provisioned)' : ''}`, icon: 'user', cssClass: 'user' });
     if (wantsConfirmEmail) {
       const confirmUrl = `${process.env.APP_URL}/account/confirm/${confirmCode}`;
       sendConfirmationEmail({ toEmail: created.email, toName: created.name, confirmUrl })
         .catch((err) => console.error('confirmation email failed:', err.message));
     }
-    return findOne(tenant, created.id);
+    // Company-role create may have come from a Super Admin with no
+    // tenant context. Resolve findOne against the new user's own
+    // company id so the response works either way.
+    const lookupTenant = isCompany ? { tenantId: created.id } : tenant;
+    return findOne(lookupTenant, created.id);
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') throw new ConflictError('email-already-in-use');
     throw err;
   }
 }
 
-/**
- * Create a user AND provision a new tenant in one flow.
- * The tenant schema is created first; if the user insert fails the schema is
- * explicitly dropped (plus the tenant row deleted) as cleanup.
- * D4 spec: atomic rollback — even though DDL and DML are in separate steps, the
- * catch block ensures no orphaned schema or tenant row is left behind.
- */
-async function createWithNewTenant(actor, dto, tenantsSvc) {
-  const tenantName = dto.newTenantName || dto.tenantName;
-  if (!tenantName) throw new BadRequestError('tenantName-required-when-creating-new-tenant');
-
-  const slug = dto.tenantSlug || tenantName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 60);
-
-  let provisionedTenant = null;
-  try {
-    provisionedTenant = await tenantsSvc.create(actor, {
-      slug,
-      name: tenantName,
-      timezone: dto.tenantTimezone ?? 'Europe/Stockholm',
-      // If admin specified a custom DB name, provision a separate PostgreSQL database
-      dbName: dto.tenantDbName ?? undefined,
-    });
-
-    const roleNames = dto.roles ?? ['Company'];
-    const roleIds = await resolveRoleIds(roleNames, 'Company');
-    const passwordHash = await hash(dto.password);
-
-    const created = await prisma.$transaction(async (tx) => {
-      const existing = await tx.user.findUnique({ where: { email: dto.email }, select: { id: true, deletedAt: true } });
-      if (existing && !existing.deletedAt) throw new ConflictError('email-already-in-use');
-
-      const user = await tx.user.create({
-        data: {
-          name: dto.name,
-          firstName: dto.firstName ?? dto.name,
-          lastName: dto.lastName ?? '',
-          email: dto.email,
-          password: passwordHash,
-          confirmed: dto.confirmed ?? true,
-          status: dto.active === false || dto.status === 0 ? 0 : 1,
-          unitOnly: dto.unitOnly ?? false,
-          image: dto.image ?? '',
-        },
-      });
-      await tx.userRole.createMany({ data: roleIds.map((roleId) => ({ userId: user.id, roleId })), skipDuplicates: true });
-      await tx.tenantUser.create({ data: { tenantId: provisionedTenant.id, userId: user.id, roleId: roleIds[0], status: true } });
-      return user;
-    });
-
-    await record({ actor, typeName: 'User', entityId: created.id, text: `created user ${created.email} with new tenant ${provisionedTenant.name}`, icon: 'user', cssClass: 'user' });
-    return { user: await listAll({ search: dto.email }), tenant: provisionedTenant };
-  } catch (err) {
-    // Rollback: drop schema + delete tenant row so no orphan is left
-    if (provisionedTenant) {
-      try {
-        if (provisionedTenant.dbName) {
-          await tenantsSvc.dropDatabase(provisionedTenant.dbName);
-        } else {
-          await tenantsSvc.dropSchema(provisionedTenant.schemaName);
-        }
-        await prisma.tenant.delete({ where: { id: provisionedTenant.id } }).catch(() => {});
-      } catch (cleanupErr) {
-        console.error('tenant rollback failed:', cleanupErr.message);
-      }
-    }
-    throw err;
-  }
-}
-
 async function update(tenant, actor, id, dto) {
-  // Self-protection checks before tenant membership lookup
   if (id === actor.id) {
     if (dto.active === false || dto.status === 0) throw new ForbiddenError('cannot-disable-self');
     if (dto.roles !== undefined && actor.isAdmin && !dto.roles.includes('Administrator')) {
@@ -328,6 +267,7 @@ async function update(tenant, actor, id, dto) {
   if (dto.active !== undefined) data.status = dto.active ? 1 : 0;
   if (dto.status !== undefined && dto.active === undefined) data.status = dto.status === 1 ? 1 : 0;
   if (dto.unitOnly !== undefined) data.unitOnly = dto.unitOnly;
+  if (dto.timezone !== undefined) data.timezone = dto.timezone;
   if (dto.password) data.password = await hash(dto.password);
 
   try {
@@ -337,21 +277,12 @@ async function update(tenant, actor, id, dto) {
         const roleIds = await resolveRoleIds(dto.roles, 'User');
         await tx.userRole.deleteMany({ where: { userId: target.id } });
         await tx.userRole.createMany({ data: roleIds.map((roleId) => ({ userId: target.id, roleId })), skipDuplicates: true });
-        await tx.tenantUser.update({
-          where: { tenantId_userId: { tenantId: tenant.tenantId, userId: target.id } },
-          data: { roleId: roleIds[0] },
-        });
       } else if (dto.roleId !== undefined) {
-        // Legacy single-roleId path
         const role = await tx.role.findUnique({ where: { id: Number(dto.roleId) }, select: { id: true, all: true } });
         if (!role) throw new NotFoundError('role-not-found');
         if (role.all && !actor.isAdmin) throw new ForbiddenError('cannot-assign-super-admin');
         await tx.userRole.deleteMany({ where: { userId: target.id } });
         await tx.userRole.create({ data: { userId: target.id, roleId: role.id } });
-        await tx.tenantUser.update({
-          where: { tenantId_userId: { tenantId: tenant.tenantId, userId: target.id } },
-          data: { roleId: role.id },
-        });
       }
     });
   } catch (err) {
@@ -365,10 +296,7 @@ async function update(tenant, actor, id, dto) {
 async function softDelete(tenant, actor, id) {
   if (id === actor.id) throw new ForbiddenError('cannot-delete-self');
   const target = await findUserInTenantOrThrow(tenant, id);
-  await prisma.$transaction(async (tx) => {
-    await tx.tenantUser.updateMany({ where: { tenantId: tenant.tenantId, userId: target.id }, data: { status: false } });
-    await tx.user.update({ where: { id: target.id }, data: { deletedAt: new Date(), status: 0 } });
-  });
+  await prisma.user.update({ where: { id: target.id }, data: { deletedAt: new Date(), status: 0 } });
   await record({ actor, typeName: 'User', entityId: target.id, text: `deleted user ${target.email}`, icon: 'user', cssClass: 'user' });
 }
 
@@ -389,8 +317,11 @@ async function toggleConfirm(tenant, actor, id, confirmed) {
 
 async function listDeleted(tenant, q) {
   const page = q.page ?? 1; const perPage = q.perPage ?? 10;
-  const where = { deletedAt: { not: null }, tenantUsers: { some: { tenantId: tenant.tenantId } } };
-  if (q.search) where.OR = [{ name: { contains: q.search, mode: 'insensitive' } }, { email: { contains: q.search, mode: 'insensitive' } }];
+  const where = { deletedAt: { not: null }, ...companyMembershipFilter(tenant.tenantId) };
+  if (q.search) where.AND = [{ OR: [
+    { name: { contains: q.search, mode: 'insensitive' } },
+    { email: { contains: q.search, mode: 'insensitive' } },
+  ] }];
   const [rows, total] = await prisma.$transaction([
     prisma.user.findMany({
       where, orderBy: { deletedAt: 'desc' }, skip: (page - 1) * perPage, take: perPage,
@@ -412,14 +343,11 @@ async function changePassword(tenant, actor, id, plain) {
 
 async function restore(tenant, actor, id) {
   const target = await prisma.user.findFirst({
-    where: { id, deletedAt: { not: null }, tenantUsers: { some: { tenantId: tenant.tenantId } } },
+    where: { id, deletedAt: { not: null }, ...companyMembershipFilter(tenant.tenantId) },
     select: { id: true, email: true },
   });
   if (!target) throw new NotFoundError('user-not-found');
-  await prisma.$transaction(async (tx) => {
-    await tx.user.update({ where: { id: target.id }, data: { deletedAt: null, status: 1 } });
-    await tx.tenantUser.updateMany({ where: { tenantId: tenant.tenantId, userId: target.id }, data: { status: true } });
-  });
+  await prisma.user.update({ where: { id: target.id }, data: { deletedAt: null, status: 1 } });
   await record({ actor, typeName: 'User', entityId: target.id, text: `restored user ${target.email}`, icon: 'user' });
   return findOne(tenant, target.id);
 }
@@ -427,16 +355,20 @@ async function restore(tenant, actor, id) {
 async function permanentDelete(tenant, actor, id) {
   if (id === actor.id) throw new ForbiddenError('cannot-delete-self');
   const target = await prisma.user.findFirst({
-    where: { id, deletedAt: { not: null }, tenantUsers: { some: { tenantId: tenant.tenantId } } },
-    select: { id: true, email: true },
+    where: { id, deletedAt: { not: null }, ...companyMembershipFilter(tenant.tenantId) },
+    include: { userRoles: { select: { role: { select: { name: true } } } } },
   });
   if (!target) throw new NotFoundError('user-not-found-or-not-soft-deleted');
+  const wasCompany = (target.userRoles ?? []).some((ur) => ur.role?.name === 'Company');
   await prisma.$transaction(async (tx) => {
     await tx.userRole.deleteMany({ where: { userId: target.id } });
-    await tx.tenantUser.deleteMany({ where: { userId: target.id } });
     await tx.user.delete({ where: { id: target.id } });
   });
-  await record({ actor, typeName: 'User', entityId: target.id, text: `permanently deleted user ${target.email}`, icon: 'user' });
+  if (wasCompany) {
+    try { await dropSchema(target.id); }
+    catch (err) { console.error(`drop tenant_${target.id} failed: ${err.message}`); }
+  }
+  await record({ actor, typeName: 'User', entityId: target.id, text: `permanently deleted user ${target.email}${wasCompany ? ' (and its tenant schema)' : ''}`, icon: 'user' });
 }
 
 async function resendConfirmation(tenant, actor, id) {
@@ -450,26 +382,20 @@ async function resendConfirmation(tenant, actor, id) {
   return { ok: true, queued: true };
 }
 
-// Superadmin-only: fetch a single user without requiring a tenant context.
 async function findOneGlobal(id) {
   const u = await prisma.user.findFirst({
     where: { id, deletedAt: null },
-    include: {
-      userRoles: { include: { role: { select: { name: true } } } },
-      tenantUsers: {
-        where: { status: true },
-        include: { tenant: { select: { id: true, name: true } } },
-        orderBy: { id: 'asc' },
-        take: 1,
-      },
-    },
+    include: { userRoles: { include: { role: { select: { name: true } } } } },
   });
   if (!u) throw new NotFoundError('user-not-found');
-  return {
-    ...mapUser(u),
-    companyId: u.tenantUsers[0]?.tenant?.id ?? null,
-    companyName: u.tenantUsers[0]?.tenant?.name ?? '',
-  };
+  const isCompany = u.userRoles.some((ur) => ur.role.name === 'Company');
+  const companyId = isCompany ? u.id : (u.companyId || null);
+  let companyName = '';
+  if (companyId) {
+    const c = await prisma.user.findUnique({ where: { id: companyId }, select: { name: true } });
+    companyName = c?.name ?? '';
+  }
+  return { ...mapUser(u), companyId, companyName };
 }
 
 async function recordImpersonateStart(actor, targetId) {
@@ -482,7 +408,7 @@ async function recordImpersonateStop(actor, originalAdminId) {
 }
 
 module.exports = {
-  list, listAll, findOne, findOneGlobal, summary, create, createWithNewTenant, update,
+  list, listAll, findOne, findOneGlobal, summary, create, update,
   softDelete, toggleStatus, toggleConfirm, listDeleted,
   changePassword, restore, permanentDelete, resendConfirmation,
   recordImpersonateStart, recordImpersonateStop,

@@ -9,6 +9,8 @@ html, body {
   color: #333;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Prevent horizontal overflow on all mobile viewports */
+  overflow-x: hidden;
 }
 
 * {
@@ -37,4 +39,121 @@ h1, h2, h3, h4, h5, h6,
 
 .fp-no-scroll {
   overflow: hidden !important;
+}
+
+/* Safe area insets — iOS notch and home bar */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Hide scrollbar utility (reused by horizontal scroll carousels) */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* -------------------------------------------------------------------------
+   Responsive AntD Table fallback.
+   The admin list pages render <Table> directly with `tableLayout: auto`,
+   which crushes columns into ~30px and wraps text character-by-character
+   on phones. This rule keeps the table at a sensible min-width on small
+   screens and gives the wrapper horizontal scroll, so each cell can
+   render normally and the user pans left/right.
+   The opt-out class `.fp-table-no-mobile-scroll` is for tables that
+   already supply their own responsive treatment (e.g. profile field
+   stacks). Apply via the wrapping element's className.
+   ------------------------------------------------------------------------- */
+@media (max-width: 767px) {
+  .ant-table-wrapper:not(.fp-table-no-mobile-scroll) .ant-table-content,
+  .ant-table-wrapper:not(.fp-table-no-mobile-scroll) .ant-table-body {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* AntD's own .ant-table table { min-width: 100% } wins on specificity
+     without !important. We need at least ~720px so 5 narrow columns get
+     usable widths (each ~140px) and the user scrolls horizontally. */
+  .ant-table-wrapper:not(.fp-table-no-mobile-scroll) table {
+    min-width: 720px !important;
+    table-layout: auto !important;
+  }
+  /* Default AntD cell has `word-break: break-all` which gives the
+     hard-to-read character-by-character wrap in narrow columns. */
+  .ant-table-wrapper:not(.fp-table-no-mobile-scroll) .ant-table-cell {
+    word-break: normal !important;
+    overflow-wrap: anywhere;
+    white-space: normal !important;
+  }
+  /* Make sure even unsized columns get enough room not to crush text. */
+  .ant-table-wrapper:not(.fp-table-no-mobile-scroll) .ant-table-thead > tr > th,
+  .ant-table-wrapper:not(.fp-table-no-mobile-scroll) .ant-table-tbody > tr > td {
+    min-width: 96px;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   Minimum readable text on mobile. AntD's `Text type="secondary"` and
+   .ant-typography-* helpers default to 12-13px which is below the WCAG
+   guidance for body copy. Floor everything except form fields (which
+   browsers honour at 16px to avoid iOS zoom) at 14px on phones.
+   ------------------------------------------------------------------------- */
+@media (max-width: 767px) {
+  body,
+  .ant-typography,
+  .ant-typography-caption,
+  .ant-table-cell,
+  .ant-form-item-label > label {
+    font-size: 14px;
+  }
+
+  /* Prevent iOS auto-zoom on input focus (requires 16px) */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   Mobile tap-target floor. WCAG / Apple HIG / Material all converge on
+   ~44px. Selectively bump compact AntD controls (icon-only buttons,
+   pagination arrows, table action icons) without enlarging deliberately
+   small chips/tags.
+   ------------------------------------------------------------------------- */
+@media (max-width: 767px) {
+  .ant-btn-sm,
+  .ant-pagination-item,
+  .ant-pagination-prev,
+  .ant-pagination-next,
+  .ant-pagination-jump-prev,
+  .ant-pagination-jump-next {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  .ant-btn-icon-only:not(.ant-btn-sm) {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  /* Dropdown menu items — full touch target */
+  .ant-dropdown-menu-item {
+    min-height: 44px !important;
+    line-height: 44px !important;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   Ant Layout DVH fix — iOS Safari's retractable toolbar causes 100vh to
+   overflow. Using 100dvh (dynamic viewport height) fixes this.
+   ------------------------------------------------------------------------- */
+.ant-layout {
+  min-height: 100dvh !important;
+}
+.ant-layout .ant-layout {
+  min-height: unset !important;
 }

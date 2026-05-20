@@ -45,6 +45,17 @@ function mapLegacyRoleId(roleId) {
   return 'User';
 }
 
+/**
+ * @swagger
+ * /api/v1/company/users:
+ *   get:
+ *     tags: ["Company Users"]
+ *     summary: GET /
+ *     security:
+ *       - access_token: []
+ *     responses:
+ *       200: { description: OK }
+ */
 router.get('/', async (req, res, next) => {
   try {
     const q = {
@@ -62,10 +73,34 @@ router.get('/', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+/**
+ * @swagger
+ * /api/v1/company/users/{id}:
+ *   get:
+ *     tags: ["Company Users"]
+ *     summary: GET /:id
+ *     security:
+ *       - access_token: []
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string } }
+ *     responses:
+ *       200: { description: OK }
+ */
 router.get('/:id', async (req, res, next) => {
   try { res.json(await svc.findOne(req.tenant, Number(req.params.id))); } catch (err) { next(err); }
 });
 
+/**
+ * @swagger
+ * /api/v1/company/users:
+ *   post:
+ *     tags: ["Company Users"]
+ *     summary: POST /
+ *     security:
+ *       - access_token: []
+ *     responses:
+ *       200: { description: OK }
+ */
 router.post('/', async (req, res, next) => {
   try {
     const body = req.body || {};
@@ -101,6 +136,19 @@ router.post('/', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+/**
+ * @swagger
+ * /api/v1/company/users/{id}:
+ *   patch:
+ *     tags: ["Company Users"]
+ *     summary: PATCH /:id
+ *     security:
+ *       - access_token: []
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string } }
+ *     responses:
+ *       200: { description: OK }
+ */
 router.patch('/:id', async (req, res, next) => {
   try {
     const body = req.body || {};
@@ -115,6 +163,19 @@ router.patch('/:id', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+/**
+ * @swagger
+ * /api/v1/company/users/{id}:
+ *   delete:
+ *     tags: ["Company Users"]
+ *     summary: DELETE /:id
+ *     security:
+ *       - access_token: []
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string } }
+ *     responses:
+ *       200: { description: OK }
+ */
 router.delete('/:id', async (req, res, next) => {
   try {
     await svc.softDelete(req.tenant, req.user, Number(req.params.id));
@@ -122,6 +183,19 @@ router.delete('/:id', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+/**
+ * @swagger
+ * /api/v1/company/users/{id}/status:
+ *   patch:
+ *     tags: ["Company Users"]
+ *     summary: PATCH /:id/status
+ *     security:
+ *       - access_token: []
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string } }
+ *     responses:
+ *       200: { description: OK }
+ */
 router.patch('/:id/status', async (req, res, next) => {
   try {
     const active = req.body.active !== undefined ? !!req.body.active : req.body.status === 1;
@@ -129,12 +203,38 @@ router.patch('/:id/status', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+/**
+ * @swagger
+ * /api/v1/company/users/{id}/confirm:
+ *   patch:
+ *     tags: ["Company Users"]
+ *     summary: PATCH /:id/confirm
+ *     security:
+ *       - access_token: []
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string } }
+ *     responses:
+ *       200: { description: OK }
+ */
 router.patch('/:id/confirm', async (req, res, next) => {
   try {
     res.json(await svc.toggleConfirm(req.tenant, req.user, Number(req.params.id), !!req.body.confirmed));
   } catch (err) { next(err); }
 });
 
+/**
+ * @swagger
+ * /api/v1/company/users/{id}/password:
+ *   post:
+ *     tags: ["Company Users"]
+ *     summary: POST /:id/password
+ *     security:
+ *       - access_token: []
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: string } }
+ *     responses:
+ *       200: { description: OK }
+ */
 router.post('/:id/password', async (req, res, next) => {
   try {
     res.json(await svc.changePassword(req.tenant, req.user, Number(req.params.id), req.body.password));

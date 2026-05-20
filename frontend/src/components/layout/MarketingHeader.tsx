@@ -17,6 +17,11 @@ const { useBreakpoint } = Grid;
 export interface MarketingHeaderProps {
   /** Bilingual stub — wire to next-intl in Phase 4b. */
   locale?: 'en' | 'sv';
+  /** Hide the four marketing nav links (Services / Our Product / About /
+   *  Contact). Used by UserShell on authenticated pages so the operator
+   *  only sees logo + user dropdown — per operator request. The mobile
+   *  drawer also omits the nav items when this is set. */
+  hideNav?: boolean;
 }
 
 const NAV_LABELS = {
@@ -39,7 +44,7 @@ const USER_MENU_LABELS = {
  *
  * Mirrors the legacy frontend/includes/nav.blade.php IA exactly.
  */
-export function MarketingHeader({ locale = 'sv' }: MarketingHeaderProps) {
+export function MarketingHeader({ locale = 'sv', hideNav = false }: MarketingHeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
   const screens = useBreakpoint();
@@ -71,7 +76,7 @@ export function MarketingHeader({ locale = 'sv' }: MarketingHeaderProps) {
 
   const userMenuItems = [
     { key: 'startpage',      label: <Link href="/dashboard">{userLabels.startpage}</Link> },
-    { key: 'changePassword', label: <Link href="/profile/edit">{userLabels.changePassword}</Link> },
+    { key: 'changePassword', label: <Link href="/profile/password">{userLabels.changePassword}</Link> },
     // Administration is visible to anyone with view-backend (Administrator
     // or Company role) — matches legacy @permission('view-backend').
     ...(canAccessBackend(me)
@@ -156,8 +161,8 @@ export function MarketingHeader({ locale = 'sv' }: MarketingHeaderProps) {
           </span>
         </Link>
 
-        {/* nav */}
-        {!isMobile ? (
+        {/* nav (omitted on authenticated pages when hideNav is set) */}
+        {!isMobile && !hideNav ? (
           <nav style={{ display: 'flex', gap: 28, marginLeft: 24, flex: 1 }}>
             {navItems.map((i) => navLink(i.href, i.label))}
           </nav>
@@ -208,15 +213,17 @@ export function MarketingHeader({ locale = 'sv' }: MarketingHeaderProps) {
         onClose={() => setDrawerOpen(false)}
         width={280}
       >
-        <Menu
-          mode="inline"
-          selectedKeys={[pathname]}
-          items={navItems.map((i) => ({
-            key: i.href,
-            label: <Link href={i.href} onClick={() => setDrawerOpen(false)}>{i.label}</Link>,
-          }))}
-          style={{ borderRight: 0, marginBottom: 16 }}
-        />
+        {!hideNav && (
+          <Menu
+            mode="inline"
+            selectedKeys={[pathname]}
+            items={navItems.map((i) => ({
+              key: i.href,
+              label: <Link href={i.href} onClick={() => setDrawerOpen(false)}>{i.label}</Link>,
+            }))}
+            style={{ borderRight: 0, marginBottom: 16 }}
+          />
+        )}
         {me ? (
           <Menu
             mode="inline"

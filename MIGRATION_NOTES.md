@@ -82,7 +82,8 @@ The pre-existing `docs-1/` reference docs (14 files) match the actual code with 
 | Roles/permissions | `config/access.php` static + DB tables | DB-only via Prisma; runtime-editable via admin UI | Seeded from `config/access.php`. |
 | Queue | DB driver (`jobs`/`failed_jobs` tables) | BullMQ on Redis | Four V1 IoT jobs port over; V0 jobs dropped. |
 | Cache / sessions | File driver | Redis (BullMQ shares this Redis) | Aligns with prompt §Phase 5 services. |
-| Charts | HighCharts + AmCharts | `highcharts-react-official` (legacy already uses HighCharts heavily) + AmCharts 5 React only where AmCharts-specific visuals exist | Default to HighCharts for new charts. |
+| Charts | HighCharts + AmCharts | `highcharts-react-official` (legacy already uses HighCharts heavily) + AmCharts 5 React only where AmCharts-specific visuals exist | Default to HighCharts for new charts. **Phase 4c Q2:** Legacy `board/graphWidgets` routed chart rendering through an external Grafana instance (GRAPH_URL / GRAPH_KEY env vars). That integration is broken for the new PostgreSQL stack. Replaced with in-app HighCharts using the `getBarChartData()` query logic ported to NestJS services. GRAPH_URL / GRAPH_KEY are marked `# legacy — unused in new stack` in `.env.example`. |
+| Calendar | jQuery FullCalendar v3 (CDN) | `@fullcalendar/react` + `@fullcalendar/daygrid` + `@fullcalendar/timegrid` + `@fullcalendar/interaction` — **shift schedule edit page only** | AntD `Calendar` is insufficient for recurring-event expansion and click-to-add interaction required by the shift schedule edit UI (Phase 4c Q1). AntD Calendar is still used for date pickers elsewhere. |
 | Flow diagrams | GoJS (`public/js/google.js`, 822 KB) | `gojs` npm package wrapped in a React component | Same library, React adapter. |
 | Rich text | CKEditor 4 (full distribution in `public/ckeditor/`) | TipTap or Ant Design's `Mentions`/`Editor` integration; CKEditor 5 React fallback for CMS | CKEditor 4 is EOL; default to TipTap, escalate to CKEditor 5 if CMS authors need its specific UX. |
 | Tables | yajra DataTables (server-side) | Ant Design `Table` with TanStack Query server pagination | Same UX; remove the jQuery dependency. |
@@ -381,8 +382,8 @@ The legacy app has **57 model files**, of which ~10 are `Access/` traits (relati
 | `Slider.php` → `sliders` | `Slider` (public) | |
 | `Testimonial.php` → `testimonials` | `Testimonial` (public) | |
 | `SiteSettings.php` → `site_settings` | `SiteSetting` (public) | key/value |
-| (new) | `Tenant` (public, `tenants`) | Replaces `users.db_name`/`db_username`/`db_password` columns. Stores `slug`, `schema_name`, `created_at`, `status`, primary contact `user_id`, plan info, **`timezone TEXT NOT NULL DEFAULT 'Europe/Stockholm'`** (NEW v3 R6 — see §17) |
-| (new) | `TenantUser` (public) | M:N `User`↔`Tenant` |
+| ~~(new) `Tenant`~~ | **REMOVED 2026-05-14** — see §13 entry 32. Schema name is now derived from the Company user's id; `timezone` moved to `User.timezone`. |
+| ~~(new) `TenantUser`~~ | **REMOVED 2026-05-14** — see §13 entry 32. Single-tenant: `User.companyId` points at the Company user's id. |
 | `Equipments.php` → `equipments` | `Equipment` (tenant_template) | Self-FK `parent_id`, FK `type_id → EquipmentType`. Index on `parent_id`, `type_id`, `status`, `sort_order`. |
 | `EquipmentType.php` → `equipment_type` | `EquipmentType` (tenant_template) | Self-FK `parent_id` |
 | `EquipmentProperty.php` → `equipment_properties` | `EquipmentProperty` (tenant_template) | FK `equipment_id` |
@@ -692,8 +693,8 @@ This is the highest-risk part of the migration and the biggest semantic change.
 
 ### 11.2 New model — schema-per-tenant in one Postgres DB (updated v2)
 
-- One Postgres DB. `public` schema for platform-wide tables. `tenant_template` schema for the canonical tenant table set. Per-tenant schemas `tenant_<id>` cloned from `tenant_template` on tenant creation.
-- `PrismaService` extends `PrismaClient` and overrides `$connect`/$queryRaw to set `SET search_path = "tenant_<id>", public` per request, based on the JWT's `tenant_id` claim handled by `TenantInterceptor`.
+- One Postgres DB. `public` schema for platform-wide tables. `tenant_template` schema for the canonical tenant table set. Per-tenant schemas `tenant_<id>` cloned from `tenant_template` on Company-user creation.
+- **(updated 2026-05-14 — §13 entry 32)** Tenant routing is derived from the authenticated user with no DB lookup: `tenant_${user.id}` for Company users, `tenant_${user.companyId}` for sub-Users, `tenant_${X-Tenant-Id header}` for Administrators. `withTenant(tenant, cb)` issues `SET LOCAL search_path = "tenant_<id>", public` per request. The JWT no longer carries a `tenantId` claim — the auth middleware reloads the user row (cheap, indexed) and the tenant middleware reads role + companyId off it.
 - All FKs within a tenant schema are intra-schema. **A5 (v2):** there are NO cross-schema FKs from tenant tables to `public.users` — replaced with denormalised user snapshots (see §11.5).
 - **A7 (v2) — `pg_trgm` extension** enabled in the initial migration: `CREATE EXTENSION IF NOT EXISTS pg_trgm;`. GIN trigram indexes on the autocomplete-relevant columns:
   - `tenant_<id>.machine_programmes.name`
@@ -735,6 +736,48 @@ The legacy `BackOfficeFunction::InsertData($tblName, $data)` and friends write t
 5. Reports counts and any rows skipped due to validation errors (FK violations, malformed JSON, etc.).
 6. **Order of operations matters**: master tables first, then tenant tables in dependency order (types → parts/work-shifts/equipments → flows → flow_design_attributes → production/scrap/stop). The script uses Prisma's known FK graph to order writes.
 7. **Schema discovery**: for the ~50 tables without Laravel migrations, the script first runs `INFORMATION_SCHEMA` queries against the live MySQL DB to extract column types, asserts they match the Prisma schema, and FAILS LOUDLY with the diff if they don't. This catches the cases where a column was added in production but not reflected in Prisma.
+
+**(updated 2026-05-14 — §13 entry 32) Tenant-id ≠ Company-user-id remapping.**
+When migrating legacy MySQL tenant data to Postgres in Phase 6:
+
+- The legacy `tenants.id` will NOT match the Company user's `id` in the
+  new system (Demo: `tenant.id=1` → `user.id=2`; Volvo: `tenant.id=14` →
+  `user.id=66`).
+- The Phase 6 migration script must map legacy `tenant.id` → Company
+  `user.id` to correctly name the Postgres schema as `tenant_<userId>`.
+  Build this map up front by joining legacy `tenants` to legacy `users`
+  on the tenant's primary contact (the user whose role row is `Company`
+  for that tenant), then keep the map in memory for the duration of the
+  run. Persist it as a `legacy_tenant_id_map.json` audit file alongside
+  the script's output.
+- Any legacy data that references `tenant.id` as a foreign key must be
+  updated to reference the Company `user.id` after migration. In
+  practice this affects:
+  - The schema name itself (`tenant_<id>` directory in PG).
+  - The `feedback.tenantId` column (now stores Company user id — the
+    field name is kept per the §13 entry 32 stability decision).
+  - Any future denormalised "tenant_*_id" snapshot columns added by
+    later phases.
+- The legacy `users.db_name`, `users.db_username`, `users.db_password`
+  columns are **ignored** in the new stack — schema is derived from
+  `user.id` only. The Phase 6 script should `SELECT` these columns
+  during the legacy read pass only to assert that the `db_name` for
+  each Company user matches the legacy `tenants.db_name` for that
+  tenant (sanity check that the legacy data really is consistent); it
+  must NOT write any of these columns into Postgres `users`.
+
+This block **supersedes step 2 above** for Phase 6: there is no
+`public.tenants` row to create. The script's pseudocode for step 2
+becomes:
+
+```
+for each legacy tenants row T:
+    companyUser = legacy_users[T.primary_user_id]  # the role=Company user
+    newUserId   = public_users[companyUser.email].id   # already inserted in step 1
+    schemaName  = `tenant_${newUserId}`
+    provisionSchema(prisma, newUserId)
+    legacy_tenant_id_map[T.id] = newUserId
+```
 
 ### 11.5 User snapshots & per-tenant backup integrity (updated v2 per A5)
 
@@ -923,6 +966,19 @@ These are deliberate. If any are wrong, fix here before Phase 1.
 29. **(NEW v3, C1)** Migration window: **big-bang**. Plan a 4–8 hour weekend outage. **Rollback plan:** keep the legacy app deployable for **30 days post-migration** in case data corruption is discovered. Concretely: the legacy DB and app server stay up but read-only (a single-line nginx rule blocks POST/PUT/PATCH/DELETE) for 30 days. After 30 days clean, decommission the legacy stack.
 30. **(NEW v3, C2 provisional)** Rich text editor: **TipTap**. Re-evaluate during UAT — if CMS authors push back, swap to CKEditor 5 React (one component swap; data format is HTML-string in both).
 31. **(NEW v3, C5 strategy)** All 10 locales lazy-loaded by next-intl (default behaviour). Eagerly bundle only `sv` + `en` in the initial JS payload. Operator confirms actual usage post-migration via `SELECT DISTINCT locale FROM users` (or wherever per-user locale is stored) — see OPERATOR_QUESTIONS.md. If only sv+en are real, the other 8 locale JSON files are kept on disk but never bundled and `/changeLanguage` for them returns 404.
+32. **(NEW 2026-05-14)** **Drop the `Tenant` + `TenantUser` models — a Company user IS the company.** Replaces the v2/v3 design that had a separate `public.tenants` table joining users to schemas. New shape:
+    - `User.companyId BIGINT NOT NULL DEFAULT 0` — for `role=User`, points at the Company user's id; for `role=Company`, stays 0 (they ARE the company).
+    - `User.timezone TEXT NOT NULL DEFAULT 'Europe/Stockholm'` — absorbs the field that used to live on `Tenant`.
+    - Tenant schema name derived purely from the authenticated user with **no DB lookup**: `tenant_${user.id}` for Company users, `tenant_${user.companyId}` for sub-Users, `tenant_${X-Tenant-Id header}` for Administrators. The legacy `req.tenant.tenantId` field is preserved at the middleware boundary, with the value now meaning *Company user id*.
+    - `Feedback.tenantId` column retained, redocumented to mean "Company user id". Snapshot writes use `prisma.user.findUnique` to capture the Company user's display name (was `prisma.tenant.findUnique`).
+    - JWT payload drops the `tenantId` claim — `{ sub, email, roles, kind, impersonator_id? }` only. The auth middleware adds one `prisma.user.findFirst` per request (with `userRoles` include) to repopulate role/companyId/timezone; net effect ≈ the same as the old `prisma.tenant.findUnique` hop in `tenantMiddleware`.
+    - **Schema-only mode is now the only mode.** `Tenant.dbName` (separate-DB routing — Volvo's `vovodb`) is gone. Production migration for Volvo must convert that separate DB into a `tenant_<id>` schema in the shared cluster *before* this commit deploys (see OPERATOR_QUESTIONS.md, item 31.dbname-flip).
+    - `me.activeTenantId` field name preserved on the API; semantic now = Company user id. `MeResponse.tenants[]` becomes a one-row synthetic array (or empty for Administrators) so the frontend's `tenants.find(t => t.id === activeTenantId)` pattern keeps working.
+    - **Frontend API surface changes:** `GET /api/v1/admin/tenants` deleted. Admins discover companies via `GET /superadmin/users?roles=Company` (the `roles` filter was added in the same commit). Sidebar's "Tenants" item replaced by filtering User Management on `role=Company`. `frontend/src/lib/api/tenants.ts` and `frontend/src/app/(admin)/admin/tenants/` are gone; new `lib/api/companies.ts` provides `useCompaniesForPicker()`.
+    - **Test-bootstrap helper:** `backend/test/helpers/get-demo-company-user-id.js` exports `getDemoCompanyUserId(app, adminCookie)` and `getDemoTenantContext(app, adminCookie)`. Replaces the `GET /admin/tenants` discovery used by 7 e2e tests; the 2 tenant-specific tests are rewritten in place.
+    - **Rationale:** the Tenant table existed only to map a user→schema and to hold a timezone; both responsibilities collapse into the User row. Removing it eliminates an entire join (and an entire CRUD surface) without losing any production capability.
+    - **Risk audit and full resolution log:** see `TENANT_REMOVAL.md` (all 7 risks RESOLVED, full e2e suite green, smoke verifications I.1–I.3 PASS).
+    - **References updated in this section's siblings:** §4.3 (Tenant + TenantUser rows now annotated REMOVED — see entry 32); §11.2 (`PrismaService` derives `search_path` from `req.user.id`/`companyId`, no Tenant table lookup); §17.2 (`tenants.timezone` → `users.timezone`).
 
 ---
 
@@ -1056,7 +1112,7 @@ v3 fixes this rigorously.
 
 ### 17.2 Tenant timezone
 
-Add `tenants.timezone TEXT NOT NULL DEFAULT 'Europe/Stockholm'` (R6). Every migrated tenant gets `'Europe/Stockholm'`; new tenants pick at creation time (admin UI dropdown of IANA TZ names).
+**(updated 2026-05-14 — §13 entry 32)** `timezone` now lives on `User` rather than on the removed `tenants` table. Column: `users.timezone TEXT NOT NULL DEFAULT 'Europe/Stockholm'`. The effective tenant timezone is the Company user's `timezone` (sub-users inherit from their Company user via `user.companyId`). New Company users pick at creation time (admin UI dropdown of IANA TZ names); migrated rows default to `'Europe/Stockholm'`.
 
 ### 17.3 Reads + display
 
