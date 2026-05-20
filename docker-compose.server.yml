@@ -41,6 +41,8 @@ services:
     environment:
       NODE_ENV: production
       PORT: 4000
+    ports:
+      - '4000:4000'
     networks: [internal]
     depends_on:
       postgres:
@@ -66,6 +68,8 @@ services:
     environment:
       NODE_ENV: production
       NEXT_TELEMETRY_DISABLED: '1'
+    ports:
+      - '3000:3000'
     networks: [internal]
     depends_on:
       backend:
@@ -77,29 +81,8 @@ services:
       retries: 5
       start_period: 60s
 
-  nginx:
-    image: nginx:1.27-alpine
-    restart: unless-stopped
-    ports:
-      - '80:80'
-      - '443:443'
-    volumes:
-      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./docker/nginx/certs:/etc/nginx/certs:ro
-    networks:
-      - internal
-      - public
-    depends_on:
-      backend:
-        condition: service_healthy
-      frontend:
-        condition: service_healthy
-
 networks:
   internal:
-    driver: bridge
-    internal: false # set true once cert renewal automation is wired
-  public:
     driver: bridge
 
 volumes:
