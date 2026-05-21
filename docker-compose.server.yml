@@ -43,12 +43,6 @@ services:
       - mqtt-data:/mosquitto/data
     networks: [internal]
     env_file: .env.production
-    environment:
-      # env_file loads MQTT_USERNAME and MQTT_PASSWORD into the container so
-      # the healthcheck ($$MQTT_USERNAME / $$MQTT_PASSWORD) can read them
-      # without needing those vars exported to the host shell.
-      MQTT_USERNAME: ${MQTT_USERNAME:-fpanalyzer-mqtt-u1}
-      MQTT_PASSWORD: ${MQTT_PASSWORD:-}
     healthcheck:
       test: ['CMD-SHELL', 'mosquitto_pub -h localhost -p 1883 -t "health/broker" -m "ok" -u "$$MQTT_USERNAME" -P "$$MQTT_PASSWORD" || exit 1']
       interval: 30s
