@@ -2,14 +2,18 @@
 
 /**
  * MQTT subscriber — connects to the Mosquitto broker as the superuser
- * client, subscribes to fp/v1/#, and routes each message to the
- * appropriate service function.
+ * client and handles ONLY the three critical stop-data topics:
  *
- * All business logic is delegated to the same service functions used by
- * the existing HTTP routes (saveStopStart, installMachine, saveStopEvent)
- * so no logic is duplicated.
+ *   fp/v1/+/machine/+/stop/start   → handleStopStart
+ *   fp/v1/+/machine/+/stop/end     → handleStopEnd
+ *   fp/v1/+/machine/+/stop/replay  → handleStopReplay
  *
- * Phase 1: server-side only. HTTP endpoints are untouched.
+ * All other IoT interactions (heartbeat, enroll, status, firmware check)
+ * are HTTP-only. The broker may receive those publishes from devices but
+ * the backend is NOT subscribed to them and will not act on them.
+ *
+ * Business logic is delegated to iot-machine-data.service.js (same
+ * functions used by the HTTP routes) so no logic is duplicated.
  */
 
 const mqtt = require('mqtt');
@@ -46,75 +50,8 @@ function productionTimeStr(startISO, endISO) {
 }
 
 // ── topic handlers ────────────────────────────────────────────────────────────
-
-async function handleHeartbeat(tenantId, machineId, payload) {
-  const tenant = buildTenant(tenantId);
-  try {
-    const result = await iotSvc.installMachine(tenant, {
-      machine_id: parseInt(machineId, 10),
-      pin_no: payload.pin_no ?? 0,
-      unit_name: payload.unit_name ?? '',
-      wifi_id: payload.wifi_id ?? null,
-      bluetooth_id: payload.bluetooth_id ?? null,
-    });
-
-    // Passive firmware version check — emit badge event if behind latest.
-    const latest = process.env.IOT_LATEST_VERSION || '1.0.0';
-    if (payload.firmware_version && payload.firmware_version !== latest) {
-      const newer = _semverGt(latest, payload.firmware_version);
-      if (newer) {
-        _socketSvc?.emitToTenant(tenantId, 'machine:firmware:update:available', {
-          machineId: parseInt(machineId, 10),
-          currentVersion: payload.firmware_version,
-          latestVersion: latest,
-          ts: Date.now(),
-        });
-      }
-    }
-
-    _socketSvc?.emitToTenant(tenantId, 'machine:status:changed', {
-      machineId: parseInt(machineId, 10),
-      runningStatus: result.data?.runningStatus ?? 'on',
-      unitConnected: result.data?.unitConnected ?? 'yes',
-      lastOnline: result.data?.lastOnline ?? new Date().toISOString(),
-      ts: Date.now(),
-    });
-  } catch (err) {
-    console.error(`[MQTT] heartbeat machine=${machineId} tenant=${tenantId}: ${err.message}`);
-  }
-}
-
-async function handleEnroll(tenantId, payload) {
-  const tenant = buildTenant(tenantId);
-  try {
-    const result = await iotSvc.installMachine(tenant, {
-      machine_id: 0,
-      pin_no: payload.pin_no ?? 0,
-      unit_name: payload.unit_name ?? 'Unknown',
-      wifi_id: payload.wifi_id ?? null,
-      bluetooth_id: payload.bluetooth_id ?? null,
-    });
-
-    const newMachineId = result.data?.id;
-    if (_client && newMachineId) {
-      _client.publish(
-        `fp/v1/${tenantId}/machine/new/enrolled`,
-        JSON.stringify({ machine_id: newMachineId, status: 'created', ts: Date.now() }),
-        { qos: 1 },
-      );
-    }
-
-    _socketSvc?.emitToTenant(tenantId, 'machine:enrolled', {
-      machineId: newMachineId,
-      pinNo: payload.pin_no,
-      unitName: payload.unit_name,
-      tenantId: parseInt(tenantId, 10),
-      ts: Date.now(),
-    });
-  } catch (err) {
-    console.error(`[MQTT] enroll tenant=${tenantId}: ${err.message}`);
-  }
-}
+// Only three handlers exist. Heartbeat, enroll, status, and firmware/check
+// are handled exclusively via HTTP — no MQTT handlers for those topics.
 
 async function handleStopStart(tenantId, machineId, payload, packetId) {
   const tenant = buildTenant(tenantId);
@@ -286,13 +223,8 @@ async function handleStopReplay(tenantId, machineId, payload) {
     }
   }
 
-  // Acknowledge to device.
-  _client?.publish(
-    `fp/v1/${tenantId}/machine/${machineId}/stop/replay/ack`,
-    JSON.stringify({ committed, total: sorted.length, failed_at: failedAt, ts: Date.now() }),
-    { qos: 1 },
-  );
-
+  // No ACK published — device does not subscribe to response topics.
+  // Dashboard is notified via WebSocket only.
   _socketSvc?.emitToTenant(tenantId, 'machine:replay:complete', {
     machineId: parseInt(machineId, 10),
     committed,
@@ -302,57 +234,10 @@ async function handleStopReplay(tenantId, machineId, payload) {
   });
 }
 
-async function handleStatus(tenantId, machineId, payload) {
-  const tenant = buildTenant(tenantId);
-  const connected = payload.connected === true;
-
-  try {
-    await withTenant(tenant, (tx) =>
-      tx.$executeRawUnsafe(
-        `UPDATE machines SET unit_connected = $2, updated_at = NOW() WHERE id = $1`,
-        parseInt(machineId, 10), connected ? 'yes' : 'no',
-      ),
-    );
-
-    const event = connected ? 'machine:online' : 'machine:offline';
-    _socketSvc?.emitToTenant(tenantId, event, {
-      machineId: parseInt(machineId, 10),
-      connected,
-      reason: payload.reason ?? (connected ? 'connect' : 'lwt'),
-      ts: Date.now(),
-    });
-    _socketSvc?.emitToTenant(tenantId, 'machine:status:changed', {
-      machineId: parseInt(machineId, 10),
-      unitConnected: connected ? 'yes' : 'no',
-      ts: Date.now(),
-    });
-  } catch (err) {
-    console.error(`[MQTT] status machine=${machineId} tenant=${tenantId}: ${err.message}`);
-  }
-}
-
-async function handleFirmwareCheck(tenantId, machineId, payload) {
-  const latest = process.env.IOT_LATEST_VERSION || '1.0.0';
-  const downloadUrl = process.env.IOT_FIRMWARE_URL || '/iot_version/software/latest.bin';
-  const upgradeAvailable = _semverGt(latest, payload.current_version || '0.0.0');
-
-  _client?.publish(
-    `fp/v1/${tenantId}/machine/${machineId}/firmware/response`,
-    JSON.stringify({
-      current_version: payload.current_version,
-      latest_version: latest,
-      upgrade_available: upgradeAvailable,
-      download_url: upgradeAvailable ? downloadUrl : null,
-      ts: Date.now(),
-    }),
-    { qos: 0 },
-  );
-}
-
 // ── message router ────────────────────────────────────────────────────────────
 
 function routeMessage(topic, rawPayload, packet) {
-  // topic: fp/v1/{tenantId}/machine/{machineId or "new"}/{event...}
+  // topic: fp/v1/{tenantId}/machine/{machineId}/{stop/start|stop/end|stop/replay}
   const parts = topic.split('/');
   if (parts[0] !== 'fp' || parts[1] !== 'v1' || parts[3] !== 'machine') return;
 
@@ -360,7 +245,7 @@ function routeMessage(topic, rawPayload, packet) {
   if (!tenantId || !/^\d+$/.test(tenantId)) return;
 
   const machineSegment = parts[4];
-  if (!machineSegment) return;
+  if (!machineSegment || !/^\d+$/.test(machineSegment)) return;
 
   let payload;
   try {
@@ -378,21 +263,11 @@ function routeMessage(topic, rawPayload, packet) {
   const eventPath = parts.slice(5).join('/');
   const packetId = packet?.messageId;
 
-  if (machineSegment === 'new' && eventPath === 'enroll') {
-    handleEnroll(tenantId, payload);
-    return;
-  }
-
-  if (!/^\d+$/.test(machineSegment)) return; // ignore non-numeric machineId segments
-
   switch (eventPath) {
-    case 'heartbeat':      handleHeartbeat(tenantId, machineSegment, payload); break;
-    case 'stop/start':     handleStopStart(tenantId, machineSegment, payload, packetId); break;
-    case 'stop/end':       handleStopEnd(tenantId, machineSegment, payload, packetId); break;
-    case 'stop/replay':    handleStopReplay(tenantId, machineSegment, payload); break;
-    case 'status':         handleStatus(tenantId, machineSegment, payload); break;
-    case 'firmware/check': handleFirmwareCheck(tenantId, machineSegment, payload); break;
-    default: break; // unknown topic — silently ignore
+    case 'stop/start':  handleStopStart(tenantId, machineSegment, payload, packetId); break;
+    case 'stop/end':    handleStopEnd(tenantId, machineSegment, payload, packetId); break;
+    case 'stop/replay': handleStopReplay(tenantId, machineSegment, payload); break;
+    default: break; // heartbeat, status, firmware/check, enroll → HTTP-only; ignored here
   }
 }
 
@@ -427,9 +302,14 @@ function connect() {
 
   _client.on('connect', () => {
     console.log('[MQTT] Connected to broker:', brokerUrl);
-    _client.subscribe('fp/v1/#', { qos: 1 }, (err) => {
+    const topics = [
+      'fp/v1/+/machine/+/stop/start',
+      'fp/v1/+/machine/+/stop/end',
+      'fp/v1/+/machine/+/stop/replay',
+    ];
+    _client.subscribe(topics, { qos: 1 }, (err) => {
       if (err) console.error('[MQTT] Subscribe error:', err.message);
-      else console.log('[MQTT] Subscribed to fp/v1/#');
+      else console.log('[MQTT] Subscribed to stop topics:', topics.join(', '));
     });
   });
 
@@ -461,20 +341,6 @@ function disconnect() {
     _client.end(true);
     _client = null;
   }
-}
-
-// ── utilities ─────────────────────────────────────────────────────────────────
-
-/** Returns true if versionA is strictly greater than versionB (semver). */
-function _semverGt(versionA, versionB) {
-  const parse = (v) => String(v ?? '0').split('.').map((n) => parseInt(n, 10) || 0);
-  const a = parse(versionA);
-  const b = parse(versionB);
-  for (let i = 0; i < 3; i++) {
-    if (a[i] > b[i]) return true;
-    if (a[i] < b[i]) return false;
-  }
-  return false;
 }
 
 module.exports = { connect, disconnect, getClient, setSocketService, routeMessage };

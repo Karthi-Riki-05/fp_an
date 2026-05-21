@@ -135,33 +135,10 @@ router.post('/getMachineStatus', async (req, res, next) => {
 // (mobile-machine-iot.routes.js) mounted in app.js BEFORE the global
 // JWT middleware — they accept either JWT or `company_email_id` body
 // auth so field firmware can call them without a cookie.
-
-/**
- * @swagger
- * /api/v1/machine/updateUnitConnectionStatus:
- *   post:
- *     tags: [Mobile - Machine]
- *     summary: Toggle `unit_connected` for one or more machines
- *     requestBody:
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               machine_id: { type: integer }
- *               unit_connected: { type: string, enum: [yes, no] }
- *     security:
- *       - access_token: []
- */
-router.post('/updateUnitConnectionStatus', async (req, res, next) => {
-  try {
-    const id = Number(req.body.machine_id);
-    const conn = req.body.unit_connected === 'yes' ? 'yes' : 'no';
-    if (!id) return res.json(fail('machine_id required'));
-    const updated = await machinesSvc.update(req.tenant, id, { unitConnected: conn });
-    res.json(ok(updated));
-  } catch (e) { res.json(fail(e.message ?? 'update failed')); }
-});
+//
+// updateUnitConnectionStatus is also served by the public IoT shim so
+// legacy firmware can call it with company_email_id + unit_name without
+// a JWT. See mobile-machine-iot.routes.js.
 
 // ── Phase C: IoT stop ingestion + helpers ─────────────────────────────────
 
@@ -325,9 +302,23 @@ router.post('/getShiftSchedulesByDates', async (req, res) => {
 
 // ── Firmware versioning ───────────────────────────────────────────────────
 //
-// Legacy reads `public/iot_version/version.web` + `version_info.web` for
-// the current published version. We keep it simple: read from env vars
-// (or a Redis-stashed override) so admins can bump without a redeploy.
+// Legacy reads `public/iot_version/version.web` + `version_info.web`.
+// We read from env vars (or a Redis-stashed override) so admins can bump
+// without a redeploy. Response shape mirrors the Laravel original so old
+// firmware parses it correctly.
+
+// Proper per-component semver comparison — avoids the "strip dots → int"
+// bug where 1.2.10 < 1.2.9 because 1210 < 129 as integers.
+function semverGt(a, b) {
+  const pa = String(a).split('.').map(Number);
+  const pb = String(b).split('.').map(Number);
+  const len = Math.max(pa.length, pb.length);
+  for (let i = 0; i < len; i++) {
+    const diff = (pa[i] || 0) - (pb[i] || 0);
+    if (diff !== 0) return diff > 0;
+  }
+  return false;
+}
 
 /**
  * @swagger
@@ -338,16 +329,19 @@ router.post('/getShiftSchedulesByDates', async (req, res) => {
  *     description: |
  *       Compares the unit's `version` against `IOT_LATEST_VERSION`
  *       (env var, optionally overridden via Redis key `iot:latest`).
- *       Returns `{ latest, downloadUrl?, upgradeAvailable }`.
  *
- *       Version comparison is the legacy "strip dots → int" hack:
- *       `1.2.10` becomes `1210`, **less than** `1.2.9` (`129`). Keep
- *       per-component digits ≤ 9 until this is refactored.
+ *       Response mirrors Laravel MachineController@checkIotLatestVersion:
+ *         - upgrade available → `{ success: true, data: { version, info, url } }`
+ *         - up to date        → `{ success: false, msg: "Request version is upto date." }`
+ *
+ *       Set `IOT_FIRMWARE_INFO` to a human-readable change-log string.
  *     requestBody:
+ *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [version]
  *             properties:
  *               version: { type: string, example: "1.2.7" }
  *     security:
@@ -356,15 +350,18 @@ router.post('/getShiftSchedulesByDates', async (req, res) => {
 router.post('/checkIotLatestVersion', async (req, res) => {
   try {
     const current = String(req.body.version ?? '').trim();
+    if (!current) return res.json(fail('Required fields not satisfied'));
+
     const override = await redis.get('iot:latest');
-    const latest = override || process.env.IOT_LATEST_VERSION || '1.0.0';
-    const url = process.env.IOT_FIRMWARE_URL || '/iot_version/software/latest.bin';
-    const toInt = (v) => Number(String(v).replace(/\D/g, '')) || 0;
-    const upgradeAvailable = current ? toInt(latest) > toInt(current) : true;
-    res.json(ok({
-      current, latest, upgradeAvailable,
-      downloadUrl: upgradeAvailable ? url : null,
-    }));
+    const latest   = override || process.env.IOT_LATEST_VERSION || '1.0.0';
+    const info     = process.env.IOT_FIRMWARE_INFO || '';
+    const url      = process.env.IOT_FIRMWARE_URL  || '/iot_version/software/latest.bin';
+
+    if (!semverGt(latest, current)) {
+      return res.json({ success: false, msg: 'Request version is upto date.' });
+    }
+
+    return res.json(ok({ version: latest, info, url }));
   } catch (e) { res.json(fail(e.message ?? 'version check failed')); }
 });
 

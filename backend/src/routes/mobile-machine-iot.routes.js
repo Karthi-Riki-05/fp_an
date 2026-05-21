@@ -16,13 +16,24 @@
  */
 
 const { Router } = require('express');
+const jwt = require('jsonwebtoken');
 const { iotAuth } = require('../middleware/iot-auth');
+const { loginRateLimiter } = require('../middleware/rateLimiter');
+const { prisma, withTenant } = require('../prisma/client');
+const { verify: verifyPassword } = require('../services/password.service');
 const iotSvc = require('../services/iot-machine-data.service');
 
 const router = Router();
 
 function ok(data, msg = '') { return { success: true, msg, data }; }
 function fail(msg) { return { success: false, msg }; }
+
+function parseTtlToSeconds(ttl) {
+  if (/^\d+$/.test(String(ttl))) return Number(ttl);
+  const m = String(ttl).match(/^(\d+)\s*([smhd])$/);
+  if (!m) return 900;
+  return Number(m[1]) * ({ s: 1, m: 60, h: 3600, d: 86400 }[m[2]] ?? 1);
+}
 
 /**
  * @swagger
@@ -184,6 +195,158 @@ router.post('/saveStopDataV1', iotAuth, async (req, res) => {
     res.json(result);
   } catch (e) {
     res.json(fail(e.message ?? 'saveStopData failed'));
+  }
+});
+
+// ── Machine / IoT login ───────────────────────────────────────────────────────
+/**
+ * @swagger
+ * /api/v1/machine/login:
+ *   post:
+ *     tags: [Mobile - Machine]
+ *     summary: Legacy machine/IoT login — mirrors Laravel MachineController@login
+ *     description: |
+ *       Returns the full user object in the legacy {success,msg,data} envelope
+ *       AND sets an HTTP-only JWT cookie so the firmware can authenticate
+ *       subsequent requests without re-sending credentials.
+ *
+ *       Old mobile builds and IoT firmware that pre-date the /auth/login JWT
+ *       flow use this endpoint. Credentials are verified against the master
+ *       users table (bcrypt). Rate-limited to prevent brute force.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password]
+ *             properties:
+ *               email: { type: string, format: email }
+ *               password: { type: string }
+ *     responses:
+ *       200:
+ *         description: Legacy {success,msg,data} envelope with user object + JWT cookie
+ */
+router.post('/login', loginRateLimiter, async (req, res) => {
+  try {
+    const email = String(req.body.email ?? '').trim();
+    const password = String(req.body.password ?? '').trim();
+    if (!email || !password) return res.json(fail('Required fields not satisfied'));
+
+    const user = await prisma.user.findFirst({
+      where: { email: email.toLowerCase(), deletedAt: null },
+      select: {
+        id: true, companyId: true, name: true, firstName: true, lastName: true,
+        email: true, image: true, password: true, status: true,
+        createdAt: true, updatedAt: true,
+        userRoles: { select: { role: { select: { name: true } } } },
+      },
+    });
+
+    if (!user || !user.password) return res.json(fail('Invalid login'));
+
+    const { ok: pwOk } = await verifyPassword(password, user.password);
+    if (!pwOk) return res.json(fail('Invalid login'));
+    if (user.status !== 1) return res.json(fail('Invalid login'));
+
+    // Look up the company name (parent Company user if this is a sub-user).
+    let companyName = user.name;
+    if (user.companyId > 0) {
+      const parent = await prisma.user.findFirst({
+        where: { id: user.companyId },
+        select: { name: true },
+      });
+      companyName = parent?.name ?? '';
+    }
+
+    // Issue JWT + set cookie so subsequent IoT calls carry it.
+    const roles = user.userRoles.map((ur) => ur.role.name);
+    const ttl = process.env.JWT_ACCESS_TTL || '15m';
+    const expiresIn = parseTtlToSeconds(ttl);
+    const accessToken = jwt.sign(
+      { sub: user.id, email: user.email, roles, kind: 'web' },
+      process.env.JWT_ACCESS_SECRET,
+      { expiresIn: ttl },
+    );
+    const domain = process.env.COOKIE_DOMAIN || undefined;
+    res.cookie('access_token', accessToken, {
+      httpOnly: true, sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/', maxAge: expiresIn * 1000,
+      ...(domain ? { domain } : {}),
+    });
+
+    return res.json(ok({
+      id: user.id,
+      company_id: user.companyId || null,
+      name: user.name,
+      first_name: user.firstName,
+      last_name: user.lastName,
+      email: user.email,
+      image: user.image,
+      created_at: user.createdAt,
+      updated_at: user.updatedAt,
+      company_name: companyName,
+    }, 'Successfully logined'));
+  } catch (e) {
+    res.json(fail(e.message ?? 'Login failed'));
+  }
+});
+
+// ── Update unit connection status ─────────────────────────────────────────────
+/**
+ * @swagger
+ * /api/v1/machine/updateUnitConnectionStatus:
+ *   post:
+ *     tags: [Mobile - Machine]
+ *     summary: Mark a machine connected and refresh last_online
+ *     description: |
+ *       Mirrors Laravel MachineController@updateUnitConnectionStatus.
+ *       Accepts EITHER:
+ *         (a) JWT (cookie/Bearer) + machine_id, OR
+ *         (b) company_email_id + unit_name  (IoT firmware style, no JWT needed).
+ *       Sets unit_connected and last_online=NOW() using a parameterised query
+ *       (no SQL injection). Works for both configured and unconfigured machines.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               company_email_id: { type: string }
+ *               unit_name:        { type: string }
+ *               machine_id:       { type: integer }
+ *               unit_connected:   { type: string, enum: [yes, no], default: "yes" }
+ */
+router.post('/updateUnitConnectionStatus', iotAuth, async (req, res) => {
+  try {
+    const unitName  = String(req.body.unit_name  ?? '').trim();
+    const machineId = Number(req.body.machine_id) || 0;
+    const conn = req.body.unit_connected === 'no' ? 'no' : 'yes';
+
+    if (!unitName && !machineId) {
+      return res.json(fail('Required fields not satisfied'));
+    }
+
+    await withTenant(req.tenant, (tx) => {
+      if (unitName) {
+        return tx.$executeRawUnsafe(
+          `UPDATE machines SET unit_connected = $1, last_online = NOW(), updated_at = NOW()
+           WHERE unit_name = $2`,
+          conn, unitName,
+        );
+      }
+      return tx.$executeRawUnsafe(
+        `UPDATE machines SET unit_connected = $1, last_online = NOW(), updated_at = NOW()
+         WHERE id = $2`,
+        conn, machineId,
+      );
+    });
+
+    return res.json({ success: true, msg: 'updated successfully' });
+  } catch (e) {
+    res.json(fail(e.message ?? 'update failed'));
   }
 });
 
