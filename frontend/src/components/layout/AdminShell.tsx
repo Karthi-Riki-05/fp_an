@@ -148,18 +148,22 @@ const COMPANY_SIDEBAR: SidebarItem[] = [
 // Reads and writes the NEXT_LOCALE cookie on the client; page reload causes
 // the server to re-read it via i18n/request.ts and serve the correct locale.
 function LocaleSwitcher() {
-  const [locale, setLocale] = useState<'sv' | 'en'>(() => {
-    if (typeof document === 'undefined') return 'sv';
+  const [locale, setLocale] = useState<'sv' | 'en' | null>(null);
+
+  useEffect(() => {
     const m = document.cookie.match(/NEXT_LOCALE=([^;]+)/);
-    return (m?.[1] === 'en' ? 'en' : 'sv');
-  });
+    setLocale(m?.[1] === 'en' ? 'en' : 'sv');
+  }, []);
 
   const toggle = () => {
+    if (!locale) return;
     const next = locale === 'sv' ? 'en' : 'sv';
     document.cookie = `NEXT_LOCALE=${next}; path=/; max-age=31536000; SameSite=Lax`;
     setLocale(next);
     window.location.reload();
   };
+
+  if (!locale) return null;
 
   return (
     <Button

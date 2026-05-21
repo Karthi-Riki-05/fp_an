@@ -11,7 +11,7 @@
  */
 
 import { Button } from 'antd';
-import { CSSProperties, useState } from 'react';
+import { CSSProperties, useEffect, useState } from 'react';
 
 interface Props {
   /** Override the floating position if the caller wants to anchor it
@@ -20,11 +20,16 @@ interface Props {
 }
 
 export function PublicLocaleSwitcher({ style }: Props) {
-  const [locale, setLocale] = useState<'sv' | 'en'>(() => {
-    if (typeof document === 'undefined') return 'sv';
+  // null = not yet mounted (SSR + first client paint both render nothing,
+  // avoiding the server/client mismatch that causes a hydration error).
+  const [locale, setLocale] = useState<'sv' | 'en' | null>(null);
+
+  useEffect(() => {
     const m = document.cookie.match(/NEXT_LOCALE=([^;]+)/);
-    return m?.[1] === 'en' ? 'en' : 'sv';
-  });
+    setLocale(m?.[1] === 'en' ? 'en' : 'sv');
+  }, []);
+
+  if (!locale) return null;
 
   const toggle = () => {
     const next = locale === 'sv' ? 'en' : 'sv';
