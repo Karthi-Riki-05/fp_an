@@ -1,7 +1,7 @@
 'use strict';
 
 const { Router } = require('express');
-const { tenantMiddleware } = require('../middleware/tenant');
+const { tenantMiddleware, softTenantMiddleware } = require('../middleware/tenant');
 const { requirePermission } = require('../middleware/requirePermission');
 const { requireRole } = require('../middleware/requireRole');
 const svc = require('../services/admin-users.service');
@@ -15,10 +15,10 @@ function cookieOpts(maxAgeSeconds) {
 
 const router = Router();
 
-// Tenant model removed. Creating a Company user now auto-provisions
-// tenant_${newUser.id} inside admin-users.service.create() — no separate
-// "new tenant" body fields, no upfront pre-handler. See MIGRATION_NOTES §13.
-router.use(tenantMiddleware, requirePermission('manage-users'));
+// All routes require manage-users permission. GET/PATCH/DELETE routes require a
+// resolved tenant context (X-Tenant-Id for Administrator). POST uses
+// softTenantMiddleware so Company creation works without a pre-existing tenant.
+router.use(requirePermission('manage-users'));
 
 // GET /summary — column stats for DataTable summary row (Section B.6)
 /**
@@ -32,7 +32,7 @@ router.use(tenantMiddleware, requirePermission('manage-users'));
  *     responses:
  *       200: { description: OK }
  */
-router.get('/summary', async (req, res, next) => {
+router.get('/summary', tenantMiddleware, async (req, res, next) => {
   try {
     const q = {
       type: req.query.type,
@@ -53,7 +53,7 @@ router.get('/summary', async (req, res, next) => {
  *     responses:
  *       200: { description: OK }
  */
-router.get('/', async (req, res, next) => {
+router.get('/', tenantMiddleware, async (req, res, next) => {
   try {
     const filters = [];
     // Support ?filters[0][column]=name&filters[0][operator]=contains&filters[0][value]=foo
@@ -89,7 +89,7 @@ router.get('/', async (req, res, next) => {
  *     responses:
  *       200: { description: OK }
  */
-router.get('/deactivated', async (req, res, next) => {
+router.get('/deactivated', tenantMiddleware, async (req, res, next) => {
   try {
     const q = {
       page: req.query.page ? Number(req.query.page) : undefined,
@@ -112,7 +112,7 @@ router.get('/deactivated', async (req, res, next) => {
  *     responses:
  *       200: { description: OK }
  */
-router.get('/deleted', async (req, res, next) => {
+router.get('/deleted', tenantMiddleware, async (req, res, next) => {
   try {
     const q = {
       page: req.query.page ? Number(req.query.page) : undefined,
@@ -136,7 +136,7 @@ router.get('/deleted', async (req, res, next) => {
  *     responses:
  *       200: { description: OK }
  */
-router.get('/:id', async (req, res, next) => {
+router.get('/:id', tenantMiddleware, async (req, res, next) => {
   try { res.json(await svc.findOne(req.tenant, Number(req.params.id))); } catch (err) { next(err); }
 });
 
@@ -151,7 +151,7 @@ router.get('/:id', async (req, res, next) => {
  *     responses:
  *       200: { description: OK }
  */
-router.post('/', async (req, res, next) => {
+router.post('/', softTenantMiddleware, async (req, res, next) => {
   try {
     res.status(201).json(await svc.create(req.tenant, req.user, req.body));
   } catch (err) { next(err); }
@@ -170,7 +170,7 @@ router.post('/', async (req, res, next) => {
  *     responses:
  *       200: { description: OK }
  */
-router.patch('/:id', async (req, res, next) => {
+router.patch('/:id', tenantMiddleware, async (req, res, next) => {
   try { res.json(await svc.update(req.tenant, req.user, Number(req.params.id), req.body)); } catch (err) { next(err); }
 });
 
@@ -188,7 +188,7 @@ router.patch('/:id', async (req, res, next) => {
  *     responses:
  *       200: { description: OK }
  */
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', tenantMiddleware, async (req, res, next) => {
   try {
     if (req.query.permanent === 'true') {
       await svc.permanentDelete(req.tenant, req.user, Number(req.params.id));
@@ -213,7 +213,7 @@ router.delete('/:id', async (req, res, next) => {
  *     responses:
  *       200: { description: OK }
  */
-router.delete('/:id/permanent', async (req, res, next) => {
+router.delete('/:id/permanent', tenantMiddleware, async (req, res, next) => {
   try { await svc.permanentDelete(req.tenant, req.user, Number(req.params.id)); res.status(204).send(); } catch (err) { next(err); }
 });
 
@@ -231,7 +231,7 @@ router.delete('/:id/permanent', async (req, res, next) => {
  *     responses:
  *       200: { description: OK }
  */
-router.patch('/:id/status', async (req, res, next) => {
+router.patch('/:id/status', tenantMiddleware, async (req, res, next) => {
   try {
     const active = req.body.active !== undefined ? !!req.body.active : req.body.status === 1;
     res.json(await svc.toggleStatus(req.tenant, req.user, Number(req.params.id), active));
@@ -251,7 +251,7 @@ router.patch('/:id/status', async (req, res, next) => {
  *     responses:
  *       200: { description: OK }
  */
-router.patch('/:id/confirm', async (req, res, next) => {
+router.patch('/:id/confirm', tenantMiddleware, async (req, res, next) => {
   try { res.json(await svc.toggleConfirm(req.tenant, req.user, Number(req.params.id), !!req.body.confirmed)); } catch (err) { next(err); }
 });
 
@@ -268,7 +268,7 @@ router.patch('/:id/confirm', async (req, res, next) => {
  *     responses:
  *       200: { description: OK }
  */
-router.post('/:id/password', async (req, res, next) => {
+router.post('/:id/password', tenantMiddleware, async (req, res, next) => {
   try { res.json(await svc.changePassword(req.tenant, req.user, Number(req.params.id), req.body.password)); } catch (err) { next(err); }
 });
 
@@ -285,7 +285,7 @@ router.post('/:id/password', async (req, res, next) => {
  *     responses:
  *       200: { description: OK }
  */
-router.post('/:id/restore', async (req, res, next) => {
+router.post('/:id/restore', tenantMiddleware, async (req, res, next) => {
   try { res.json(await svc.restore(req.tenant, req.user, Number(req.params.id))); } catch (err) { next(err); }
 });
 
@@ -302,7 +302,7 @@ router.post('/:id/restore', async (req, res, next) => {
  *     responses:
  *       200: { description: OK }
  */
-router.post('/:id/confirm/resend', async (req, res, next) => {
+router.post('/:id/confirm/resend', tenantMiddleware, async (req, res, next) => {
   try { res.status(202).json(await svc.resendConfirmation(req.tenant, req.user, Number(req.params.id))); } catch (err) { next(err); }
 });
 

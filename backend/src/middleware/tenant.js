@@ -82,4 +82,26 @@ async function tenantMiddleware(req, res, next) {
   }
 }
 
-module.exports = { tenantMiddleware, getTenantSchema };
+// Like tenantMiddleware but sets req.tenant = null instead of returning 400
+// when an Administrator has no X-Tenant-Id. Used for endpoints that work
+// without a tenant context (e.g. Company creation, which provisions its own schema).
+async function softTenantMiddleware(req, res, next) {
+  try {
+    const user = req.user;
+    if (!user) return res.status(403).json({ statusCode: 403, message: 'not-authenticated' });
+    let resolved;
+    try {
+      resolved = getTenantSchema(user, req);
+    } catch (err) {
+      return res.status(err.statusCode ?? 400).json({ statusCode: err.statusCode ?? 400, message: err.message });
+    }
+    req.tenant = resolved
+      ? { tenantId: resolved.companyUserId, schemaName: resolved.schemaName, dbName: null, timezone: user.timezone || 'Europe/Stockholm' }
+      : null;
+    next();
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { tenantMiddleware, softTenantMiddleware, getTenantSchema };
