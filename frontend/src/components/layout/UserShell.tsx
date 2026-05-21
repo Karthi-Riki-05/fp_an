@@ -7,6 +7,7 @@ import { useMe } from '../../lib/api/auth';
 import { ImpersonationBanner } from '../admin/ImpersonationBanner';
 import { MarketingFooter } from './MarketingFooter';
 import { MarketingHeader } from './MarketingHeader';
+import { MachineSocketProvider } from '../realtime/MachineSocketProvider';
 
 const { Content } = Layout;
 
@@ -45,6 +46,8 @@ export function UserShell({ children, locale = 'sv' }: Props) {
           MarketingHeader serves PublicShell with its nav intact. */}
       <MarketingHeader locale={locale} hideNav />
       <ImpersonationBanner />
+      {/* Real-time machine event subscriber — no DOM output */}
+      <MachineSocketProvider />
       <Content style={{ background: '#ecf0f5' }}>{children}</Content>
       <MarketingFooter locale={locale} />
     </Layout>

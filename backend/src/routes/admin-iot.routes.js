@@ -125,6 +125,33 @@ router.post('/units/:id/test-notification', async (req, res, next) => {
 
 /**
  * @swagger
+ * /api/v1/admin/iot/units/{id}/provision-mqtt:
+ *   post:
+ *     tags: ["Admin — Iot"]
+ *     summary: Generate unique MQTT credentials for a machine
+ *     description: >
+ *       Creates a new MQTT username + random password for the machine, stores the bcrypt hash,
+ *       and returns the plain-text password **once**. Deploy these credentials to the Pi firmware
+ *       as its MQTT CONNECT credentials. The broker ACL must grant this client
+ *       read/write access to fp/v1/{tenantId}/machine/{machineId}/#.
+ *     security:
+ *       - access_token: []
+ *     parameters:
+ *       - { in: path, name: id, required: true, schema: { type: integer } }
+ *     responses:
+ *       200:
+ *         description: Credentials generated. Store password securely — shown once only.
+ *       404:
+ *         description: Machine not found
+ */
+router.post('/units/:id/provision-mqtt', async (req, res, next) => {
+  try {
+    res.json(await svc.provisionMqtt(req.tenant, Number(req.params.id)));
+  } catch (e) { next(e); }
+});
+
+/**
+ * @swagger
  * /api/v1/admin/iot/flow-designs:
  *   get:
  *     tags: ["Admin — Iot"]

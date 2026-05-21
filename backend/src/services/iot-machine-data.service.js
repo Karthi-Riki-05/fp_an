@@ -314,7 +314,7 @@ async function _processMachineStart(tx, machine, endTime) {
   // Close out the latest open machine_data row (if any).
   const last = await tx.$queryRawUnsafe(
     `SELECT id, start_time AS "startTime" FROM machine_data
-       WHERE machine_id = $1 ORDER BY id DESC LIMIT 1`,
+       WHERE machine_id = $1 AND end_time IS NULL ORDER BY id DESC LIMIT 1`,
     machine.id,
   );
 
@@ -391,11 +391,57 @@ async function saveStopStart(tenant, dto) {
     );
 
     if (!machine.equipmentId) {
+      // Machine is not yet configured to an equipment.  We still record the stop
+      // so that when the machine is later configured and "Turn On" is sent, there
+      // is an open machine_data row to close.  The row is marked is_valid_data=false
+      // so analytics ignore it until the machine has a real equipment assignment.
       await tx.$executeRawUnsafe(
-        `UPDATE machines SET running_status = 'off'::tenant_template."MachineRunningStatus" WHERE id = $1`,
+        `UPDATE machines SET running_status = 'off'::tenant_template."MachineRunningStatus",
+                             unit_connected = 'yes', updated_at = NOW() WHERE id = $1`,
         machine.id,
       );
-      return { success: false, msg: 'Machine not configured', data: { id: machine.id } };
+
+      // Long-stop suppression applies even for unconfigured machines.
+      const ucStatusRows = await tx.$queryRawUnsafe(
+        `SELECT id, status::text AS status FROM machine_status WHERE machine_id = $1 LIMIT 1`,
+        machine.id,
+      );
+      if (ucStatusRows[0]?.status === 'off') {
+        return { success: false, msg: 'Machine not configured — long stop continue', data: { id: machine.id } };
+      }
+
+      // Upsert machine_status = 'off' so Turn On can later clear it.
+      if (ucStatusRows[0]) {
+        await tx.$executeRawUnsafe(
+          `UPDATE machine_status SET status = 'off'::tenant_template."MachineRunningStatus", "time" = $2 WHERE id = $1`,
+          ucStatusRows[0].id, startTime,
+        );
+      } else {
+        await tx.$executeRawUnsafe(
+          `INSERT INTO machine_status (machine_id, status, "time")
+           VALUES ($1, 'off'::tenant_template."MachineRunningStatus", $2)`,
+          machine.id, startTime,
+        );
+      }
+
+      const ucMqttMsgId = dto.mqtt_message_id ?? dto.mqttMessageId ?? null;
+      const ucInserted = await tx.$queryRawUnsafe(
+        `INSERT INTO machine_data (machine_id, start_time, is_registered, is_valid_data, mqtt_message_id)
+         VALUES ($1, $2::timestamptz, 'no'::tenant_template."MachineDataRegistration", false, $3)
+         RETURNING id::int AS id`,
+        machine.id, startTime, ucMqttMsgId,
+      );
+
+      await tx.$executeRawUnsafe(
+        `UPDATE machines SET has_unregister_data = 'yes' WHERE id = $1`,
+        machine.id,
+      );
+
+      return {
+        success: false,
+        msg: 'Machine not configured',
+        data: { id: machine.id, machine_data_id: ucInserted[0].id },
+      };
     }
 
     // Long-stop suppression: if machine_status is already off, do nothing.
@@ -426,11 +472,12 @@ async function saveStopStart(tenant, dto) {
     }
 
     // Persist the raw open stop row (end_time stays NULL until installV1 closes it).
+    const mqttMessageId = dto.mqtt_message_id ?? dto.mqttMessageId ?? null;
     const inserted = await tx.$queryRawUnsafe(
-      `INSERT INTO machine_data (machine_id, start_time, is_registered, is_valid_data)
-       VALUES ($1, $2::timestamptz, 'no'::tenant_template."MachineDataRegistration", true)
+      `INSERT INTO machine_data (machine_id, start_time, is_registered, is_valid_data, mqtt_message_id)
+       VALUES ($1, $2::timestamptz, 'no'::tenant_template."MachineDataRegistration", true, $3)
        RETURNING id::int AS id`,
-      machine.id, startTime,
+      machine.id, startTime, mqttMessageId,
     );
 
     const updated = await tx.$queryRawUnsafe(

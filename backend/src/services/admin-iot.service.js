@@ -1,4 +1,6 @@
 'use strict';
+const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const { withTenant } = require('../prisma/client');
 const { NotFoundError } = require('../errors');
 const equipmentSvc = require('./equipment.service');
@@ -148,4 +150,50 @@ async function getStopReasons(tenant, equipmentId) {
   );
 }
 
-module.exports = { getUnits, updateSettings, assignEquipment, removeEquipment, updateCounterSettings, getCounterChildren, getFlowDesigns, getStopReasons, SIGNAL_LABELS, parseCounterDetails };
+/**
+ * Generate unique MQTT broker credentials for a machine and persist the
+ * bcrypt hash. The plain-text password is returned once to the caller and
+ * never stored.
+ */
+async function provisionMqtt(tenant, machineId) {
+  const id = Number(machineId);
+  if (!id) throw Object.assign(new Error('machineId required'), { statusCode: 400 });
+
+  // Verify machine exists.
+  const rows = await withTenant(tenant, (tx) =>
+    tx.$queryRawUnsafe(`SELECT id FROM machines WHERE id = $1 LIMIT 1`, id),
+  );
+  if (!rows[0]) throw Object.assign(new Error('machine not found'), { statusCode: 404 });
+
+  const username = `machine-${tenant.tenantId}-${id}`;
+  const plainPassword = crypto.randomBytes(32).toString('base64url');
+  const passwordHash = await bcrypt.hash(plainPassword, 10);
+
+  await withTenant(tenant, (tx) =>
+    tx.$executeRawUnsafe(
+      `UPDATE machines SET
+         mqtt_client_id       = $2,
+         mqtt_password_hash   = $3,
+         mqtt_provisioned_at  = NOW(),
+         updated_at           = NOW()
+       WHERE id = $1`,
+      id, username, passwordHash,
+    ),
+  );
+
+  return {
+    success: true,
+    data: {
+      machineId: id,
+      username,
+      clientId: username,
+      password: plainPassword,
+      brokerUrl: process.env.MQTT_BROKER_URL_PUBLIC || process.env.MQTT_BROKER_URL || null,
+      aclTopicPrefix: `fp/v1/${tenant.tenantId}/machine/${id}/#`,
+      provisionedAt: new Date().toISOString(),
+      note: 'Store the password securely — it will not be shown again.',
+    },
+  };
+}
+
+module.exports = { getUnits, updateSettings, assignEquipment, removeEquipment, updateCounterSettings, getCounterChildren, getFlowDesigns, getStopReasons, provisionMqtt, SIGNAL_LABELS, parseCounterDetails };

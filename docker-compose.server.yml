@@ -31,6 +31,26 @@ services:
       timeout: 5s
       retries: 10
 
+  mqtt:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:1883:1883'   # bind to loopback only — not accessible from outside the host
+    volumes:
+      - ./docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./docker/mosquitto/acl:/mosquitto/config/acl:ro
+      - ./docker/mosquitto/passwd:/mosquitto/config/passwd:ro
+      - mqtt-data:/mosquitto/data
+    networks: [internal]
+    environment:
+      MQTT_USERNAME: ${MQTT_USERNAME:-fpanalyzer-mqtt-u1}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:-}
+    healthcheck:
+      test: ['CMD-SHELL', 'mosquitto_pub -h localhost -p 1883 -t "health/broker" -m "ok" -u "$$MQTT_USERNAME" -P "$$MQTT_PASSWORD" || exit 1']
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: .
@@ -48,6 +68,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      mqtt:
         condition: service_healthy
     healthcheck:
       test: ['CMD', 'wget', '-qO-', 'http://localhost:4000/api/v1/health']
@@ -88,3 +110,4 @@ networks:
 volumes:
   postgres-data:
   redis-data:
+  mqtt-data:

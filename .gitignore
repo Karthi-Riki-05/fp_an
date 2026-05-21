@@ -86,6 +86,12 @@ secrets.yml
 secrets.yaml
 
 # =============================================================
+# Mosquitto broker — passwd is environment-specific (dev vs prod).
+# mosquitto.conf and acl are tracked (config, not credentials).
+# =============================================================
+docker/mosquitto/passwd
+
+# =============================================================
 # Test / coverage output
 # =============================================================
 coverage/

@@ -39,6 +39,26 @@ services:
       - '1025:1025' # SMTP
       - '8025:8025' # Web UI
 
+  mqtt:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    ports:
+      - '1883:1883'   # plain MQTT (dev only — firewall externally in production)
+    volumes:
+      - ./docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./docker/mosquitto/acl:/mosquitto/config/acl:ro
+      - ./docker/mosquitto/passwd:/mosquitto/config/passwd
+      - mqtt-data:/mosquitto/data
+    environment:
+      # Exposed so the healthcheck can authenticate against the broker.
+      MQTT_USERNAME: ${MQTT_USERNAME:-fpanalyzer-mqtt-u1}
+      MQTT_PASSWORD: ${MQTT_PASSWORD:-}
+    healthcheck:
+      test: ['CMD-SHELL', 'mosquitto_pub -h localhost -p 1883 -t "health/broker" -m "ok" -u "$$MQTT_USERNAME" -P "$$MQTT_PASSWORD" || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
@@ -118,6 +138,7 @@ services:
 volumes:
   postgres-data:
   redis-data:
+  mqtt-data:
   backend-node-modules:
   frontend-node-modules:
   frontend-next-cache:

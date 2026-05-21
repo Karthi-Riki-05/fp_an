@@ -20,6 +20,8 @@ import {
   TagOutlined,
   TeamOutlined,
   ToolOutlined,
+  WifiOutlined,
+  BugOutlined,
 } from '@ant-design/icons';
 import { App, Avatar, Button, Drawer, Grid, Layout, Popover, Spin, Tag, Typography } from 'antd';
 import Image from 'next/image';
@@ -32,6 +34,7 @@ import { toApiError } from '../../lib/api-client';
 import { useLogout, useMe } from '../../lib/api/auth';
 import { hasPermission } from '../../lib/auth';
 import { ImpersonationBanner } from '../admin/ImpersonationBanner';
+import { AdminSocketProvider } from '../realtime/AdminSocketProvider';
 
 const { Sider, Header, Content } = Layout;
 const { Text } = Typography;
@@ -62,8 +65,10 @@ const SUPERADMIN_SIDEBAR: SidebarItem[] = [
   { key: '/admin/social',       icon: <ShareAltOutlined />,          labelKey: 'social_management',  href: '/admin/social' },
   { key: '/admin/cms',          icon: <ProfileOutlined />,           labelKey: 'cms_management',     href: '/admin/cms' },
   { key: '/admin/sliders',      icon: <ProjectOutlined />,           labelKey: 'slider_management',  href: '/admin/sliders' },
-  { key: '/admin/testimonials', icon: <BulbOutlined />,              labelKey: 'testimonials',       href: '/admin/testimonials' },
-  { key: '/admin/feedback',     icon: <CommentOutlined />,           labelKey: 'feedback',           href: '/admin/feedback' },
+  { key: '/admin/testimonials',  icon: <BulbOutlined />,              labelKey: 'testimonials',        href: '/admin/testimonials' },
+  { key: '/admin/feedback',      icon: <CommentOutlined />,           labelKey: 'feedback',            href: '/admin/feedback' },
+  { key: '/admin/mqtt-monitor',  icon: <WifiOutlined />,              labelKey: 'mqtt_monitor',        href: '/admin/mqtt-monitor' },
+  { key: '/admin/mqtt-testing',  icon: <BugOutlined />,               labelKey: 'mqtt_testing',        href: '/admin/mqtt-testing' },
 ];
 
 /**
@@ -531,6 +536,7 @@ export function AdminShell({ children, pageTitle }: AdminShellProps) {
         </Header>
 
         <ImpersonationBanner />
+        {me?.isAdmin && <AdminSocketProvider />}
         <Content style={{ padding: isMobile ? 16 : 24, background: '#f5f7fa' }}>
           {children}
         </Content>
