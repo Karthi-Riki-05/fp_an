@@ -88,7 +88,10 @@ export default function LoginPage() {
       await login.mutateAsync(values);
       const { data: me } = await apiClient.get<MeResponse>('/me');
       message.success(t('signed_in'));
-      router.push(me.isAdmin ? '/admin/dashboard' : next);
+      // Administrator + Company both use the admin portal; only the operator
+      // (User) role lands on the mobile /dashboard shell.
+      const usesAdminPortal = me.isAdmin || me.roles?.includes('Company');
+      router.push(usesAdminPortal ? '/admin/dashboard' : next);
     } catch (err) {
       const e = toApiError(err);
       if (e.status === 403 && e.message === 'account_not_confirmed') {

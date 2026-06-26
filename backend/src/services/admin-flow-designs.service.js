@@ -38,8 +38,11 @@ async function list(tenant, q = {}) {
   if (q.status !== undefined) { params.push(Number(q.status)); where.push(`status = $${params.length}`); }
   const whereSql = `WHERE ${where.join(' AND ')}`;
 
-  // When equipmentId is supplied we need flow_data to filter in JS.
-  const needsFlowData = !!q.equipmentId;
+  // When equipmentId is supplied we need flow_data to filter in JS. Callers
+  // can also force flow_data into the SELECT (without the JSON node filter)
+  // via includeFlowData — used by the operator flow-by-equipment lookup,
+  // whose flow_data is mxGraph XML and is string-matched by the route.
+  const needsFlowData = !!q.equipmentId || !!q.includeFlowData;
   const selectCols = needsFlowData ? SELECT : `id, name, status, created_at AS "createdAt", updated_at AS "updatedAt"`;
 
   return withTenant(tenant, async (tx) => {

@@ -1,11 +1,16 @@
 'use strict';
 
 const { Router } = require('express');
-const { requirePermission } = require('../middleware/requirePermission');
+const { requirePermission, requireAnyPermission } = require('../middleware/requirePermission');
 const svc = require('../services/roles.service');
 
 const router = Router();
+// Writes require manage-roles. Reads are allowed for anyone who can view the
+// backend (Company admins) so they get a READ-ONLY roles view (Sprint 4 /
+// Task 5); the UI hides edit/delete unless the user is an Administrator.
+// (Administrators bypass permission checks in requirePermission.)
 const guard = requirePermission('manage-roles');
+const viewGuard = requireAnyPermission('manage-roles', 'view-roles', 'view-backend');
 
 /**
  * @swagger
@@ -18,7 +23,7 @@ const guard = requirePermission('manage-roles');
  *     responses:
  *       200: { description: OK }
  */
-router.get('/', guard, async (req, res, next) => {
+router.get('/', viewGuard, async (req, res, next) => {
   try { res.json(await svc.list()); } catch (err) { next(err); }
 });
 
@@ -33,7 +38,7 @@ router.get('/', guard, async (req, res, next) => {
  *     responses:
  *       200: { description: OK }
  */
-router.get('/permissions', guard, async (req, res, next) => {
+router.get('/permissions', viewGuard, async (req, res, next) => {
   try { res.json(await svc.listPermissions()); } catch (err) { next(err); }
 });
 
@@ -50,7 +55,7 @@ router.get('/permissions', guard, async (req, res, next) => {
  *     responses:
  *       200: { description: OK }
  */
-router.get('/:id', guard, async (req, res, next) => {
+router.get('/:id', viewGuard, async (req, res, next) => {
   try { res.json(await svc.findOne(Number(req.params.id))); } catch (err) { next(err); }
 });
 

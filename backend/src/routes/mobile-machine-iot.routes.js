@@ -302,11 +302,42 @@ router.post('/login', loginRateLimiter, async (req, res) => {
  *     summary: Mark a machine connected and refresh last_online
  *     description: |
  *       Mirrors Laravel MachineController@updateUnitConnectionStatus.
- *       Accepts EITHER:
- *         (a) JWT (cookie/Bearer) + machine_id, OR
- *         (b) company_email_id + unit_name  (IoT firmware style, no JWT needed).
- *       Sets unit_connected and last_online=NOW() using a parameterised query
+ *
+ *       **Authentication — two modes:**
+ *
+ *       **(a) JWT (cookie or Bearer) + machine_id** — for web/mobile callers already
+ *       logged in. Company-role users resolve the tenant automatically from their JWT.
+ *       Sub-users (User role) resolve via their `companyId`. Administrator/SuperAdmin
+ *       users **must** also supply the `X-Tenant-Id` header (the Company user's id,
+ *       e.g. 9 for the Volvo tenant) — without it the call returns an error.
+ *
+ *       **(b) company_email_id + unit_name** — legacy IoT firmware style. No JWT
+ *       needed. The backend resolves the tenant from the Company-role user whose
+ *       email matches `company_email_id`.
+ *
+ *       Sets `unit_connected` and `last_online = NOW()` using parameterised queries
  *       (no SQL injection). Works for both configured and unconfigured machines.
+ *
+ *       **How to test in Swagger UI:**
+ *       1. Call `POST /api/v1/machine/login` (or `POST /api/v1/auth/login`) with your
+ *          credentials — the response sets the `access_token` cookie on this domain.
+ *       2. Click **Authorize** (top-right) and paste the same token as a Bearer value.
+ *       3. If you are a SuperAdmin, also enter the Company user's id in the
+ *          `X-Tenant-Id` field of the Authorize dialog or in the header parameter below.
+ *     security:
+ *       - access_token: []
+ *       - bearer: []
+ *     parameters:
+ *       - in: header
+ *         name: X-Tenant-Id
+ *         schema:
+ *           type: integer
+ *         required: false
+ *         description: |
+ *           Company user id that identifies the tenant schema (`tenant_<id>`).
+ *           **Required when calling as Administrator/SuperAdmin** (JWT roles include
+ *           "Administrator"). Ignored for Company-role and User-role JWT callers.
+ *           Example: 9 (Volvo tenant).
  *     requestBody:
  *       required: true
  *       content:
@@ -314,10 +345,54 @@ router.post('/login', loginRateLimiter, async (req, res) => {
  *           schema:
  *             type: object
  *             properties:
- *               company_email_id: { type: string }
- *               unit_name:        { type: string }
- *               machine_id:       { type: integer }
- *               unit_connected:   { type: string, enum: [yes, no], default: "yes" }
+ *               company_email_id:
+ *                 type: string
+ *                 description: Company-owner email (IoT firmware / no-JWT path). Use volvo123@gmail.com for the Volvo tenant.
+ *                 example: "volvo123@gmail.com"
+ *               unit_name:
+ *                 type: string
+ *                 description: Machine unit_name (used when no machine_id provided, or on the legacy no-JWT path).
+ *                 example: "Montering Input - 1"
+ *               machine_id:
+ *                 type: integer
+ *                 description: Machine id (JWT path). For Volvo, machine_id 9 = "Montering Input - 1".
+ *                 example: 9
+ *               unit_connected:
+ *                 type: string
+ *                 enum: [yes, no]
+ *                 default: "yes"
+ *                 description: Connection state to persist.
+ *           examples:
+ *             jwtCompanyUser:
+ *               summary: "JWT (Company user) + machine_id — no extra header needed"
+ *               value:
+ *                 machine_id: 9
+ *                 unit_connected: "yes"
+ *             jwtAdminWithHeader:
+ *               summary: "JWT (SuperAdmin) + machine_id — requires X-Tenant-Id header set to 9"
+ *               value:
+ *                 machine_id: 9
+ *                 unit_connected: "yes"
+ *             legacyIoT:
+ *               summary: "Legacy IoT — company_email_id + unit_name, no JWT"
+ *               value:
+ *                 company_email_id: "volvo123@gmail.com"
+ *                 unit_name: "Montering Input - 1"
+ *                 unit_connected: "yes"
+ *     responses:
+ *       200:
+ *         description: Success or error in the legacy {success, msg} envelope
+ *         content:
+ *           application/json:
+ *             examples:
+ *               success:
+ *                 value: { success: true, msg: "updated successfully" }
+ *               missingFields:
+ *                 value: { success: false, msg: "Required fields not satisfied" }
+ *               invalidLogin:
+ *                 value: { success: false, msg: "Invalid login" }
+ *               adminMissingHeader:
+ *                 value: { success: false, msg: "X-Tenant-Id header required for admin/superadmin calls, or include company_email_id in the request body" }
  */
 router.post('/updateUnitConnectionStatus', iotAuth, async (req, res) => {
   try {
@@ -329,7 +404,7 @@ router.post('/updateUnitConnectionStatus', iotAuth, async (req, res) => {
       return res.json(fail('Required fields not satisfied'));
     }
 
-    await withTenant(req.tenant, (tx) => {
+    const affected = await withTenant(req.tenant, (tx) => {
       if (unitName) {
         return tx.$executeRawUnsafe(
           `UPDATE machines SET unit_connected = $1, last_online = NOW(), updated_at = NOW()
@@ -344,6 +419,9 @@ router.post('/updateUnitConnectionStatus', iotAuth, async (req, res) => {
       );
     });
 
+    if (affected === 0) {
+      return res.json(fail('Machine not found'));
+    }
     return res.json({ success: true, msg: 'updated successfully' });
   } catch (e) {
     res.json(fail(e.message ?? 'update failed'));

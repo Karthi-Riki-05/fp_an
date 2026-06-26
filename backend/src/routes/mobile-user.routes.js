@@ -23,9 +23,90 @@ const resultsSvc = require('../services/admin-results.service');
 const equipmentSvc = require('../services/equipment.service');
 const machinesSvc = require('../services/admin-machines.service');
 const workShiftsSvc = require('../services/admin-work-shifts.service');
+const alertsSvc = require('../services/alerts.service');
+const ordersSvc = require('../services/admin-orders.service');
 
 const router = Router();
 router.use(tenantMiddleware);
+
+// ── Orders for the operator (Sprint 3 / Task 5) ───────────────────────────
+/**
+ * @swagger
+ * /api/v1/user/orders:
+ *   get:
+ *     tags: [Mobile - User]
+ *     summary: Active production orders for the operator's tenant
+ *     description: |
+ *       Returns the tenant's orders (optionally scoped to an equipment via
+ *       `?equipmentId=`). NOTE — there is no user→machine binding in the schema,
+ *       so without an equipmentId this returns all tenant orders; the mobile UI
+ *       does the In-Progress / Overdue tab filtering client-side.
+ *     security:
+ *       - access_token: []
+ *     responses:
+ *       200: { description: OK }
+ */
+router.get('/orders', async (req, res, next) => {
+  try {
+    const q = { page: 1, perPage: 200 };
+    if (req.query.equipmentId) q.equipmentId = Number(req.query.equipmentId);
+    if (req.query.flowId) q.flowId = Number(req.query.flowId);
+    const result = await ordersSvc.list(req.tenant, q);
+    res.json({ orders: result.data ?? [] });
+  } catch (e) { next(e); }
+});
+
+// ── Alerts feed (Sprint 2 / Task 1) ───────────────────────────────────────
+/**
+ * @swagger
+ * /api/v1/user/alerts:
+ *   get:
+ *     tags: [Mobile - User]
+ *     summary: Operator alert feed (unlogged stops + warnings)
+ *     description: |
+ *       Combined newest-first alert list. CRITICAL = unlogged stops
+ *       (stop_data with no stop type), WARNING = warning_data rows.
+ *       Returns `{ items, unread, counts }`.
+ *     security:
+ *       - access_token: []
+ *     responses:
+ *       200:
+ *         description: OK
+ */
+router.get('/alerts', async (req, res, next) => {
+  try {
+    const data = await alertsSvc.getAlerts(req.tenant, {
+      windowDays: Number(req.query.windowDays ?? 7),
+      limit: Number(req.query.limit ?? 100),
+    });
+    res.json(data);
+  } catch (e) { next(e); }
+});
+
+/**
+ * @swagger
+ * /api/v1/user/alerts/warnings/{id}/acknowledge:
+ *   patch:
+ *     tags: [Mobile - User]
+ *     summary: Acknowledge a warning (removes it from the alert feed)
+ *     security:
+ *       - access_token: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer }
+ *     responses:
+ *       200: { description: OK }
+ *       404: { description: Not found or already acknowledged }
+ */
+router.patch('/alerts/warnings/:id/acknowledge', async (req, res, next) => {
+  try {
+    const ok = await alertsSvc.acknowledgeWarning(req.tenant, req.params.id, req.user?.id);
+    if (!ok) return res.status(404).json({ error: 'not found or already acknowledged' });
+    res.json({ acknowledged: true });
+  } catch (e) { next(e); }
+});
 
 /** Standard mobile envelope. Every legacy mobile endpoint returns
  *  `{ success, msg, data?, errors? }` with HTTP 200 even on logical
@@ -130,9 +211,10 @@ router.post('/getFlowListByEquipment', async (req, res, next) => {
   try {
     const equipmentId = Number(req.body.equipment_id);
     if (!equipmentId) return res.json(fail('equipment_id required'));
-    // Reuse the existing list endpoint then filter — admin list already
-    // surfaces flowData per row.
-    const result = await flowSvc.list(req.tenant, { page: 1, perPage: 200, status: 1 });
+    // Reuse the existing list endpoint then filter. includeFlowData forces
+    // flow_data into the SELECT (it's omitted by default for performance);
+    // without it f.flowData is undefined and the filter never matches.
+    const result = await flowSvc.list(req.tenant, { page: 1, perPage: 200, status: 1, includeFlowData: true });
     const filtered = (result.data ?? []).filter((f) => {
       try { return f.flowData && f.flowData.includes(`equipment-id="${equipmentId}"`); }
       catch { return false; }

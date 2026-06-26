@@ -35,6 +35,9 @@ const adminResultsRoutes = require('./routes/admin-results.routes');
 const adminSalaryGroupsRoutes = require('./routes/admin-salary-groups.routes');
 const adminFeedbackRoutes = require('./routes/admin-feedback.routes');
 const adminBoardsRoutes = require('./routes/admin-boards.routes');
+const adminDashboardRoutes = require('./routes/admin-dashboard.routes');
+const adminAndonTokensRoutes = require('./routes/admin-andon-tokens.routes');
+const adminCompanySettingsRoutes = require('./routes/admin-company-settings.routes');
 const cmsRoutes = require('./routes/cms.routes');
 const slidersRoutes = require('./routes/sliders.routes');
 const testimonialsRoutes = require('./routes/testimonials.routes');
@@ -132,6 +135,12 @@ app.use('/api/v1/auth/mobile', mobileAuthRoutes);
 const mobileMachineIotRoutes = require('./routes/mobile-machine-iot.routes');
 app.use('/api/v1/machine', mobileMachineIotRoutes);
 
+// Public Andon board (Sprint 2 / Task 2) — wall-mounted TV display, no JWT.
+// Tenant is resolved from a ?company=<email> query param (flow_id is only
+// unique within a tenant schema). Mounted BEFORE the global JWT middleware.
+const andonRoutes = require('./routes/andon.routes');
+app.use('/api/v1/andon', andonRoutes);
+
 // Apply JWT auth middleware for all subsequent routes
 app.use(authMiddleware);
 
@@ -156,6 +165,9 @@ app.use('/api/v1/admin/results', adminResultsRoutes);
 app.use('/api/v1/admin/salary-groups', adminSalaryGroupsRoutes);
 app.use('/api/v1/admin/feedback', adminFeedbackRoutes);
 app.use('/api/v1/admin/boards', adminBoardsRoutes);
+app.use('/api/v1/admin/dashboard', adminDashboardRoutes);
+app.use('/api/v1/admin/andon-tokens', adminAndonTokensRoutes);
+app.use('/api/v1/admin/company-settings', adminCompanySettingsRoutes);
 app.use('/api/v1/admin/cms', cmsRoutes);
 app.use('/api/v1/admin/sliders', slidersRoutes);
 app.use('/api/v1/admin/testimonials', testimonialsRoutes);

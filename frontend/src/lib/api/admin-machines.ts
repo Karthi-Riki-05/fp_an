@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../api-client';
+import type { UnitCard } from './units';
 
 export interface MachineRow {
   id: number;
@@ -179,5 +180,44 @@ export function useDeleteMachineFile(tenantId: number | null | undefined) {
     },
     onSuccess: (_, vars) =>
       qc.invalidateQueries({ queryKey: FILES_KEY(tenantId, vars.machineId) }),
+  });
+}
+
+// ─── Live machine status grid (admin dashboard) ───────────────────────────
+// Polls the tenant unit list every 10s. /units has no role guard (auth +
+// tenant only), so a Company admin can read it. Returns a UI-ready shape
+// with a single `status` enum derived from the raw running/unregistered flags.
+
+export type AdminMachineStatus = 'running' | 'stopped' | 'warning';
+
+export interface AdminMachine {
+  id: number;
+  name: string;
+  status: AdminMachineStatus;
+  unregisteredCount: number;
+  lastOnline: string | null;
+}
+
+function unitToStatus(u: UnitCard): AdminMachineStatus {
+  if (u.hasUnregisterData === 'yes') return 'warning';
+  return u.runningStatus === 'on' ? 'running' : 'stopped';
+}
+
+/** Tenant machines with live running status; polled every 10s. */
+export function useAdminMachines() {
+  return useQuery({
+    queryKey: ['admin', 'machines', 'live'] as const,
+    queryFn: async (): Promise<AdminMachine[]> => {
+      const { data } = await apiClient.get<UnitCard[]>('/units');
+      return (data ?? []).map((u) => ({
+        id: u.id,
+        name: u.unitName || u.equipmentName || `Machine ${u.id}`,
+        status: unitToStatus(u),
+        unregisteredCount: u.unregisteredCount,
+        lastOnline: u.lastOnline,
+      }));
+    },
+    refetchInterval: 10_000,
+    staleTime: 5_000,
   });
 }

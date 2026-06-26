@@ -42,6 +42,39 @@ datasource db {
 // PUBLIC SCHEMA — platform-wide
 // =========================================================================
 
+// Andon TV-board access tokens (Sprint 3 / Task 1). Lives in PUBLIC (not a
+// tenant schema) because the token is what *resolves* the tenant for the
+// public, unauthenticated /api/v1/andon/:flowId board — so it must be
+// readable without tenant context. `companyId` = the Company-role user id
+// (i.e. tenant id); `flowId` is scoped to that tenant.
+model AndonToken {
+  id        String    @id @default(cuid())
+  flowId    Int       @map("flow_id")
+  companyId Int       @map("company_id")
+  token     String    @unique @default(cuid())
+  label     String?   @db.VarChar(120)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  expiresAt DateTime? @map("expires_at") @db.Timestamptz
+
+  @@index([companyId])
+  @@index([token])
+  @@map("andon_tokens")
+  @@schema("public")
+}
+
+// Per-company configuration (Sprint 4 / Task 2). Keyed by the Company-role
+// user id (= tenant id). Settings are a single JSON blob so the shape can
+// evolve without migrations. Lives in PUBLIC (company-level config, not
+// tenant-schema operational data).
+model CompanySetting {
+  companyId Int      @id @map("company_id")
+  data      Json     @default("{}")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("company_settings")
+  @@schema("public")
+}
+
 enum FcmDevice {
   android
   ios
@@ -50,42 +83,42 @@ enum FcmDevice {
 }
 
 model User {
-  id                Int       @id @default(autoincrement())
+  id               Int       @id @default(autoincrement())
   /// For role=User rows: points at the parent Company user's id. The
   /// derived schema name is `tenant_${companyId}` (or `tenant_${id}` when
   /// the user IS the Company). Replaces the old TenantUser join table —
   /// the decision is documented in MIGRATION_NOTES §13.
-  companyId         Int       @default(0) @map("company_id")
-  name              String    @db.VarChar(255)
-  firstName         String    @default("") @map("first_name") @db.VarChar(255)
-  lastName          String    @default("") @map("last_name") @db.VarChar(255)
-  email             String    @unique @db.VarChar(255)
-  password          String?   @db.VarChar(255)
-  image             String    @default("") @db.VarChar(255)
-  status            Int       @default(1) @db.SmallInt
-  confirmationCode  String    @default("") @map("confirmation_code") @db.VarChar(255)
-  confirmed         Boolean   @default(false)
-  rememberToken     String?   @map("remember_token") @db.VarChar(100)
-  emailVerifiedAt   DateTime? @map("email_verified_at") @db.Timestamptz
+  companyId        Int       @default(0) @map("company_id")
+  name             String    @db.VarChar(255)
+  firstName        String    @default("") @map("first_name") @db.VarChar(255)
+  lastName         String    @default("") @map("last_name") @db.VarChar(255)
+  email            String    @unique @db.VarChar(255)
+  password         String?   @db.VarChar(255)
+  image            String    @default("") @db.VarChar(255)
+  status           Int       @default(1) @db.SmallInt
+  confirmationCode String    @default("") @map("confirmation_code") @db.VarChar(255)
+  confirmed        Boolean   @default(false)
+  rememberToken    String?   @map("remember_token") @db.VarChar(100)
+  emailVerifiedAt  DateTime? @map("email_verified_at") @db.Timestamptz
   // Legacy db_name/db_username/db_password DROPPED (§11.1) — schema name is
   // derived from the Company user's id (no per-user DB credentials).
   // Legacy session_timeout DROPPED (§13.3) — replaced by JWT TTL.
-  equipmentTreePos  String    @default("") @map("equipment_tree_pos") @db.VarChar(1024)
-  analyzerSettings  String    @default("") @map("analyzer_settings") @db.VarChar(1024)
-  tablePreferences  Json?     @map("table_settings")
-  fcmToken          String?   @map("fcm_token") @db.VarChar(255)
-  fcmDevice         FcmDevice @default(android) @map("fcm_device")
-  unitOnly          Boolean   @default(false) @map("unit_only")
+  equipmentTreePos String    @default("") @map("equipment_tree_pos") @db.VarChar(1024)
+  analyzerSettings String    @default("") @map("analyzer_settings") @db.VarChar(1024)
+  tablePreferences Json?     @map("table_settings")
+  fcmToken         String?   @map("fcm_token") @db.VarChar(255)
+  fcmDevice        FcmDevice @default(android) @map("fcm_device")
+  unitOnly         Boolean   @default(false) @map("unit_only")
   /// Moved here from the deleted Tenant model. Per-Company timezone;
   /// sub-users inherit the value from their Company user at display time.
-  timezone          String    @default("Europe/Stockholm") @db.VarChar(64)
-  legacyId          BigInt?   @unique @map("legacy_id")
-  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt         DateTime? @map("deleted_at") @db.Timestamptz
+  timezone         String    @default("Europe/Stockholm") @db.VarChar(64)
+  legacyId         BigInt?   @unique @map("legacy_id")
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt        DateTime? @map("deleted_at") @db.Timestamptz
 
-  userRoles    UserRole[]
-  history      History[]
+  userRoles UserRole[]
+  history   History[]
 
   @@index([companyId])
   @@index([deletedAt])
@@ -210,14 +243,14 @@ model History {
 
 // CMS — managed through admin UI, served by /api/v1/cms/pages/:slug.
 model Cms {
-  id        Int      @id @default(autoincrement())
-  slug      String   @unique @db.VarChar(255)
-  title     String   @db.VarChar(255)
+  id        Int       @id @default(autoincrement())
+  slug      String    @unique @db.VarChar(255)
+  title     String    @db.VarChar(255)
   content   String?
-  status    Boolean  @default(true)
-  legacyId  BigInt?  @unique @map("legacy_id")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  status    Boolean   @default(true)
+  legacyId  BigInt?   @unique @map("legacy_id")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz
 
   images CmsImage[]
@@ -288,21 +321,21 @@ model Testimonial {
 // survive user deletion. `visibleToTenant` is a future-flag — when true, the Company
 // role can see the row in their own view. Default false = platform-only behaviour.
 model Feedback {
-  id                Int       @id @default(autoincrement())
-  body              String
-  status            Int       @default(1) @db.SmallInt
+  id              Int       @id @default(autoincrement())
+  body            String
+  status          Int       @default(1) @db.SmallInt
   /// Stores the Company user's id (formerly the Tenant.id; column kept for
   /// table-level back-compat with the legacy `feedbacks.tenant_id` name).
-  tenantId          Int?      @map("tenant_id")
-  tenantNameSnap    String    @default("") @map("tenant_name_snap") @db.VarChar(255)
-  userId            Int?      @map("user_id")
-  userEmailSnap     String    @default("") @map("user_email_snap") @db.VarChar(255)
-  userNameSnap      String    @default("") @map("user_name_snap") @db.VarChar(255)
-  visibleToTenant   Boolean   @default(false) @map("visible_to_tenant")
-  legacyId          BigInt?   @unique @map("legacy_id")
-  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt         DateTime? @map("deleted_at") @db.Timestamptz
+  tenantId        Int?      @map("tenant_id")
+  tenantNameSnap  String    @default("") @map("tenant_name_snap") @db.VarChar(255)
+  userId          Int?      @map("user_id")
+  userEmailSnap   String    @default("") @map("user_email_snap") @db.VarChar(255)
+  userNameSnap    String    @default("") @map("user_name_snap") @db.VarChar(255)
+  visibleToTenant Boolean   @default(false) @map("visible_to_tenant")
+  legacyId        BigInt?   @unique @map("legacy_id")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz
 
   @@index([tenantId])
   @@index([userId])
@@ -464,19 +497,19 @@ enum OrderSelection {
 // ----------------------------- Categorization -------------------------------
 
 model Type {
-  id           Int        @id @default(autoincrement())
-  name         String?    @db.VarChar(255)
-  kind         TypeKind   @default(NotApplicable) @map("type")
-  entity       TypeEntity @default(Equipment)
-  description  String?
-  icon         String?    @default("noimage.jpg") @db.VarChar(255)
-  isActive     Boolean    @default(true) @map("is_active")
-  excludeType  Boolean    @default(false) @map("exclude_type")
-  sortOrder    Int        @default(0) @map("sort_order")
-  legacyId     BigInt?    @unique @map("legacy_id")
-  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt    DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt    DateTime?  @map("deleted_at") @db.Timestamptz
+  id          Int        @id @default(autoincrement())
+  name        String?    @db.VarChar(255)
+  kind        TypeKind   @default(NotApplicable) @map("type")
+  entity      TypeEntity @default(Equipment)
+  description String?
+  icon        String?    @default("noimage.jpg") @db.VarChar(255)
+  isActive    Boolean    @default(true) @map("is_active")
+  excludeType Boolean    @default(false) @map("exclude_type")
+  sortOrder   Int        @default(0) @map("sort_order")
+  legacyId    BigInt?    @unique @map("legacy_id")
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime?  @map("deleted_at") @db.Timestamptz
 
   parts        Part[]
   scrapReasons ScrapReason[]
@@ -540,16 +573,16 @@ model StopReason {
 }
 
 model StopCategory {
-  id          Int               @id @default(autoincrement())
-  name        String?           @db.VarChar(255)
-  kind        StopCategoryKind  @default(Performance) @map("type")
-  description String            @default("") @db.VarChar(512)
-  icon        String?           @db.VarChar(255)
-  isActive    Boolean           @default(true) @map("is_active")
-  legacyId    BigInt?           @unique @map("legacy_id")
-  createdAt   DateTime?         @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime?         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt   DateTime?         @map("deleted_at") @db.Timestamptz
+  id          Int              @id @default(autoincrement())
+  name        String?          @db.VarChar(255)
+  kind        StopCategoryKind @default(Performance) @map("type")
+  description String           @default("") @db.VarChar(512)
+  icon        String?          @db.VarChar(255)
+  isActive    Boolean          @default(true) @map("is_active")
+  legacyId    BigInt?          @unique @map("legacy_id")
+  createdAt   DateTime?        @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime?        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt   DateTime?        @map("deleted_at") @db.Timestamptz
 
   @@index([deletedAt])
   @@map("stop_category")
@@ -573,20 +606,20 @@ model Equipment {
   updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
 
-  type     Type    @relation(fields: [typeId], references: [id])
+  type Type @relation(fields: [typeId], references: [id])
 
-  properties           EquipmentProperty[]
-  scrapReasons         EquipmentScrapReason[]
-  stopReasons          EquipmentStopReason[]
-  parts                EquipmentPart[]
-  orders               EquipmentOrder[]
-  shiftSchedules       EquipmentShiftSchedule[]
-  assignments          EquipmentAssign[]
-  userEquipments       UserEquipment[]
-  machines             Machine[]
-  machineDocuments     MachineDocument[]
-  folders              Folder[]
-  warningData          WarningData[]
+  properties       EquipmentProperty[]
+  scrapReasons     EquipmentScrapReason[]
+  stopReasons      EquipmentStopReason[]
+  parts            EquipmentPart[]
+  orders           EquipmentOrder[]
+  shiftSchedules   EquipmentShiftSchedule[]
+  assignments      EquipmentAssign[]
+  userEquipments   UserEquipment[]
+  machines         Machine[]
+  machineDocuments MachineDocument[]
+  folders          Folder[]
+  warningData      WarningData[]
   // FlowDesignAttribute references via relation_id+type — polymorphic, no FK.
 
   @@index([parentId])
@@ -601,20 +634,23 @@ model Equipment {
 }
 
 model EquipmentProperty {
-  id              Int            @id @default(autoincrement())
-  equipmentId     Int            @map("equip_id")
-  typeId          Int            @map("type_id")
-  cycleTime       String         @default("") @map("cycle_time") @db.VarChar(512)
-  costPerHour     Int            @default(0) @map("cost_per_hour")
-  currency        String         @default("") @db.VarChar(10)
-  operator        Int            @default(0)
-  salaryGroupId   Int            @map("salary_group_id")
-  valueAddedType  ValueAddedType @default(currency) @map("value_added_type")
-  valueAddedVal   String         @map("value_added_val") @db.VarChar(10)
-  orderSelection  OrderSelection @default(free_text) @map("order_selection")
-  legacyId        BigInt?        @unique @map("legacy_id")
-  createdAt       DateTime?      @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime?      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  id               Int            @id @default(autoincrement())
+  equipmentId      Int            @map("equip_id")
+  typeId           Int            @map("type_id")
+  cycleTime        String         @default("") @map("cycle_time") @db.VarChar(512)
+  // Typed cycle time in seconds/part (Sprint 3 / Task 6). Backfilled from the
+  // legacy free-text `cycle_time` VARCHAR; preferred by getOeeMetrics().
+  cycleTimeSeconds Float?         @map("cycle_time_seconds")
+  costPerHour      Int            @default(0) @map("cost_per_hour")
+  currency         String         @default("") @db.VarChar(10)
+  operator         Int            @default(0)
+  salaryGroupId    Int            @map("salary_group_id")
+  valueAddedType   ValueAddedType @default(currency) @map("value_added_type")
+  valueAddedVal    String         @map("value_added_val") @db.VarChar(10)
+  orderSelection   OrderSelection @default(free_text) @map("order_selection")
+  legacyId         BigInt?        @unique @map("legacy_id")
+  createdAt        DateTime?      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime?      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
 
@@ -663,11 +699,11 @@ model EquipmentPart {
 }
 
 model EquipmentShiftSchedule {
-  id                Int     @id @default(autoincrement())
-  equipmentId       Int     @map("equipment_id")
-  scheduleId        Int     @map("schedule_id")
-  alsoAssignImport  Boolean @default(false) @map("also_assign_import")
-  legacyId          BigInt? @unique @map("legacy_id")
+  id               Int     @id @default(autoincrement())
+  equipmentId      Int     @map("equipment_id")
+  scheduleId       Int     @map("schedule_id")
+  alsoAssignImport Boolean @default(false) @map("also_assign_import")
+  legacyId         BigInt? @unique @map("legacy_id")
 
   equipment Equipment     @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
   schedule  ShiftSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
@@ -679,17 +715,17 @@ model EquipmentShiftSchedule {
 }
 
 model EquipmentScrapReason {
-  id            Int       @id @default(autoincrement())
-  equipmentId   Int       @default(0) @map("equipment_id")
-  reasonTypeId  Int       @default(0) @map("reason_type_id")
-  status        Int       @default(1) @db.SmallInt
-  legacyId      BigInt?   @unique @map("legacy_id")
-  createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz
+  id           Int       @id @default(autoincrement())
+  equipmentId  Int       @default(0) @map("equipment_id")
+  reasonTypeId Int       @default(0) @map("reason_type_id")
+  status       Int       @default(1) @db.SmallInt
+  legacyId     BigInt?   @unique @map("legacy_id")
+  createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
 
-  equipment Equipment    @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
-  reason    ScrapReason  @relation(fields: [reasonTypeId], references: [id])
+  equipment Equipment   @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  reason    ScrapReason @relation(fields: [reasonTypeId], references: [id])
 
   @@index([equipmentId])
   @@index([reasonTypeId])
@@ -699,17 +735,17 @@ model EquipmentScrapReason {
 }
 
 model EquipmentStopReason {
-  id            Int       @id @default(autoincrement())
-  equipmentId   Int       @default(0) @map("equipment_id")
-  reasonTypeId  Int       @default(0) @map("reason_type_id")
-  status        Int       @default(1) @db.SmallInt
-  legacyId      BigInt?   @unique @map("legacy_id")
-  createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz
+  id           Int       @id @default(autoincrement())
+  equipmentId  Int       @default(0) @map("equipment_id")
+  reasonTypeId Int       @default(0) @map("reason_type_id")
+  status       Int       @default(1) @db.SmallInt
+  legacyId     BigInt?   @unique @map("legacy_id")
+  createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
 
-  equipment Equipment   @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
-  reason    StopReason  @relation(fields: [reasonTypeId], references: [id])
+  equipment Equipment  @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+  reason    StopReason @relation(fields: [reasonTypeId], references: [id])
 
   @@index([equipmentId])
   @@index([reasonTypeId])
@@ -742,15 +778,15 @@ model EquipmentAssign {
 
 // User snapshot pattern (per §11.5).
 model UserEquipment {
-  id          Int      @id @default(autoincrement())
-  userId      Int      @map("user_id")
-  userEmail   String   @default("") @map("user_email") @db.VarChar(255)
-  userName    String   @default("") @map("user_name") @db.VarChar(255)
-  equipmentId Int      @default(0) @map("equipment_id")
-  icon        String   @default("noimage.jpg") @db.VarChar(255)
-  status      Int      @default(1) @db.SmallInt
-  legacyId    BigInt?  @unique @map("legacy_id")
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  id          Int       @id @default(autoincrement())
+  userId      Int       @map("user_id")
+  userEmail   String    @default("") @map("user_email") @db.VarChar(255)
+  userName    String    @default("") @map("user_name") @db.VarChar(255)
+  equipmentId Int       @default(0) @map("equipment_id")
+  icon        String    @default("noimage.jpg") @db.VarChar(255)
+  status      Int       @default(1) @db.SmallInt
+  legacyId    BigInt?   @unique @map("legacy_id")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt   DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
@@ -795,31 +831,31 @@ model Part {
 }
 
 model Order {
-  id            Int       @id @default(autoincrement())
-  status        Int       @default(1) @db.SmallInt
-  typeId        Int       @map("type_id")
-  orderNr       String    @map("order_nr") @db.VarChar(50)
-  description   String    @db.VarChar(255)
-  flowId        Int       @map("flow_id")
+  id           Int       @id @default(autoincrement())
+  status       Int       @default(1) @db.SmallInt
+  typeId       Int       @map("type_id")
+  orderNr      String    @map("order_nr") @db.VarChar(50)
+  description  String    @db.VarChar(255)
+  flowId       Int       @map("flow_id")
   // R2: legacy column was equip_id; renamed to equipment_id in v3.
-  equipmentId   Int       @map("equipment_id")
-  partId        Int       @map("part_id")
-  startDate     DateTime? @map("start_date") @db.Timestamptz
-  endDate       DateTime? @map("end_date") @db.Timestamptz
-  plannedQty    Int       @default(0) @map("planned_qty")
-  okQty         Int       @default(0) @map("ok_qty")
-  scrapQty      Int       @default(0) @map("scrap_qty")
-  plannedHrs    Int       @default(0) @map("planned_hrs")
-  workedHrs     Int       @default(0) @map("worked_hrs")
-  remainingQty  Int       @default(0) @map("remaining_qty")
-  remainingHrs  Int       @default(0) @map("remaining_hrs")
-  sortOrder     Int       @default(0) @map("sort_order")
-  legacyId      BigInt?   @unique @map("legacy_id")
-  createdAt     DateTime? @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt     DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz
+  equipmentId  Int       @map("equipment_id")
+  partId       Int       @map("part_id")
+  startDate    DateTime? @map("start_date") @db.Timestamptz
+  endDate      DateTime? @map("end_date") @db.Timestamptz
+  plannedQty   Int       @default(0) @map("planned_qty")
+  okQty        Int       @default(0) @map("ok_qty")
+  scrapQty     Int       @default(0) @map("scrap_qty")
+  plannedHrs   Int       @default(0) @map("planned_hrs")
+  workedHrs    Int       @default(0) @map("worked_hrs")
+  remainingQty Int       @default(0) @map("remaining_qty")
+  remainingHrs Int       @default(0) @map("remaining_hrs")
+  sortOrder    Int       @default(0) @map("sort_order")
+  legacyId     BigInt?   @unique @map("legacy_id")
+  createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
 
-  type Type @relation(fields: [typeId], references: [id])
+  type Type       @relation(fields: [typeId], references: [id])
   flow FlowDesign @relation(fields: [flowId], references: [id])
   part Part       @relation(fields: [partId], references: [id])
 
@@ -839,21 +875,21 @@ model Order {
 // ----------------------------- Flow design -------------------------------
 
 model FlowDesign {
-  id          Int       @id @default(autoincrement())
-  name        String    @db.VarChar(250)
+  id         Int       @id @default(autoincrement())
+  name       String    @db.VarChar(250)
   // flow_format distinguishes drawio XML (default) from legacy GoJS JSON.
   // Plan B (§11): drawio is the only writer in new_fp; pre-existing GoJS
   // rows were blanked by the §11-S1 migration so they re-save as drawio.
-  flowFormat  String    @default("drawio") @map("flow_format")
-  flowData    String?   @map("flow_data")
+  flowFormat String    @default("drawio") @map("flow_format")
+  flowData   String?   @map("flow_data")
   // SVG thumbnail captured at save-time, rendered by FlowCard in the
   // Monitor/Analyzer card grids (§11-S6). Null = unsaved or legacy row.
-  svgCache    String?   @map("svg_cache")
-  status      Int       @default(1) @db.SmallInt
-  legacyId    BigInt?   @unique @map("legacy_id")
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
+  svgCache   String?   @map("svg_cache")
+  status     Int       @default(1) @db.SmallInt
+  legacyId   BigInt?   @unique @map("legacy_id")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt  DateTime? @map("deleted_at") @db.Timestamptz
 
   attributes     FlowDesignAttribute[]
   productionData ProductionData[]
@@ -896,7 +932,7 @@ model ProductionData {
   // Legacy column name; semantically references Equipment.id (the equipment a flow node represents).
   flowObjectKey   Int       @default(0) @map("flow_object_key")
   partId          Int       @default(0) @map("part_id")
-  workShiftId    Int       @default(0) @map("work_shift_id")
+  workShiftId     Int       @default(0) @map("work_shift_id")
   workHours       String?   @map("work_hours") @db.VarChar(10)
   partQty         Int       @default(0) @map("part_qty")
   plannedQty      Int       @default(0) @map("planned_qty")
@@ -934,7 +970,7 @@ model ScrapData {
   flowId          Int       @default(0) @map("flow_id")
   flowObjectKey   Int       @default(0) @map("flow_object_key")
   partId          Int       @default(0) @map("part_id")
-  workShiftId    Int       @default(0) @map("work_shift_id")
+  workShiftId     Int       @default(0) @map("work_shift_id")
   orderNo         String?   @default("") @map("order_no") @db.VarChar(255)
   quantity        Int?
   reasonId        Int       @default(0) @map("reason")
@@ -972,35 +1008,35 @@ model ScrapData {
 }
 
 model StopData {
-  id                Int          @id @default(autoincrement())
-  flowId            Int          @default(0) @map("flow_id")
-  flowObjectKey     Int          @default(0) @map("flow_object_key")
-  partId            Int          @default(0) @map("part_id")
-  workShiftId      Int          @default(0) @map("work_shift_id")
-  orderNo           String?      @default("") @map("order_no") @db.VarChar(255)
-  date              DateTime?    @db.Date
-  reasonId          Int?         @default(0) @map("reason")
-  hours             Int          @default(0)
-  minutes           Int          @default(0)
-  time              String?      @db.VarChar(20)
-  quantity          Int          @default(0)
-  sumOfTime         Int          @default(0) @map("sum_of_time")
-  stopTimestamp     DateTime?    @map("stop_timestamp") @db.Timestamptz
-  restartTimestamp  DateTime?    @map("restart_timestamp") @db.Timestamptz
-  status            Int          @default(1) @db.SmallInt
-  comment           String       @default("") @db.VarChar(255)
-  createdByUserId   Int          @default(0) @map("created_by")
-  createdByEmail    String       @default("") @map("created_by_email") @db.VarChar(255)
-  createdByName     String       @default("") @map("created_by_name") @db.VarChar(255)
-  stopTypeId        Int          @default(0) @map("stop_type_id")
-  picture           String?      @db.VarChar(255)
-  workShiftName     String?      @map("work_shift_name") @db.VarChar(50)
-  machineStopId     Int          @default(0) @map("machine_stop_id")
-  stopDataKind      StopDataKind? @default(reg) @map("stop_data_type")
-  legacyId          BigInt?      @unique @map("legacy_id")
-  createdAt         DateTime?    @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt         DateTime?    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt         DateTime?    @map("deleted_at") @db.Timestamptz
+  id               Int           @id @default(autoincrement())
+  flowId           Int           @default(0) @map("flow_id")
+  flowObjectKey    Int           @default(0) @map("flow_object_key")
+  partId           Int           @default(0) @map("part_id")
+  workShiftId      Int           @default(0) @map("work_shift_id")
+  orderNo          String?       @default("") @map("order_no") @db.VarChar(255)
+  date             DateTime?     @db.Date
+  reasonId         Int?          @default(0) @map("reason")
+  hours            Int           @default(0)
+  minutes          Int           @default(0)
+  time             String?       @db.VarChar(20)
+  quantity         Int           @default(0)
+  sumOfTime        Int           @default(0) @map("sum_of_time")
+  stopTimestamp    DateTime?     @map("stop_timestamp") @db.Timestamptz
+  restartTimestamp DateTime?     @map("restart_timestamp") @db.Timestamptz
+  status           Int           @default(1) @db.SmallInt
+  comment          String        @default("") @db.VarChar(255)
+  createdByUserId  Int           @default(0) @map("created_by")
+  createdByEmail   String        @default("") @map("created_by_email") @db.VarChar(255)
+  createdByName    String        @default("") @map("created_by_name") @db.VarChar(255)
+  stopTypeId       Int           @default(0) @map("stop_type_id")
+  picture          String?       @db.VarChar(255)
+  workShiftName    String?       @map("work_shift_name") @db.VarChar(50)
+  machineStopId    Int           @default(0) @map("machine_stop_id")
+  stopDataKind     StopDataKind? @default(reg) @map("stop_data_type")
+  legacyId         BigInt?       @unique @map("legacy_id")
+  createdAt        DateTime?     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime?     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt        DateTime?     @map("deleted_at") @db.Timestamptz
 
   flow      FlowDesign  @relation(fields: [flowId], references: [id])
   part      Part        @relation(fields: [partId], references: [id])
@@ -1024,27 +1060,32 @@ model StopData {
 }
 
 model WarningData {
-  id                Int       @id @default(autoincrement())
+  id               Int       @id @default(autoincrement())
   // Legacy column was equip_id; renamed to equipment_id (R2 v3).
-  equipmentId       Int       @map("equipment_id")
-  machineId         Int       @map("machine_id")
-  notificationText  String    @map("notification_text") @db.VarChar(512)
-  fromTime          DateTime? @map("from_time") @db.Timestamptz
-  toTime            DateTime? @map("to_time") @db.Timestamptz
-  duration          Int       @default(0)
+  equipmentId      Int       @map("equipment_id")
+  machineId        Int       @map("machine_id")
+  notificationText String    @map("notification_text") @db.VarChar(512)
+  fromTime         DateTime? @map("from_time") @db.Timestamptz
+  toTime           DateTime? @map("to_time") @db.Timestamptz
+  duration         Int       @default(0)
   // User snapshot (§11.5)
-  createdByUserId   Int       @default(0) @map("created_by")
-  createdByEmail    String    @default("") @map("created_by_email") @db.VarChar(255)
-  createdByName     String    @default("") @map("created_by_name") @db.VarChar(255)
-  legacyId          BigInt?   @unique @map("legacy_id")
-  createdAt         DateTime? @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt         DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  createdByUserId  Int       @default(0) @map("created_by")
+  createdByEmail   String    @default("") @map("created_by_email") @db.VarChar(255)
+  createdByName    String    @default("") @map("created_by_name") @db.VarChar(255)
+  // Acknowledge state (Sprint 3 / Task 2). Null = unacknowledged → shows in
+  // the operator alert feed. acknowledged_by references public.users(id).
+  acknowledgedAt   DateTime? @map("acknowledged_at") @db.Timestamptz
+  acknowledgedBy   Int?      @map("acknowledged_by")
+  legacyId         BigInt?   @unique @map("legacy_id")
+  createdAt        DateTime? @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   equipment Equipment @relation(fields: [equipmentId], references: [id])
 
   @@index([equipmentId])
   @@index([machineId])
   @@index([fromTime, toTime])
+  @@index([acknowledgedAt])
   @@map("warning_data")
   @@schema("tenant_template")
 }
@@ -1053,33 +1094,33 @@ model WarningData {
 
 // Legacy `tbl_machines` → `Machine` (the IoT unit, per §4.2 A1).
 model Machine {
-  id                       Int                  @id @default(autoincrement())
+  id                     Int                  @id @default(autoincrement())
   // Legacy column was equip_id; renamed to equipment_id.
-  equipmentId              Int                  @default(0) @map("equipment_id")
-  pinNo                    Int                  @map("pin_no") @db.SmallInt
-  installationDate         DateTime?            @map("installation_date") @db.Timestamptz
-  runningStatus            MachineRunningStatus @map("running_status")
-  wifiId                   String?              @map("wifi_id") @db.VarChar(50)
-  bluetoothId              String?              @map("bluetooth_id") @db.VarChar(50)
-  hasUnregisterData        String               @default("no") @map("has_unregister_data") @db.VarChar(3)
-  filterTime               Int                  @default(0) @map("filter_time")
-  filterTimeOn             Int                  @default(0) @map("filter_time_on")
-  unitName                 String               @map("unit_name") @db.VarChar(50)
-  unitConnected            String               @default("yes") @map("unit_connected") @db.VarChar(3)
-  lastOnline               DateTime?            @map("last_online") @db.Timestamptz
-  signalType               MachineSignalType    @default(on) @map("signal_type")
-  logWarning               Boolean              @default(false) @map("log_warning")
-  customNotificationText   String?              @map("custom_notification_text") @db.VarChar(100)
-  notificationDefault      Boolean              @default(true) @map("notification_default")
-  isAutoRegistered         String               @default("no") @map("is_auto_registered") @db.VarChar(3)
-  autoRegisteredData       String?              @map("auto_registered_data")
-  counterDetails           String?              @map("counter_details")
-  parentId                 Int?                 @map("parent_id")
-  legacyId                 BigInt?              @unique @map("legacy_id")
-  createdAt                DateTime             @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt                DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  equipmentId            Int                  @default(0) @map("equipment_id")
+  pinNo                  Int                  @map("pin_no") @db.SmallInt
+  installationDate       DateTime?            @map("installation_date") @db.Timestamptz
+  runningStatus          MachineRunningStatus @map("running_status")
+  wifiId                 String?              @map("wifi_id") @db.VarChar(50)
+  bluetoothId            String?              @map("bluetooth_id") @db.VarChar(50)
+  hasUnregisterData      String               @default("no") @map("has_unregister_data") @db.VarChar(3)
+  filterTime             Int                  @default(0) @map("filter_time")
+  filterTimeOn           Int                  @default(0) @map("filter_time_on")
+  unitName               String               @map("unit_name") @db.VarChar(50)
+  unitConnected          String               @default("yes") @map("unit_connected") @db.VarChar(3)
+  lastOnline             DateTime?            @map("last_online") @db.Timestamptz
+  signalType             MachineSignalType    @default(on) @map("signal_type")
+  logWarning             Boolean              @default(false) @map("log_warning")
+  customNotificationText String?              @map("custom_notification_text") @db.VarChar(100)
+  notificationDefault    Boolean              @default(true) @map("notification_default")
+  isAutoRegistered       String               @default("no") @map("is_auto_registered") @db.VarChar(3)
+  autoRegisteredData     String?              @map("auto_registered_data")
+  counterDetails         String?              @map("counter_details")
+  parentId               Int?                 @map("parent_id")
+  legacyId               BigInt?              @unique @map("legacy_id")
+  createdAt              DateTime             @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt              DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
-  equipment    Equipment            @relation(fields: [equipmentId], references: [id])
+  equipment Equipment @relation(fields: [equipmentId], references: [id])
 
   data         MachineData[]
   prevStarts   MachinePrevStart[]
@@ -1095,14 +1136,14 @@ model Machine {
 // Highest-volume table. Phase 6 migration converts to PARTITION BY RANGE
 // (start_time) monthly per §4.6. For Phase 2 dev, this is a normal table.
 model MachineData {
-  id              Int                       @id @default(autoincrement())
-  machineId       Int                       @map("machine_id")
-  startTime       DateTime?                 @map("start_time") @db.Timestamptz
-  endTime         DateTime?                 @map("end_time") @db.Timestamptz
-  isRegistered    MachineDataRegistration   @default(no) @map("is_registered")
-  isValidData     Boolean                   @default(true) @map("is_valid_data")
-  productionTime  String?                   @map("production_time") @db.VarChar(10)
-  legacyId        BigInt?                   @unique @map("legacy_id")
+  id             Int                     @id @default(autoincrement())
+  machineId      Int                     @map("machine_id")
+  startTime      DateTime?               @map("start_time") @db.Timestamptz
+  endTime        DateTime?               @map("end_time") @db.Timestamptz
+  isRegistered   MachineDataRegistration @default(no) @map("is_registered")
+  isValidData    Boolean                 @default(true) @map("is_valid_data")
+  productionTime String?                 @map("production_time") @db.VarChar(10)
+  legacyId       BigInt?                 @unique @map("legacy_id")
 
   machine Machine @relation(fields: [machineId], references: [id], onDelete: Cascade)
 
@@ -1178,8 +1219,8 @@ model MachineDocument {
   updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
 
-  equipment Equipment              @relation(fields: [equipmentId], references: [id])
-  folder    Folder?                @relation(fields: [folderId], references: [id])
+  equipment Equipment             @relation(fields: [equipmentId], references: [id])
+  folder    Folder?               @relation(fields: [folderId], references: [id])
   files     MachineDocumentFile[]
   fileLocks UserFileLock[]
 
@@ -1193,28 +1234,28 @@ model MachineDocument {
 
 // Legacy `machine_files` table → `MachineDocumentFile` (A1 rename).
 model MachineDocumentFile {
-  id              Int             @id @default(autoincrement())
-  machineDocId    Int             @default(0) @map("machine_id")
-  filename        String?         @default("noimage.png") @db.VarChar(255)
-  filetype        MachineFileType? @default(Image)
-  isMain          Boolean         @default(false) @map("is_main")
-  isLocked        Boolean         @default(false) @map("is_locked")
-  uploadedAt      DateTime?       @map("uploaded_at") @db.Timestamptz
-  downloadedAt    DateTime?       @map("downloaded_at") @db.Timestamptz
-  isActive        Boolean         @default(true) @map("is_active")
-  notes           String          @default("") @db.Text
+  id               Int              @id @default(autoincrement())
+  machineDocId     Int              @default(0) @map("machine_id")
+  filename         String?          @default("noimage.png") @db.VarChar(255)
+  filetype         MachineFileType? @default(Image)
+  isMain           Boolean          @default(false) @map("is_main")
+  isLocked         Boolean          @default(false) @map("is_locked")
+  uploadedAt       DateTime?        @map("uploaded_at") @db.Timestamptz
+  downloadedAt     DateTime?        @map("downloaded_at") @db.Timestamptz
+  isActive         Boolean          @default(true) @map("is_active")
+  notes            String           @default("") @db.Text
   // Uploader snapshot (§11.5)
-  uploadedByUserId  Int           @default(0) @map("user_id")
-  uploadedByEmail   String        @default("") @map("uploaded_by_email") @db.VarChar(255)
-  uploadedByName    String        @default("") @map("uploaded_by_name") @db.VarChar(255)
+  uploadedByUserId Int              @default(0) @map("user_id")
+  uploadedByEmail  String           @default("") @map("uploaded_by_email") @db.VarChar(255)
+  uploadedByName   String           @default("") @map("uploaded_by_name") @db.VarChar(255)
   // Lock-holder snapshot (§11.5) — populated when isLocked = true.
-  lockedByUserId    Int           @default(0) @map("locked_by_user_id")
-  lockedByEmail     String        @default("") @map("locked_by_email") @db.VarChar(255)
-  lockedByName      String        @default("") @map("locked_by_name") @db.VarChar(255)
-  legacyId          BigInt?       @unique @map("legacy_id")
-  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt         DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt         DateTime?     @map("deleted_at") @db.Timestamptz
+  lockedByUserId   Int              @default(0) @map("locked_by_user_id")
+  lockedByEmail    String           @default("") @map("locked_by_email") @db.VarChar(255)
+  lockedByName     String           @default("") @map("locked_by_name") @db.VarChar(255)
+  legacyId         BigInt?          @unique @map("legacy_id")
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt        DateTime?        @map("deleted_at") @db.Timestamptz
 
   document MachineDocument @relation(fields: [machineDocId], references: [id], onDelete: Cascade)
 
@@ -1230,22 +1271,22 @@ model MachineDocumentFile {
 // ----------------------------- Programmes -------------------------------
 
 model MachineProgramme {
-  id          Int       @id @default(autoincrement())
-  name        String    @db.VarChar(255)
-  description String?
-  status      Int       @default(1) @db.SmallInt
+  id           Int       @id @default(autoincrement())
+  name         String    @db.VarChar(255)
+  description  String?
+  status       Int       @default(1) @db.SmallInt
   // Legacy `machine_id` (FK → company_machine.id) was dropped in the
   // initial port. D3 reintroduces it pointing at MachineDocument (the
   // current "machines" entity), since the new_fp admin form lets the
   // user pick a MachineDocument as the programme's parent. Nullable to
   // keep existing rows intact.
-  machineDocId Int?     @map("machine_doc_id")
-  isLink      Boolean   @default(false) @map("is_link")
-  isLocked    Boolean   @default(false) @map("is_locked")
-  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
-  legacyId    BigInt?   @unique @map("legacy_id")
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  machineDocId Int?      @map("machine_doc_id")
+  isLink       Boolean   @default(false) @map("is_link")
+  isLocked     Boolean   @default(false) @map("is_locked")
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
+  legacyId     BigInt?   @unique @map("legacy_id")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   files          MachineProgrammeFile[]
   tenantMachines TenantMachine[]
@@ -1258,16 +1299,16 @@ model MachineProgramme {
 }
 
 model MachineProgrammeFile {
-  id            Int      @id @default(autoincrement())
-  programmeId   Int      @map("programme_id")
-  filename      String   @db.VarChar(255)
+  id               Int      @id @default(autoincrement())
+  programmeId      Int      @map("programme_id")
+  filename         String   @db.VarChar(255)
   // Uploader snapshot (§11.5)
   uploadedByUserId Int      @default(0) @map("user_id")
   uploadedByEmail  String   @default("") @map("uploaded_by_email") @db.VarChar(255)
   uploadedByName   String   @default("") @map("uploaded_by_name") @db.VarChar(255)
-  legacyId      BigInt?  @unique @map("legacy_id")
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  legacyId         BigInt?  @unique @map("legacy_id")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   programme MachineProgramme @relation(fields: [programmeId], references: [id], onDelete: Cascade)
 
@@ -1335,20 +1376,20 @@ model Folder {
 }
 
 model UserFileLock {
-  id                  Int          @id @default(autoincrement())
+  id               Int          @id @default(autoincrement())
   // Lock-holder snapshot (§11.5)
-  userId              Int          @map("user_id")
-  userEmail           String       @default("") @map("user_email") @db.VarChar(255)
-  userName            String       @default("") @map("user_name") @db.VarChar(255)
-  kind                FileLockType @default(lock) @map("type")
-  machineDocId        Int          @default(0) @map("machine_id")
-  machineDocFileId    Int          @default(0) @map("machine_file_id")
-  isLocked            Boolean      @default(false) @map("is_locked")
-  legacyId            BigInt?      @unique @map("legacy_id")
-  createdAt           DateTime     @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt           DateTime?    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  userId           Int          @map("user_id")
+  userEmail        String       @default("") @map("user_email") @db.VarChar(255)
+  userName         String       @default("") @map("user_name") @db.VarChar(255)
+  kind             FileLockType @default(lock) @map("type")
+  machineDocId     Int          @default(0) @map("machine_id")
+  machineDocFileId Int          @default(0) @map("machine_file_id")
+  isLocked         Boolean      @default(false) @map("is_locked")
+  legacyId         BigInt?      @unique @map("legacy_id")
+  createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime?    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
-  document     MachineDocument     @relation(fields: [machineDocId],     references: [id], onDelete: Cascade)
+  document     MachineDocument     @relation(fields: [machineDocId], references: [id], onDelete: Cascade)
   documentFile MachineDocumentFile @relation(fields: [machineDocFileId], references: [id], onDelete: Cascade)
 
   @@index([userId])
@@ -1361,19 +1402,19 @@ model UserFileLock {
 // ----------------------------- Shifts / schedules -------------------------------
 
 model WorkShift {
-  id              Int       @id @default(autoincrement())
-  name            String?   @db.VarChar(255)
-  startTime       DateTime? @map("start_time") @db.Time
-  endTime         DateTime? @map("end_time") @db.Time
-  breakStartTime  DateTime? @map("break_start_time") @db.Time
-  breakEndTime    DateTime? @map("break_end_time") @db.Time
-  breakTimes      String?   @map("break_times") @db.VarChar(512)
-  workingDays     String?   @map("working_days") @db.VarChar(50)
-  status          Int       @default(1) @db.SmallInt
-  legacyId        BigInt?   @unique @map("legacy_id")
-  createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz
+  id             Int       @id @default(autoincrement())
+  name           String?   @db.VarChar(255)
+  startTime      DateTime? @map("start_time") @db.Time
+  endTime        DateTime? @map("end_time") @db.Time
+  breakStartTime DateTime? @map("break_start_time") @db.Time
+  breakEndTime   DateTime? @map("break_end_time") @db.Time
+  breakTimes     String?   @map("break_times") @db.VarChar(512)
+  workingDays    String?   @map("working_days") @db.VarChar(50)
+  status         Int       @default(1) @db.SmallInt
+  legacyId       BigInt?   @unique @map("legacy_id")
+  createdAt      DateTime? @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz
 
   productionData ProductionData[]
   scrapData      ScrapData[]
@@ -1394,8 +1435,8 @@ model ShiftSchedule {
   updatedAt   DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   deletedAt   DateTime? @map("deleted_at") @db.Timestamptz
 
-  data            ShiftScheduleData[]
-  equipmentLinks  EquipmentShiftSchedule[]
+  data           ShiftScheduleData[]
+  equipmentLinks EquipmentShiftSchedule[]
 
   @@index([deletedAt])
   @@map("shift_schedules")

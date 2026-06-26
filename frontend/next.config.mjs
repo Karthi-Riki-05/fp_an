@@ -1,6 +1,16 @@
 import createNextIntlPlugin from 'next-intl/plugin';
+import withPWAInit from 'next-pwa';
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
+
+// next-pwa is CommonJS; in this ESM config we import its default factory.
+// Service worker is disabled in development so HMR isn't shadowed by caching.
+const withPWA = withPWAInit({
+  dest: 'public',
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === 'development',
+});
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -20,4 +30,5 @@ const nextConfig = {
   transpilePackages: ['antd', '@ant-design/icons', 'rc-util', 'rc-pagination', 'rc-picker', 'rc-notification', 'rc-tooltip', 'rc-tree', 'rc-table'],
 };
 
-export default withNextIntl(nextConfig);
+// Compose both plugins: next-intl wraps the base config, next-pwa wraps that.
+export default withPWA(withNextIntl(nextConfig));

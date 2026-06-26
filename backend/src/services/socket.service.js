@@ -3,6 +3,7 @@
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 const { prisma, withTenant } = require('../prisma/client');
+const { initAndonNamespace, relayMachineToAndon } = require('../socket/andon-socket');
 
 let _io = null;
 
@@ -196,6 +197,9 @@ function init(httpServer) {
     });
   });
 
+  // Public token-scoped namespace for Andon TV boards (Sprint 4 / Task 3).
+  initAndonNamespace(_io);
+
   console.log('[Socket.io] Server initialised');
   return _io;
 }
@@ -206,6 +210,9 @@ function emitToTenant(tenantId, event, data) {
 
 function emitToMachine(tenantId, machineId, event, data) {
   _io?.to(`machine:${tenantId}:${machineId}`).emit(event, { ...data, tenantId });
+  // Mirror the change to any Andon board watching a flow with this machine.
+  // Fire-and-forget — never block or throw on the live machine-event path.
+  relayMachineToAndon(tenantId, machineId).catch(() => {});
 }
 
 function getIo() {

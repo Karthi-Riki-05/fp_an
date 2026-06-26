@@ -41,6 +41,8 @@
     "highcharts-react-official": "^3.2.3",
     "next": "^14.2.10",
     "next-intl": "^3.19.0",
+    "next-pwa": "^5.6.0",
+    "qrcode.react": "^4.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-grid-layout": "^2.2.3",

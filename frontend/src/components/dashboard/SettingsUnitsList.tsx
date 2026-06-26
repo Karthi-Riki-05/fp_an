@@ -92,7 +92,7 @@ function SortableRow({ row, isChecked, signalLabel, onCheck }: SortableRowProps)
 
 interface UnitFromApi {
   id: number;
-  unitName: string;
+  unitName: string | null;
   signalType: 'on' | 'off' | 'warning';
 }
 
@@ -200,7 +200,7 @@ export function SettingsUnitsList({ labels }: Props) {
               return (
                 <SortableRow
                   key={id}
-                  row={{ id: u.id, name: u.unitName, signal: u.signalType }}
+                  row={{ id: u.id, name: u.unitName ?? '', signal: u.signalType }}
                   isChecked={!hidden.has(id)}
                   signalLabel={signalLabel(u.signalType)}
                   onCheck={(checked) => {

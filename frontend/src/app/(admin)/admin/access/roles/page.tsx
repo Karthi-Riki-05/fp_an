@@ -4,6 +4,7 @@ import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
 import { App, Button, Popconfirm, Table, Tag, Typography } from 'antd';
 import { useRouter } from 'next/navigation';
 import { toApiError } from '../../../../../lib/api-client';
+import { useMe } from '../../../../../lib/api/auth';
 import { useDeleteRole, useRoles, type RoleSummary } from '../../../../../lib/api/roles';
 
 const { Title, Text } = Typography;
@@ -12,6 +13,10 @@ export default function RolesPage() {
   const router = useRouter();
   const { message } = App.useApp();
   const { data, isLoading } = useRoles();
+  const { data: me } = useMe();
+  // Only Administrators (Super Admin) may create/edit/delete roles. Company
+  // admins get a read-only view (Sprint 4 / Task 5).
+  const canManage = !!me?.isAdmin;
   const remove = useDeleteRole();
 
   const onDelete = async (row: RoleSummary) => {
@@ -28,16 +33,21 @@ export default function RolesPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
         <div>
           <Title level={4} style={{ margin: 0 }}>Roles</Title>
-          <Text type="secondary">Each role grants a fixed set of permissions. Administrator (all) is the platform owner.</Text>
+          <Text type="secondary">
+            Each role grants a fixed set of permissions. Administrator (all) is the platform owner.
+            {!canManage && ' You have read-only access.'}
+          </Text>
         </div>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => router.push('/admin/access/roles/new')}
-          style={{ background: '#01b9d0', borderColor: '#01b9d0' }}
-        >
-          New role
-        </Button>
+        {canManage && (
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => router.push('/admin/access/roles/new')}
+            style={{ background: '#01b9d0', borderColor: '#01b9d0' }}
+          >
+            New role
+          </Button>
+        )}
       </div>
 
       <Table<RoleSummary>
@@ -61,11 +71,12 @@ export default function RolesPage() {
           { title: 'Permissions', dataIndex: 'permissionCount', width: 140 },
           { title: 'Users', dataIndex: 'userCount', width: 120 },
           { title: 'Sort', dataIndex: 'sort', width: 80 },
-          {
+          // Actions column only for Administrators — read-only otherwise.
+          ...(canManage ? [{
             title: 'Actions',
             width: 220,
             align: 'center' as const,
-            render: (_, row) => (
+            render: (_: unknown, row: RoleSummary) => (
               <span style={{ display: 'inline-flex', gap: 4 }}>
                 <Button
                   type="text"
@@ -101,7 +112,7 @@ export default function RolesPage() {
                 </Popconfirm>
               </span>
             ),
-          },
+          }] : []),
         ]}
       />
     </div>

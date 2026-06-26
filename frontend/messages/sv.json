@@ -1437,7 +1437,15 @@
     "mqtt_id": "MQTT-klient-ID",
     "socket_connected": "Socket ansluten",
     "socket_disconnected": "Socket frånkopplad",
-    "joined_tenants": "Övervakar {count} företag"
+    "joined_tenants": "Övervakar {count} företag",
+    "overview": "Översikt",
+    "results": "Resultat",
+    "factory": "Fabrik",
+    "people": "Personal",
+    "advanced": "Avancerat",
+    "machines": "Maskiner",
+    "company_setup": "Företagsinställningar",
+    "import_export": "Import / Export"
   },
   "nav": {
     "administration": "Administrationspanel",

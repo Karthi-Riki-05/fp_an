@@ -3,21 +3,19 @@
 import {
   AppstoreOutlined,
   BarChartOutlined,
+  BellOutlined,
   BulbOutlined,
   CommentOutlined,
   EditOutlined,
   HomeOutlined,
-  LineChartOutlined,
   LogoutOutlined,
   MenuOutlined,
-  NodeIndexOutlined,
   ProfileOutlined,
   ProjectOutlined,
   RightOutlined,
   SafetyCertificateOutlined,
   SettingOutlined,
   ShareAltOutlined,
-  TagOutlined,
   TeamOutlined,
   ToolOutlined,
   WifiOutlined,
@@ -32,6 +30,7 @@ import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { brand } from '../../lib/assets';
 import { toApiError } from '../../lib/api-client';
 import { useLogout, useMe } from '../../lib/api/auth';
+import { useAlerts } from '../../lib/api/alerts';
 import { hasPermission } from '../../lib/auth';
 import { ImpersonationBanner } from '../admin/ImpersonationBanner';
 import { AdminSocketProvider } from '../realtime/AdminSocketProvider';
@@ -75,54 +74,34 @@ const SUPERADMIN_SIDEBAR: SidebarItem[] = [
  * COMPANY ADMIN sidebar — matches old fpanalyzer PHP sidebar.blade.php when NOT hasRole('admin').
  * Tenant-scoped operational management: equipment, flows, production, results, boards.
  */
+// Restructured into 6 operational groups + a collapsible "Advanced" section
+// at the bottom (Sprint 3 / Task 3). CMS/Boards/Feedback — marketing/secondary
+// content — moved out of the operational groups into Advanced.
 const COMPANY_SIDEBAR: SidebarItem[] = [
-  { key: '/admin/dashboard', icon: <HomeOutlined />, labelKey: 'administration', href: '/admin/dashboard' },
   {
-    key: 'user-mgmt',
-    icon: <TeamOutlined />,
-    labelKey: 'user_management',
+    key: 'overview',
+    icon: <HomeOutlined />,
+    labelKey: 'overview',
     children: [
-      { key: '/admin/access/users',         labelKey: 'users',         href: '/admin/access/users' },
-      { key: '/admin/access/salary-groups', labelKey: 'salary_group',  href: '/admin/access/salary-groups' },
-    ],
-  },
-  { key: '/admin/types', icon: <TagOutlined />, labelKey: 'type_management', href: '/admin/types' },
-  {
-    key: 'equipment-mgmt',
-    icon: <ToolOutlined />,
-    labelKey: 'equipment_management',
-    children: [
-      { key: '/admin/equipment',               labelKey: 'equipment_list',      href: '/admin/equipment' },
-      { key: '/admin/equipment/tree',          labelKey: 'equipment_structure', href: '/admin/equipment/tree' },
-      { key: '/admin/equipment/stop-reasons',  labelKey: 'stop_reasons',        href: '/admin/equipment/stop-reasons' },
-      { key: '/admin/equipment/scrap-reasons', labelKey: 'scrap_reasons',       href: '/admin/equipment/scrap-reasons' },
+      { key: '/admin/dashboard', labelKey: 'dashboard',     href: '/admin/dashboard' },
+      { key: '/admin/monitor',   labelKey: 'flow_monitor',  href: '/admin/monitor' },
+      { key: '/admin/analyzer',  labelKey: 'flow_analyzer', href: '/admin/analyzer' },
     ],
   },
   {
-    key: 'flow-mgmt',
-    icon: <NodeIndexOutlined />,
-    labelKey: 'flow_management',
-    children: [
-      { key: '/admin/flow-designs',  labelKey: 'flow_designer', href: '/admin/flow-designs' },
-      { key: '/admin/monitor',       labelKey: 'flow_monitor',  href: '/admin/monitor' },
-      { key: '/admin/analyzer',      labelKey: 'flow_analyzer', href: '/admin/analyzer' },
-    ],
-  },
-  {
-    key: 'production-mgmt',
+    key: 'production',
     icon: <AppstoreOutlined />,
-    labelKey: 'production_management',
+    labelKey: 'production',
     children: [
       { key: '/admin/orders',          labelKey: 'order_list',     href: '/admin/orders' },
       { key: '/admin/parts',           labelKey: 'parts_list',     href: '/admin/parts' },
-      { key: '/admin/work-shifts',     labelKey: 'work_shifts',    href: '/admin/work-shifts' },
       { key: '/admin/shift-schedules', labelKey: 'shift_schedule', href: '/admin/shift-schedules' },
     ],
   },
   {
-    key: 'result-mgmt',
+    key: 'results',
     icon: <BarChartOutlined />,
-    labelKey: 'result_management',
+    labelKey: 'results',
     children: [
       { key: '/admin/results/production', labelKey: 'production_data', href: '/admin/results/production' },
       { key: '/admin/results/scrap',      labelKey: 'scrap_data',      href: '/admin/results/scrap' },
@@ -131,17 +110,48 @@ const COMPANY_SIDEBAR: SidebarItem[] = [
     ],
   },
   {
-    key: 'boards',
-    icon: <LineChartOutlined />,
-    labelKey: 'board',
+    key: 'factory',
+    icon: <ToolOutlined />,
+    labelKey: 'factory',
     children: [
-      { key: '/admin/boards', labelKey: 'dashboard_creator', href: '/admin/boards' },
+      { key: '/admin/equipment',     labelKey: 'equipment_list', href: '/admin/equipment' },
+      { key: '/admin/iot/setup',     labelKey: 'setup_units',    href: '/admin/iot/setup' },
+      { key: '/admin/flow-designs',  labelKey: 'flow_designer',  href: '/admin/flow-designs' },
+      { key: '/admin/machines',      labelKey: 'machines',       href: '/admin/machines' },
     ],
   },
-  // "Loss Model" group removed per operator request — re-add here if the
-  // Loss by Order No. report needs to come back into the sidebar.
-  { key: '/admin/iot/setup', icon: <SettingOutlined />, labelKey: 'setup_units', href: '/admin/iot/setup' },
-  { key: '/admin/feedback',  icon: <CommentOutlined />, labelKey: 'feedback',    href: '/admin/feedback' },
+  {
+    key: 'people',
+    icon: <TeamOutlined />,
+    labelKey: 'people',
+    children: [
+      { key: '/admin/access/users',         labelKey: 'users',        href: '/admin/access/users' },
+      { key: '/admin/access/roles',         labelKey: 'roles',        href: '/admin/access/roles' },
+      { key: '/admin/access/salary-groups', labelKey: 'salary_group', href: '/admin/access/salary-groups' },
+    ],
+  },
+  {
+    key: 'settings',
+    icon: <SettingOutlined />,
+    labelKey: 'settings',
+    children: [
+      // No dedicated "Company Setup" page yet → points at admin profile as the
+      // nearest equivalent (tracked as a Sprint 3 blocker).
+      { key: '/admin/profile',       labelKey: 'company_setup',   href: '/admin/profile' },
+      { key: '/admin/types',         labelKey: 'type_management', href: '/admin/types' },
+      { key: '/admin/import-export', labelKey: 'import_export',   href: '/admin/import-export' },
+    ],
+  },
+  {
+    key: 'advanced',
+    icon: <ProjectOutlined />,
+    labelKey: 'advanced',
+    children: [
+      { key: '/admin/cms',      labelKey: 'cms_management',    href: '/admin/cms' },
+      { key: '/admin/boards',   labelKey: 'dashboard_creator', href: '/admin/boards' },
+      { key: '/admin/feedback', labelKey: 'feedback',          href: '/admin/feedback' },
+    ],
+  },
 ];
 
 // ── Locale switcher ───────────────────────────────────────────────────────
@@ -186,6 +196,16 @@ interface AdminShellProps {
 
 const SIDEBAR_WIDTH = 220;
 const SIDEBAR_COLLAPSED = 60;
+const AVATAR_GRADIENT = 'linear-gradient(135deg, #01b9d0 0%, #00768D 100%)';
+
+/** Two-letter initials from a display name (or email local-part). */
+function initialsOf(name?: string, email?: string): string {
+  const src = (name ?? '').trim() || (email ?? '').split('@')[0] || '';
+  if (!src) return '?';
+  const parts = src.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return src.slice(0, 2).toUpperCase();
+}
 
 export function AdminShell({ children, pageTitle }: AdminShellProps) {
   const router = useRouter();
@@ -200,6 +220,10 @@ export function AdminShell({ children, pageTitle }: AdminShellProps) {
   const { data: me, isLoading, isError } = useMe();
   const logout = useLogout();
   const { message } = App.useApp();
+  // Header bell — operator alert feed is tenant-scoped, so only fetch for
+  // Company admins (a Super Admin has no fixed tenant → /user/alerts 400s).
+  const { data: alertsData } = useAlerts({ enabled: !!me && !me.isAdmin });
+  const unreadAlerts = alertsData?.unread ?? 0;
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -469,7 +493,7 @@ export function AdminShell({ children, pageTitle }: AdminShellProps) {
   );
 
   return (
-    <Layout style={{ minHeight: '100vh', background: '#f5f7fa' }}>
+    <Layout style={{ height: '100vh', overflow: 'hidden', background: '#f5f7fa' }}>
       {!isMobile && (
         <Sider
           width={collapsed ? SIDEBAR_COLLAPSED : SIDEBAR_WIDTH}
@@ -478,10 +502,9 @@ export function AdminShell({ children, pageTitle }: AdminShellProps) {
           style={{
             background: '#fff',
             borderRight: '1px solid #eef0f3',
-            position: 'sticky',
-            top: 0,
             height: '100vh',
             overflow: 'hidden',
+            flexShrink: 0,
           }}
         >
           {sidebarMarkup}
@@ -501,7 +524,7 @@ export function AdminShell({ children, pageTitle }: AdminShellProps) {
         {sidebarMarkup}
       </Drawer>
 
-      <Layout style={{ background: '#f5f7fa' }}>
+      <Layout style={{ background: '#f5f7fa', height: '100vh', overflow: 'hidden' }}>
         <Header
           style={{
             background: '#fff',
@@ -512,56 +535,123 @@ export function AdminShell({ children, pageTitle }: AdminShellProps) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            position: 'sticky',
-            top: 0,
+            flexShrink: 0,
             zIndex: 50,
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          {/* Live-dot pulse keyframes (scoped by class name). */}
+          <style>{`@keyframes fpPulse{0%{box-shadow:0 0 0 0 rgba(82,196,26,.5)}70%{box-shadow:0 0 0 5px rgba(82,196,26,0)}100%{box-shadow:0 0 0 0 rgba(82,196,26,0)}}.fp-live-dot{animation:fpPulse 2s infinite}`}</style>
+
+          {/* LEFT — menu toggle + breadcrumb + company badge */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
             <Button
               type="text"
               icon={<MenuOutlined style={{ color: '#01b9d0', fontSize: 20 }} />}
               aria-label="Toggle navigation"
               onClick={() => (isMobile ? setDrawerOpen(true) : setCollapsed(!collapsed))}
             />
-            <Text strong style={{ fontSize: 18, color: '#333' }}>{matchedTitle}</Text>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+              <span style={{ fontSize: 13, color: '#8c8c8c' }}>{t('administration')}</span>
+              <RightOutlined style={{ fontSize: 9, color: '#bbb' }} />
+              <Text
+                strong
+                style={{ fontSize: 16, color: '#333', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+              >
+                {matchedTitle}
+              </Text>
+            </div>
+            {!isMobile && tenant?.name && (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  background: '#e6f7fa',
+                  borderRadius: 6,
+                  padding: '4px 10px',
+                  marginLeft: 4,
+                  flexShrink: 0,
+                }}
+              >
+                <span className="fp-live-dot" style={{ width: 6, height: 6, borderRadius: '50%', background: '#52c41a', display: 'inline-block' }} />
+                <span style={{ fontFamily: 'var(--font-poppins)', fontSize: 11, fontWeight: 600, color: '#595959' }}>{tenant.name}</span>
+              </span>
+            )}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+
+          {/* RIGHT — locale + bell + settings + avatar */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <LocaleSwitcher />
+            <button
+              type="button"
+              aria-label="Warnings"
+              onClick={() => router.push('/admin/results/warning')}
+              style={{ position: 'relative', width: 32, height: 32, border: '1px solid #f0f0f0', borderRadius: 6, background: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center', color: '#5b666c' }}
+            >
+              <BellOutlined style={{ fontSize: 16 }} />
+              {unreadAlerts > 0 && (
+                <span style={{ position: 'absolute', top: -6, right: -6, minWidth: 16, height: 16, padding: '0 4px', borderRadius: 8, background: '#ff4d4f', color: '#fff', fontSize: 10, fontWeight: 700, display: 'grid', placeItems: 'center', lineHeight: 1 }}>
+                  {unreadAlerts > 99 ? '99+' : unreadAlerts}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              aria-label={t('company_setup')}
+              onClick={() => router.push('/admin/profile')}
+              style={{ width: 32, height: 32, border: '1px solid #f0f0f0', borderRadius: 6, background: '#fff', cursor: 'pointer', display: 'grid', placeItems: 'center', color: '#5b666c' }}
+            >
+              <SettingOutlined style={{ fontSize: 16 }} />
+            </button>
             <Popover content={profilePopover} placement="bottomRight" trigger="click">
-              <Avatar
-                size={36}
-                style={{ background: '#f5f7fa', border: '1px solid #eef0f3', cursor: 'pointer' }}
-                src={brand.logoSmall}
-                alt={me.name}
-              />
+              <button
+                type="button"
+                aria-label="Account"
+                style={{ width: 32, height: 32, borderRadius: '50%', border: 0, background: AVATAR_GRADIENT, color: '#fff', cursor: 'pointer', fontFamily: 'var(--font-poppins)', fontSize: 11, fontWeight: 700, display: 'grid', placeItems: 'center' }}
+              >
+                {initialsOf(me.name, me.email)}
+              </button>
             </Popover>
           </div>
         </Header>
 
         <ImpersonationBanner />
         {me?.isAdmin && <AdminSocketProvider />}
-        <Content style={{ padding: isMobile ? 16 : 24, background: '#f5f7fa' }}>
-          {children}
-        </Content>
 
-        <footer
+        {/* Only this region scrolls — header + sidebar stay fixed. */}
+        <div
           style={{
-            borderTop: '1px solid #eef0f3',
-            background: '#fff',
-            padding: isMobile ? '12px 16px' : '12px 24px',
+            flex: 1,
+            minHeight: 0,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            WebkitOverflowScrolling: 'touch',
             display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            color: '#888',
-            fontSize: 12,
-            flexWrap: 'wrap',
-            gap: 8,
+            flexDirection: 'column',
           }}
         >
-          <span>Copyright © {new Date().getFullYear()} FP Analyzer. All Rights Reserved.</span>
-          <span style={{ color: '#01b9d0' }}>Developed By Flow Process Sweden AB</span>
-        </footer>
+          <Content style={{ flex: 1, padding: isMobile ? 16 : 24, background: '#f5f7fa' }}>
+            {children}
+          </Content>
+
+          <footer
+            style={{
+              borderTop: '1px solid #eef0f3',
+              background: '#fff',
+              padding: isMobile ? '12px 16px' : '12px 24px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              color: '#888',
+              fontSize: 12,
+              flexWrap: 'wrap',
+              gap: 8,
+            }}
+          >
+            <span>Copyright © {new Date().getFullYear()} FP Analyzer. All Rights Reserved.</span>
+            <span style={{ color: '#01b9d0' }}>Developed By Flow Process Sweden AB</span>
+          </footer>
+        </div>
       </Layout>
     </Layout>
   );

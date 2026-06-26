@@ -1,365 +1,208 @@
 'use client';
 
-import { App, Button, Card, Skeleton, Space, Table, Tabs, Tag, Typography } from 'antd';
-import Image from 'next/image';
-import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useMemo, useState } from 'react';
-import { toApiError } from '../../../lib/api-client';
-import { useLogout, useMe } from '../../../lib/api/auth';
-import { canAccessBackend } from '../../../lib/auth';
-import { SettingsUnitsList } from '../../../components/dashboard/SettingsUnitsList';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { useOee } from '../../../lib/api/oee';
+import { useUnitsList, type UnitCard } from '../../../lib/api/units';
 
-const { Title, Text } = Typography;
+const BRAND = '#01b9d0';
+const SUCCESS = '#00a65a';
+const ERROR = '#dd4b39';
+const WARN = '#f39c12';
+const CARD_SHADOW = '0 1px 4px rgba(0,0,0,0.08)';
 
-type Locale = 'en' | 'sv';
+type MachineVisualState = 'running' | 'stopped' | 'warning';
 
-const L = {
-  sv: {
-    pageTitle:    'Min Startsida',
-    tabStart:     'Startsida',
-    tabProfile:   'Min profil',
-    tabSettings:  'Inställningar',
-    welcome:      'Välkommen',
-    units:        'Enheter',
-    flowMonitor:  'Flödesupptagning',
-    flowAnalyzer: 'Flödesanalys',
-    myResult:     'Resultat',
-    orders:       'Ordrar',
-    changePass:   'Byt lösenord',
-    feedback:     'Feedback',
-    logout:       'Logga ut',
-    admin:        'Adminpanelen',
-    boards:       'Dashboard',
-    profileImage: 'Profilbild',
-    name:         'Namn',
-    firstName:    'Förnamn',
-    lastName:     'Efternamn',
-    email:        'E-post',
-    created:      'Skapad',
-    updated:      'Senast uppdaterad',
-    actions:      'Hantera',
-    editProfile:  'Redigera profil',
-    save:         'Spara',
-    onSignal:     'Driftsignal',
-    offSignal:    'Stopsignal',
-    warningSig:   'Varning',
-    saved:        'Sparad',
-  },
-  en: {
-    pageTitle:    'My Startpage',
-    tabStart:     'Startpage',
-    tabProfile:   'My Profile',
-    tabSettings:  'Settings',
-    welcome:      'Welcome',
-    units:        'Units',
-    flowMonitor:  'Flow Monitor',
-    flowAnalyzer: 'Flow Analyzer',
-    myResult:     'My Result',
-    orders:       'Orders',
-    changePass:   'Change Password',
-    feedback:     'Feedback',
-    logout:       'Logout',
-    admin:        'Administration',
-    boards:       'Boards',
-    profileImage: 'Profile image',
-    name:         'Name',
-    firstName:    'First name',
-    lastName:     'Last name',
-    email:        'Email',
-    created:      'Created',
-    updated:      'Last updated',
-    actions:      'Actions',
-    editProfile:  'Edit profile',
-    save:         'Save',
-    onSignal:     'On signal',
-    offSignal:    'Off signal',
-    warningSig:   'Warning signal',
-    saved:        'Saved',
-  },
-} as const;
-
-interface Tile {
-  key: string;
-  href: string;
-  icon: string;
-  label: keyof (typeof L)['en'];
-  external?: boolean;
+// Map a unit's raw flags to one visual state. Unregistered stops take
+// priority (operator must classify them) → warning; otherwise on/off.
+function machineState(u: UnitCard): MachineVisualState {
+  if (u.hasUnregisterData === 'yes') return 'warning';
+  return u.runningStatus === 'on' ? 'running' : 'stopped';
 }
 
-const TILES: Tile[] = [
-  { key: 'units',         href: '/units',        icon: '/dashboard-icons/units.png',         label: 'units' },
-  { key: 'flow-monitor',  href: '/monitor',      icon: '/dashboard-icons/flow-monitor.png',  label: 'flowMonitor' },
-  { key: 'flow-analyzer', href: '/analyzer',     icon: '/dashboard-icons/flow-analyzer.png', label: 'flowAnalyzer' },
-  { key: 'myresult',      href: '/myresult',     icon: '/dashboard-icons/myresult.png',      label: 'myResult' },
-  { key: 'orders',        href: '/orders',       icon: '/dashboard-icons/orders.png',        label: 'orders' },
-  { key: 'password',      href: '/profile/password', icon: '/dashboard-icons/password.png', label: 'changePass' },
-  { key: 'feedback',      href: '/feedback',     icon: '/dashboard-icons/feedback.png',      label: 'feedback' },
-  { key: 'logout',        href: '#logout',       icon: '/dashboard-icons/logout.png',        label: 'logout' },
-  { key: 'admin',         href: '/admin',        icon: '/dashboard-icons/admin.png',         label: 'admin' },
-  { key: 'boards',        href: '/boards',       icon: '/dashboard-icons/dashboard.png',     label: 'boards' },
-];
+const STATE_COLOR: Record<MachineVisualState, string> = {
+  running: SUCCESS, stopped: ERROR, warning: WARN,
+};
+const STATE_LABEL: Record<MachineVisualState, string> = {
+  running: 'Running', stopped: 'Stopped', warning: 'Needs attention',
+};
 
-export default function DashboardPage() {
+function lastSeen(iso: string | null): string {
+  if (!iso) return '—';
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return '—';
+  const mins = Math.max(0, Math.round((Date.now() - t) / 60000));
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.round(hrs / 24)}d ago`;
+}
+
+export default function UserDashboard() {
   const router = useRouter();
-  const search = useSearchParams();
-  const initialTab = (search.get('tab') as 'startpage' | 'myprofile' | 'settings' | null) ?? 'startpage';
-  const [activeTab, setActiveTab] = useState(initialTab);
-  const { data: me, isLoading } = useMe();
-  const logout = useLogout();
-  const { message } = App.useApp();
-  const [locale, setLocale] = useState<Locale>('sv');
-  const t = L[locale];
+  const { data: oee, isLoading } = useOee();
+  const { data: units } = useUnitsList();
 
-  const onTab = (key: string) => {
-    setActiveTab(key as typeof activeTab);
-    const url = new URL(window.location.href);
-    url.searchParams.set('tab', key);
-    window.history.replaceState({}, '', url.toString());
-  };
+  // The operator's primary machine = first card (the API already sorts
+  // units needing attention to the front).
+  const machine = units?.[0] ?? null;
 
-  const handleLogout = async () => {
-    try {
-      await logout.mutateAsync();
-      router.push('/login');
-    } catch (err) {
-      message.error(toApiError(err).message);
-    }
-  };
-
-  const handleTileClick = (tile: Tile, e: React.MouseEvent) => {
-    if (tile.key === 'logout') {
-      e.preventDefault();
-      handleLogout();
-    }
-  };
-
-  // Administration tile follows the legacy @permission('view-backend')
-  // gate — visible to Administrator (all=true) and Company roles.
-  const showAdmin = canAccessBackend(me);
-  const visibleTiles = useMemo(() => {
-    if (!me) return [];
-    return TILES.filter((tile) => {
-      if (tile.key === 'admin' && !showAdmin) return false;
-      return true;
-    });
-  }, [me, showAdmin]);
-
-  // ---- Tab 1: Startpage (tile launcher) ----
-  const StartpageTab = (
-    <div style={{ padding: '32px 16px 48px', textAlign: 'center' }}>
-      <Title level={4} style={{ fontWeight: 400, color: '#1f1f1f', marginBottom: 32 }}>
-        {t.welcome} {me?.name ?? ''}
-      </Title>
-
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-          gap: 16,
-          maxWidth: 900,
-          margin: '0 auto',
-          justifyItems: 'center',
-        }}
-      >
-        {visibleTiles.map((tile) => (
-          <Link
-            key={tile.key}
-            href={tile.href}
-            onClick={(e) => handleTileClick(tile, e)}
-            style={{ textDecoration: 'none' }}
-          >
-            <div
-              className="fp-tile"
-              style={{
-                width: 140,
-                padding: 16,
-                borderRadius: 12,
-                background: '#fff',
-                border: '1px solid #e5e7eb',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 12,
-                transition: 'transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease',
-                cursor: 'pointer',
-              }}
-            >
-              <div
-                style={{
-                  width: 88,
-                  height: 88,
-                  borderRadius: '50%',
-                  background: '#fafafa',
-                  display: 'grid',
-                  placeItems: 'center',
-                }}
-              >
-                <Image src={tile.icon} alt="" width={64} height={64} />
-              </div>
-              <Text style={{ color: '#333', fontWeight: 500, fontSize: 13, textAlign: 'center' }}>
-                {t[tile.label]}
-              </Text>
-            </div>
-          </Link>
-        ))}
-      </div>
-    </div>
+  const oeeVal = oee?.oee ?? 0;
+  const counts = (units ?? []).reduce(
+    (acc, u) => { acc[machineState(u)] += 1; return acc; },
+    { running: 0, stopped: 0, warning: 0 } as Record<MachineVisualState, number>,
   );
-
-  // ---- Tab 2: My Profile ----
-  const ProfileTab = (
-    <div style={{ padding: 16 }}>
-      <Table
-        showHeader={false}
-        pagination={false}
-        bordered
-        size="middle"
-        rowKey={(_, idx) => String(idx)}
-        dataSource={[
-          {
-            label: t.profileImage,
-            value: (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Image
-                  src="/dashboard-icons/no-image.jpeg"
-                  alt=""
-                  width={64}
-                  height={64}
-                  style={{ borderRadius: 4 }}
-                />
-                <Space size={6}>
-                  <button
-                    type="button"
-                    onClick={() => setLocale('en')}
-                    aria-label="English"
-                    style={{
-                      border: locale === 'en' ? '2px solid #01b9d0' : '1px solid #ddd',
-                      background: 'transparent',
-                      padding: 2,
-                      cursor: 'pointer',
-                      lineHeight: 0,
-                    }}
-                  >
-                    <Image src="/dashboard-icons/flag-en.png" alt="" width={24} height={24} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setLocale('sv')}
-                    aria-label="Svenska"
-                    style={{
-                      border: locale === 'sv' ? '2px solid #01b9d0' : '1px solid #ddd',
-                      background: 'transparent',
-                      padding: 2,
-                      cursor: 'pointer',
-                      lineHeight: 0,
-                    }}
-                  >
-                    <Image src="/dashboard-icons/flag-sv.png" alt="" width={24} height={24} />
-                  </button>
-                </Space>
-              </div>
-            ),
-          },
-          { label: t.name,      value: me?.name },
-          { label: t.firstName, value: me?.firstName },
-          { label: t.lastName,  value: me?.lastName ?? '' },
-          { label: t.email,     value: me?.email },
-          { label: t.created,   value: '—' },
-          { label: t.updated,   value: '—' },
-          {
-            label: t.actions,
-            value: (
-              <Space>
-                <Link href="/profile/edit">
-                  <Button type="primary" size="small">{t.editProfile}</Button>
-                </Link>
-                <Link href="/profile/password">
-                  <Button size="small" style={{ background: '#f0ad4e', color: '#fff', borderColor: '#eea236' }}>
-                    {t.changePass}
-                  </Button>
-                </Link>
-              </Space>
-            ),
-          },
-        ]}
-        columns={[
-          {
-            dataIndex: 'label',
-            width: 220,
-            render: (v: string) => <Text strong style={{ color: '#333' }}>{v}</Text>,
-          },
-          { dataIndex: 'value' },
-        ]}
-      />
-    </div>
-  );
-
-  // ---- Tab 3: Settings (units) ----
-  // Renders the real /api/v1/units list (already filtered to configured
-  // units server-side), with drag-to-reorder + per-unit checkbox.
-  // Selection persists via /me/settings/table → unit_web_settings.units,
-  // and is honoured by the /units page.
-  const SettingsTab = (
-    <SettingsUnitsList
-      labels={{
-        onSignal: t.onSignal,
-        offSignal: t.offSignal,
-        warningSig: t.warningSig,
-        save: t.save,
-        saved: t.saved,
-        units: t.units,
-      }}
-    />
-  );
+  const running = counts.running;
+  const stopped = counts.stopped;
+  const warning = counts.warning;
 
   return (
-    <div style={{ maxWidth: 1180, margin: '24px auto 0', padding: '0 16px' }}>
-      <div
-        style={{
-          background: '#fff',
-          borderRadius: 8,
-          overflow: 'hidden',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-        }}
-      >
-        <div
-          style={{
-            background: '#0a8aa0',
-            color: '#fff',
-            padding: '14px 20px',
-            fontSize: 16,
-            fontWeight: 500,
-          }}
-        >
-          {t.pageTitle}
-        </div>
+    <div style={{ paddingBottom: 16 }}>
 
-        {isLoading ? (
-          <div style={{ padding: 24 }}>
-            <Skeleton active />
+      {/* OEE Strip */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'repeat(4,1fr)',
+        gap: 1, background: '#f0f0f0',
+        margin: '12px 12px 0', borderRadius: 10,
+        overflow: 'hidden', boxShadow: CARD_SHADOW
+      }}>
+        {[
+          { val: isLoading ? '…' : `${oeeVal}%`, label: 'OEE', color: BRAND },
+          { val: running, label: 'Running', color: SUCCESS },
+          { val: stopped, label: 'Stopped', color: ERROR },
+          { val: warning, label: 'Warn', color: WARN },
+        ].map((s) => (
+          <div key={s.label} style={{ background: 'white', padding: '10px 6px', textAlign: 'center' }}>
+            <div style={{ fontFamily: 'var(--font-poppins)', fontSize: 20, fontWeight: 800, color: s.color, lineHeight: 1, marginBottom: 3 }}>{s.val}</div>
+            <div style={{ fontFamily: 'var(--font-poppins)', fontSize: 8, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: '#8c8c8c' }}>{s.label}</div>
           </div>
-        ) : (
-          <Tabs
-            activeKey={activeTab}
-            onChange={onTab}
-            tabBarStyle={{ padding: '0 16px', margin: 0, borderBottom: '1px solid #f0f0f0' }}
-            items={[
-              { key: 'startpage', label: t.tabStart,    children: StartpageTab },
-              { key: 'myprofile', label: t.tabProfile,  children: ProfileTab },
-              { key: 'settings',  label: t.tabSettings, children: SettingsTab },
-            ]}
-          />
-        )}
+        ))}
       </div>
 
-      <style jsx global>{`
-        .fp-tile:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 118, 141, 0.15);
-          border-color: #01b9d0 !important;
-        }
-      `}</style>
+      {/* Section label */}
+      <div style={{ fontFamily: 'var(--font-poppins)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '2px', color: '#8c8c8c', padding: '12px 12px 6px' }}>
+        My Machine
+      </div>
+
+      {/* My Machine card */}
+      {machine ? (() => {
+        const st = machineState(machine);
+        const color = STATE_COLOR[st];
+        return (
+          <div
+            onClick={() => router.push('/monitor')}
+            style={{
+              background: 'white', borderRadius: 10, padding: 14,
+              margin: '0 12px 10px', boxShadow: CARD_SHADOW,
+              borderLeft: `4px solid ${color}`, cursor: 'pointer',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+              {/* Left: name + status */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: 'var(--font-poppins)', fontSize: 13, fontWeight: 700, color: '#262626', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {machine.unitName || machine.equipmentName || `Machine ${machine.id}`}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                  <span style={{ fontSize: 11, fontWeight: 600, color }}>{STATE_LABEL[st]}</span>
+                  {machine.hasUnregisterData === 'yes' && machine.unregisteredCount > 0 ? (
+                    <span style={{ fontSize: 10, color: '#8c8c8c' }}>· {machine.unregisteredCount} unregistered</span>
+                  ) : null}
+                </div>
+              </div>
+              {/* Right: OEE + last seen */}
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <div style={{ fontFamily: 'var(--font-poppins)', fontSize: 26, fontWeight: 800, color, lineHeight: 1 }}>
+                  {isLoading ? '…' : `${oeeVal}%`}
+                </div>
+                <div style={{ fontSize: 10, color: '#8c8c8c', marginTop: 2 }}>{lastSeen(machine.lastOnline)}</div>
+              </div>
+            </div>
+            {/* Progress bar */}
+            <div style={{ height: 3, background: '#f0f0f0', borderRadius: 2, marginTop: 12, overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, oeeVal))}%`, background: color }} />
+            </div>
+          </div>
+        );
+      })() : (
+        <div style={{
+          background: 'white', borderRadius: 10, padding: '18px 14px',
+          margin: '0 12px 10px', boxShadow: CARD_SHADOW, border: '1px solid #f0f0f0',
+          textAlign: 'center',
+        }}>
+          <div style={{ fontSize: 22, marginBottom: 6 }}>🏭</div>
+          <div style={{ fontFamily: 'var(--font-poppins)', fontSize: 12, fontWeight: 700, color: '#262626' }}>No machine assigned</div>
+          <div style={{ fontSize: 11, color: '#8c8c8c', marginTop: 2 }}>Contact your administrator to get a unit assigned.</div>
+        </div>
+      )}
+
+      {/* Section label */}
+      <div style={{ fontFamily: 'var(--font-poppins)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '2px', color: '#8c8c8c', padding: '12px 12px 6px' }}>
+        Quick Actions
+      </div>
+
+      {/* Quick action grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: '0 12px 12px' }}>
+        {[
+          { icon: '📊', label: 'Log Production', href: '/myresult/production', primary: true },
+          { icon: '⚠️', label: 'Log Stop', href: '/myresult/stop', primary: false },
+          { icon: '🗑️', label: 'Log Scrap', href: '/myresult/scrap', primary: false },
+          { icon: '📡', label: 'Monitor', href: '/monitor', primary: false },
+        ].map((a) => (
+          <div
+            key={a.label}
+            onClick={() => router.push(a.href)}
+            style={{
+              background: a.primary ? `linear-gradient(135deg, #00768D, ${BRAND})` : 'white',
+              borderRadius: 10, padding: '14px 12px', textAlign: 'center',
+              cursor: 'pointer', boxShadow: CARD_SHADOW,
+              border: a.primary ? 'none' : '1px solid #f0f0f0',
+              minHeight: 80, display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center', gap: 5,
+              transition: 'transform 0.15s',
+            }}
+          >
+            <div style={{ fontSize: 22 }}>{a.icon}</div>
+            <div style={{
+              fontFamily: 'var(--font-poppins)', fontSize: 11, fontWeight: 700,
+              color: a.primary ? 'white' : '#262626'
+            }}>{a.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Section label */}
+      <div style={{ fontFamily: 'var(--font-poppins)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '2px', color: '#8c8c8c', padding: '0 12px 6px' }}>
+        My Results Today
+      </div>
+
+      {/* Results links */}
+      {[
+        { icon: '📋', label: 'Production Log', sub: 'View & edit entries', href: '/myresult/production' },
+        { icon: '🛑', label: 'Stop Log', sub: 'Logged stops', href: '/myresult/stop' },
+        { icon: '🗑', label: 'Scrap Log', sub: 'Scrap entries', href: '/myresult/scrap' },
+        { icon: '⚡', label: 'Unregistered Stops', sub: 'Needs reason code', href: '/myresult/unregistered' },
+      ].map((item) => (
+        <div
+          key={item.label}
+          onClick={() => router.push(item.href)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            background: 'white', borderRadius: 10, padding: '12px 14px',
+            margin: '0 12px 8px', boxShadow: CARD_SHADOW,
+            border: '1px solid #f0f0f0', cursor: 'pointer',
+          }}
+        >
+          <div style={{ fontSize: 20, flexShrink: 0 }}>{item.icon}</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: 'var(--font-poppins)', fontSize: 12, fontWeight: 700, color: '#262626' }}>{item.label}</div>
+            <div style={{ fontSize: 11, color: '#8c8c8c', marginTop: 2 }}>{item.sub}</div>
+          </div>
+          <div style={{ color: BRAND, fontSize: 16 }}>›</div>
+        </div>
+      ))}
     </div>
   );
 }

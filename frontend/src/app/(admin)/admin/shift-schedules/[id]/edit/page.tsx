@@ -28,6 +28,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import type { DateSelectArg, EventClickArg, EventDropArg } from '@fullcalendar/core';
+import type { EventResizeDoneArg } from '@fullcalendar/interaction';
 import dayjs, { type Dayjs } from 'dayjs';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -406,7 +407,7 @@ export default function ShiftScheduleEditPage({
     };
   }, [eventMenu.open]);
 
-  const handleEventDrop = async (arg: EventDropArg) => {
+  const handleEventDrop = async (arg: EventDropArg | EventResizeDoneArg) => {
     const realId = resolveRealId(arg.event.id);
     if (!realId) { arg.revert(); return; }
     const start = arg.event.start;
@@ -427,7 +428,7 @@ export default function ShiftScheduleEditPage({
     }
   };
 
-  const handleEventResize = async (arg: EventDropArg) => {
+  const handleEventResize = async (arg: EventResizeDoneArg) => {
     // Same payload as drop — FullCalendar resize gives us new start/end.
     await handleEventDrop(arg);
   };

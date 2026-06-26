@@ -1509,7 +1509,15 @@
     "mqtt_id": "MQTT Client ID",
     "socket_connected": "Socket Connected",
     "socket_disconnected": "Socket Disconnected",
-    "joined_tenants": "Monitoring {count} companies"
+    "joined_tenants": "Monitoring {count} companies",
+    "overview": "Overview",
+    "results": "Results",
+    "factory": "Factory",
+    "people": "People",
+    "advanced": "Advanced",
+    "machines": "Machines",
+    "company_setup": "Company Setup",
+    "import_export": "Import / Export"
   },
   "nav": {
     "administration": "Admin Panel",

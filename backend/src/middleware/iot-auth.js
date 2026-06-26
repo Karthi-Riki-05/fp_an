@@ -80,41 +80,55 @@ async function iotAuth(req, res, next) {
         ? req.headers.authorization.slice(7)
         : null);
 
+    // Track whether JWT was valid but tenant resolution failed (helps give
+    // a better error message than "Invalid login" for admin users who forget
+    // to send X-Tenant-Id).
+    let jwtValidNoTenant = false;
+
     if (token) {
       try {
         const payload = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
         if (payload.kind === 'web') {
           const user = await loadUserById(payload.sub);
           if (user && user.status === 1) {
-            req.user = hydrate(user);
+            const hydratedUser = hydrate(user);
             // Derive tenant the same way tenantMiddleware does — Company
             // user → tenant_${id}, sub-user → tenant_${companyId}.
-            if (req.user.roles.includes('Company')) {
+            if (hydratedUser.roles.includes('Company')) {
+              req.user = hydratedUser;
               req.tenant = buildTenantForCompanyUser(user);
-            } else if (req.user.roles.includes('User') && req.user.companyId) {
+            } else if (hydratedUser.roles.includes('User') && hydratedUser.companyId) {
+              req.user = hydratedUser;
               req.tenant = {
-                tenantId: req.user.companyId,
-                schemaName: `tenant_${req.user.companyId}`,
+                tenantId: hydratedUser.companyId,
+                schemaName: `tenant_${hydratedUser.companyId}`,
                 dbName: null,
-                timezone: req.user.timezone || 'Europe/Stockholm',
+                timezone: hydratedUser.timezone || 'Europe/Stockholm',
               };
-            } else if (req.user.roles.includes('Administrator')) {
+            } else if (hydratedUser.roles.includes('Administrator')) {
               const headerVal = req.headers['x-tenant-id'];
               const companyUserId = typeof headerVal === 'string' ? Number(headerVal) : NaN;
               if (Number.isInteger(companyUserId) && companyUserId > 0) {
+                req.user = hydratedUser;
                 req.tenant = {
                   tenantId: companyUserId,
                   schemaName: `tenant_${companyUserId}`,
                   dbName: null,
                   timezone: 'Europe/Stockholm',
                 };
+              } else {
+                // JWT is valid but admin didn't send X-Tenant-Id.
+                // Fall through to company_email_id path — firmware can still
+                // identify the tenant via email. If that also fails we return
+                // a descriptive error instead of "Invalid login".
+                jwtValidNoTenant = true;
               }
             }
             if (req.tenant) return next();
           }
         }
       } catch {
-        // fall through to company_email_id path
+        // Invalid / expired token — fall through to company_email_id path.
       }
     }
 
@@ -122,6 +136,12 @@ async function iotAuth(req, res, next) {
     const emailRaw = req.body?.company_email_id ?? req.body?.companyEmailId;
     const email = typeof emailRaw === 'string' ? emailRaw.trim() : '';
     if (!email) {
+      // If JWT was valid but we couldn't resolve the tenant (Administrator
+      // without X-Tenant-Id header and no company_email_id in the body),
+      // return a descriptive error so the caller knows what's missing.
+      if (jwtValidNoTenant) {
+        return res.json(legacyFail('X-Tenant-Id header required for admin/superadmin calls, or include company_email_id in the request body'));
+      }
       return res.json(legacyFail('Invalid login'));
     }
 
@@ -138,4 +158,4 @@ async function iotAuth(req, res, next) {
   }
 }
 
-module.exports = { iotAuth };
+module.exports = { iotAuth, loadCompanyUserByEmail, buildTenantForCompanyUser };
