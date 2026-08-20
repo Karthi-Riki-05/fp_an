@@ -76,6 +76,11 @@ services:
       PORT: 4000
     ports:
       - '4000:4000'
+    volumes:
+      # The backend verifies the broker's certificate against this CA, so it
+      # needs the same ca.crt the broker was issued from. Read-only: the
+      # private keys in this directory must never be writable from the app.
+      - ./docker/mosquitto/certs:/app/certs:ro
     networks: [internal]
     depends_on:
       postgres:
