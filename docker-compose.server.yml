@@ -56,7 +56,7 @@ services:
       test:
         - CMD-SHELL
         - >-
-          mosquitto_pub -h localhost -p 8883 --cafile /mosquitto/certs/ca.crt
+          mosquitto_pub -h localhost -p 8883 --cafile /mosquitto/certs/ca.crt --insecure
           -t 'health/broker' -m 'ok'
           -u "$$MQTT_USERNAME" -P "$$MQTT_PASSWORD" || exit 1
       interval: 30s
