@@ -1509,7 +1509,10 @@
     "mqtt_id": "MQTT Client ID",
     "socket_connected": "Socket Connected",
     "socket_disconnected": "Socket Disconnected",
-    "joined_tenants": "Monitoring {count} companies"
+    "joined_tenants": "Monitoring {count} companies",
+    "iot": "IoT",
+    "iot_units": "IoT units",
+    "iot_firmware": "IoT firmware"
   },
   "nav": {
     "administration": "Admin Panel",

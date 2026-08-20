@@ -40,24 +40,38 @@ services:
       - '8025:8025' # Web UI
 
   mqtt:
-    image: eclipse-mosquitto:2
+    # Same broker and same Postgres-backed auth as production, so dev exercises
+    # the real code path. Difference is the listener only: plain 1883 here.
+    image: iegomez/mosquitto-go-auth:latest
     restart: unless-stopped
     ports:
-      - '1883:1883'   # plain MQTT (dev only — firewall externally in production)
+      - '127.0.0.1:1883:1883'   # loopback only — no TLS on this listener
     volumes:
-      - ./docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
-      - ./docker/mosquitto/acl:/mosquitto/config/acl:ro
-      - ./docker/mosquitto/passwd:/mosquitto/config/passwd
+      - ./docker/mosquitto/mosquitto.conf.dev.template:/mosquitto/config/mosquitto.conf.dev.template:ro
+      - ./docker/mosquitto/entrypoint.sh:/mosquitto/entrypoint.sh:ro
       - mqtt-data:/mosquitto/data
+    entrypoint: ['/bin/sh', '/mosquitto/entrypoint.sh']
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
-      # Exposed so the healthcheck can authenticate against the broker.
-      MQTT_USERNAME: ${MQTT_USERNAME:-fpanalyzer-mqtt-u1}
+      MQTT_MODE: plain
+      MQTT_PG_HOST: postgres
+      MQTT_PG_PORT: '5432'
+      MQTT_PG_DATABASE: ${POSTGRES_DB:-fp_analyzer}
+      MQTT_PG_USER: ${POSTGRES_USER:-postgres}
+      MQTT_PG_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      MQTT_PG_SSLMODE: disable
+      # Backend service account — create with:
+      #   node backend/scripts/provision-mqtt-unit.js --backend
+      MQTT_USERNAME: ${MQTT_USERNAME:-fp-backend}
       MQTT_PASSWORD: ${MQTT_PASSWORD:-}
     healthcheck:
       test: ['CMD-SHELL', 'mosquitto_pub -h localhost -p 1883 -t "health/broker" -m "ok" -u "$$MQTT_USERNAME" -P "$$MQTT_PASSWORD" || exit 1']
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 20s
 
   caddy:
     image: caddy:2-alpine

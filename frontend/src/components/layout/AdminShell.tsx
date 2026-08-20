@@ -140,7 +140,16 @@ const COMPANY_SIDEBAR: SidebarItem[] = [
   },
   // "Loss Model" group removed per operator request — re-add here if the
   // Loss by Order No. report needs to come back into the sidebar.
-  { key: '/admin/iot/setup', icon: <SettingOutlined />, labelKey: 'setup_units', href: '/admin/iot/setup' },
+  {
+    key: 'iot',
+    icon: <SettingOutlined />,
+    labelKey: 'iot',
+    children: [
+      { key: '/admin/iot/setup',    labelKey: 'setup_units',  href: '/admin/iot/setup' },
+      { key: '/admin/iot/units',    labelKey: 'iot_units',    href: '/admin/iot/units' },
+      { key: '/admin/iot/software', labelKey: 'iot_firmware', href: '/admin/iot/software' },
+    ],
+  },
   { key: '/admin/feedback',  icon: <CommentOutlined />, labelKey: 'feedback',    href: '/admin/feedback' },
 ];
 

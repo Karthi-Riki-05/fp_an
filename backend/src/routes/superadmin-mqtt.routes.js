@@ -1,5 +1,6 @@
 'use strict';
 
+const { randomUUID } = require('crypto');
 const { Router } = require('express');
 const { requireRole } = require('../middleware/requireRole');
 const { prisma, withTenant } = require('../prisma/client');
@@ -72,18 +73,26 @@ router.get('/companies/:companyId/machines', async (req, res, next) => {
 });
 
 // POST /superadmin/test/machine-action
-// Simulates an MQTT message by routing it through the full MQTT → DB → Socket.io
-// pipeline. Exercises exactly the same code path a real device would.
+// Simulates a device message by pushing it through the real MQTT handler
+// pipeline — same code path a Raspberry Pi triggers, including auto-register,
+// event_id deduplication and the Socket.io fan-out.
 //
 // Body: { companyId, machineId, action: 'stop_start' | 'stop_end' | 'heartbeat' }
+//
+// The action names are kept for the existing admin UI. They map onto the v2
+// protocol as:
+//   stop_start -> evt/machine  state OFF   (machine stopped)
+//   stop_end   -> evt/machine  state ON    (machine restarted)
+//   heartbeat  -> status/conn  online true (presence; there is no heartbeat topic)
 router.post('/test/machine-action', async (req, res, next) => {
   try {
     const { companyId, machineId, action } = req.body ?? {};
+    const ACTIONS = ['stop_start', 'stop_end', 'heartbeat'];
 
-    if (!companyId || !machineId || !['stop_start', 'stop_end', 'heartbeat'].includes(action)) {
+    if (!companyId || !machineId || !ACTIONS.includes(action)) {
       return res.status(400).json({
         statusCode: 400,
-        message: 'companyId, machineId, and action (stop_start|stop_end|heartbeat) are required',
+        message: `companyId, machineId, and action (${ACTIONS.join('|')}) are required`,
       });
     }
 
@@ -91,115 +100,43 @@ router.post('/test/machine-action', async (req, res, next) => {
     const mId = Number(machineId);
     const tenant = { tenantId: cId, schemaName: `tenant_${cId}`, dbName: null, timezone: 'UTC' };
 
-    let topic, payload;
+    // v2 topics address the physical unit, not the machine, so we need the
+    // machine's unit_name and pin_no to build one.
+    const machines = await withTenant(tenant, (tx) =>
+      tx.$queryRawUnsafe(
+        `SELECT pin_no AS "pinNo", unit_name AS "unitName" FROM machines WHERE id = $1`,
+        mId,
+      ),
+    );
+    if (!machines[0]) {
+      return res.status(404).json({ statusCode: 404, message: 'machine-not-found' });
+    }
+    const { pinNo, unitName } = machines[0];
+    const now = new Date().toISOString();
 
-    if (action === 'stop_start') {
-      topic = `fp/v1/${cId}/machine/${mId}/stop/start`;
-      payload = { start_time: new Date().toISOString() };
+    let topic;
+    let payload;
 
-    } else if (action === 'stop_end') {
-      // Find the most recent open machine_data row for this machine.
-      const rows = await withTenant(tenant, (tx) =>
-        tx.$queryRawUnsafe(
-          `SELECT start_time FROM machine_data
-            WHERE machine_id = $1 AND end_time IS NULL
-            ORDER BY start_time DESC LIMIT 1`,
-          mId,
-        ),
-      );
-
-      if (!rows[0]) {
-        // No open stop — the machine may already be running, or a previous Turn Off
-        // happened while the machine was unconfigured (equipment_id=0).
-        // Do NOT 409. Instead, directly set running_status='on' AND upsert
-        // machine_status='on' so long-stop suppression is reset, then emit a
-        // machine:status:changed WebSocket event so the dashboard updates.
-        console.warn(`[SuperAdmin] stop_end: machine ${mId} (company ${cId}) has no open stop — refreshing status to 'on'`);
-
-        const now = new Date().toISOString();
-        const mUpdated = await withTenant(tenant, async (tx) => {
-          const mRows = await tx.$queryRawUnsafe(
-            `SELECT id FROM machines WHERE id = $1`, mId,
-          );
-          if (!mRows[0]) return null;
-
-          const statusRows = await tx.$queryRawUnsafe(
-            `SELECT id FROM machine_status WHERE machine_id = $1 LIMIT 1`, mId,
-          );
-          if (statusRows[0]) {
-            await tx.$executeRawUnsafe(
-              `UPDATE machine_status SET status = 'on'::tenant_template."MachineRunningStatus", "time" = $2 WHERE id = $1`,
-              statusRows[0].id, now,
-            );
-          } else {
-            await tx.$executeRawUnsafe(
-              `INSERT INTO machine_status (machine_id, status, "time")
-               VALUES ($1, 'on'::tenant_template."MachineRunningStatus", $2)`,
-              mId, now,
-            );
-          }
-
-          const updated = await tx.$queryRawUnsafe(
-            `UPDATE machines SET running_status = 'on'::tenant_template."MachineRunningStatus",
-                                 unit_connected = 'yes', last_online = NOW(), updated_at = NOW()
-               WHERE id = $1
-             RETURNING last_online AS "lastOnline"`,
-            mId,
-          );
-          return updated[0];
-        });
-
-        if (!mUpdated) {
-          return res.status(404).json({ statusCode: 404, message: 'machine-not-found' });
-        }
-
-        socketService.emitToTenant(cId, 'machine:status:changed', {
-          machineId: mId,
-          runningStatus: 'on',
-          unitConnected: 'yes',
-          lastOnline: mUpdated.lastOnline,
-          ts: Date.now(),
-        });
-
-        return res.json({
-          success: true,
-          topic: `fp/v1/${cId}/machine/${mId}/status-updated`,
-          payload: { action: 'no-open-stop-status-refresh', runningStatus: 'on' },
-        });
-      } else {
-        topic = `fp/v1/${cId}/machine/${mId}/stop/end`;
-        payload = {
-          start_time: rows[0].start_time instanceof Date
-            ? rows[0].start_time.toISOString()
-            : String(rows[0].start_time),
-          end_time: new Date().toISOString(),
-        };
-      }
-
-    } else if (action === 'heartbeat') {
-      // Fetch pin_no + unit_name required by installMachine().
-      const machines = await withTenant(tenant, (tx) =>
-        tx.$queryRawUnsafe(
-          `SELECT pin_no AS "pinNo", unit_name AS "unitName"
-             FROM machines WHERE id = $1`,
-          mId,
-        ),
-      );
-      if (!machines[0]) {
-        return res.status(404).json({ statusCode: 404, message: 'machine-not-found' });
-      }
-      topic = `fp/v1/${cId}/machine/${mId}/heartbeat`;
+    if (action === 'heartbeat') {
+      topic = `fp/${cId}/${unitName}/status/conn`;
+      payload = { online: true, reason: 'admin-test', fw: 'admin-test-1.0.0' };
+    } else {
+      // A fresh event_id each time, so repeated clicks are treated as distinct
+      // events rather than silently deduplicated.
+      topic = `fp/${cId}/${unitName}/evt/machine`;
       payload = {
-        pin_no: machines[0].pinNo,
-        unit_name: machines[0].unitName,
-        firmware_version: 'admin-test-1.0.0',
-        uptime: 0,
+        event_id: randomUUID(),
+        pin_no: pinNo,
+        state: action === 'stop_start' ? 'OFF' : 'ON',
+        ts: now,
+        buffered: false,
+        fw: 'admin-test-1.0.0',
       };
     }
 
-    // Route through the full MQTT handler pipeline (async, fire-and-forget).
-    // DB writes and Socket.io events fire asynchronously after this returns.
-    mqttService.routeMessage(topic, Buffer.from(JSON.stringify(payload)), {});
+    // Await it, unlike the v1 handler which fired and forgot — the panel should
+    // report a failure rather than show success while the write is still open.
+    await mqttService.routeMessage(topic, Buffer.from(JSON.stringify(payload)), {});
 
     res.json({ success: true, topic, payload });
   } catch (err) { next(err); }

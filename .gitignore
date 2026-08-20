@@ -133,3 +133,6 @@ backend/prisma/migrations/.tmp/
 .coverage
 *.tgz
 *.zip
+
+# MQTT broker TLS material — ca.key is the fleet trust root, never commit
+docker/mosquitto/certs/

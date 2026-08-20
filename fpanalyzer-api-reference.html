@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FP Analyzer — Machine API Reference (v2.1.7)</title>
+<style>
+  :root{
+    --brand:#00768D; --brand-dark:#025b6d; --brand-light:#e6f3f6;
+    --ink:#1a2327; --muted:#5b6b71; --line:#dce5e8; --bg:#f4f7f8; --card:#ffffff;
+    --get:#0a7d4d; --post:#00768D; --code-bg:#0f2b31; --code-ink:#e8f2f4;
+    --warn-bg:#fff6e5; --warn-line:#e0a72e; --warn-ink:#8a5a00;
+    --danger-bg:#fdeceb; --danger-line:#d64027; --danger-ink:#9c2013;
+    --info-bg:#eaf3fb; --info-line:#2f7fd1; --info-ink:#1c4e80;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);background:var(--bg);line-height:1.6;font-size:15px}
+  header.top{background:linear-gradient(135deg,var(--brand) 0%,var(--brand-dark) 100%);color:#fff;
+    padding:34px 40px 30px}
+  header.top h1{margin:0 0 6px;font-size:26px;font-weight:700;letter-spacing:.2px}
+  header.top .sub{opacity:.9;font-size:14.5px;max-width:820px}
+  .tags{margin-top:16px;display:flex;flex-wrap:wrap;gap:8px}
+  .tag{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);border-radius:999px;
+    padding:4px 12px;font-size:12.5px;font-family:"SFMono-Regular",Consolas,monospace}
+  .wrap{max-width:1000px;margin:0 auto;padding:0 24px 80px}
+  nav.toc{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 22px;margin:26px 0}
+  nav.toc h2{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted)}
+  nav.toc ol{margin:0;padding-left:20px;columns:2;column-gap:34px}
+  nav.toc li{margin:3px 0}
+  nav.toc a{color:var(--brand);text-decoration:none}
+  nav.toc a:hover{text-decoration:underline}
+  section{margin:34px 0}
+  h2.sec{font-size:20px;border-bottom:2px solid var(--brand-light);padding-bottom:8px;margin:0 0 16px;color:var(--brand-dark)}
+  p{margin:10px 0}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0}
+  .kv{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .kv .k{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:4px}
+  .kv .v{font-size:14.5px}
+  code,.mono{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13px}
+  code.inline{background:var(--brand-light);color:var(--brand-dark);padding:1px 6px;border-radius:5px}
+  pre{background:var(--code-bg);color:var(--code-ink);border-radius:10px;padding:14px 16px;overflow:auto;
+    font-size:12.7px;line-height:1.55;margin:12px 0}
+  pre .cmt{color:#7fb8c4}
+  .endpoint{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:0;margin:20px 0;overflow:hidden}
+  .ep-head{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .method{font-family:"SFMono-Regular",Consolas,monospace;font-weight:700;font-size:12px;color:#fff;
+    padding:5px 11px;border-radius:6px;letter-spacing:.5px}
+  .method.post{background:var(--post)} .method.get{background:var(--get)}
+  .path{font-family:"SFMono-Regular",Consolas,monospace;font-size:14.5px;font-weight:600;word-break:break-all}
+  .ep-purpose{color:var(--muted);font-size:13.5px;width:100%;margin-top:2px}
+  .ep-body{padding:6px 20px 20px}
+  .ep-body h4{margin:18px 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--brand-dark)}
+  .callsite{font-family:"SFMono-Regular",Consolas,monospace;font-size:12.5px;color:var(--muted)}
+  table{width:100%;border-collapse:collapse;margin:8px 0;font-size:13.5px}
+  th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:var(--brand-light);color:var(--brand-dark);font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+  td code{background:#eef3f4;padding:1px 5px;border-radius:4px}
+  .req{color:#b02a12;font-weight:600;font-size:11.5px}
+  .opt{color:var(--muted);font-size:11.5px}
+  .callout{border-radius:10px;padding:12px 15px;margin:12px 0;font-size:13.5px;border-left:4px solid}
+  .callout .lbl{font-weight:700;display:block;margin-bottom:3px;font-size:12.5px;letter-spacing:.3px}
+  .callout.warn{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn-ink)}
+  .callout.danger{background:var(--danger-bg);border-color:var(--danger-line);color:var(--danger-ink)}
+  .callout.info{background:var(--info-bg);border-color:var(--info-line);color:var(--info-ink)}
+  .sev{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:700;letter-spacing:.3px}
+  .sev.crit{background:var(--danger-line);color:#fff}
+  .sev.high{background:#e8702a;color:#fff}
+  .sev.med{background:var(--warn-line);color:#3a2a00}
+  .sev.low{background:#8aa0a6;color:#fff}
+  footer{color:var(--muted);font-size:12.5px;border-top:1px solid var(--line);margin-top:40px;padding-top:18px}
+  .disclaimer{background:var(--info-bg);border:1px solid var(--info-line);border-radius:10px;padding:14px 16px;
+    font-size:13.5px;color:var(--info-ink);margin:22px 0}
+  @media(max-width:720px){.grid,nav.toc ol{grid-template-columns:1fr;columns:1}header.top{padding:26px 22px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>FP Analyzer — Machine API Reference</h1>
+  <div class="sub">HTTP endpoints the FP Analyzer Raspberry&nbsp;Pi client currently calls. Reverse-engineered from client source v2.1.7 (<code>main.py</code>, <code>machineStart.py</code>, <code>machineStop.py</code>, <code>fpmain.py</code>). Server-side behaviour is inferred from how the client sends and reads each call.</div>
+  <div class="tags">
+    <span class="tag">Base: https://test.fpanalyzer.se/api/machine/</span>
+    <span class="tag">Client v2.1.7</span>
+    <span class="tag">7 endpoints</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="disclaimer">
+    <strong>Environment note:</strong> every call points at the <strong>test</strong> host <code class="inline">test.fpanalyzer.se</code>. There is no production base URL anywhere in the source — the same string is hard-coded in four files. Swapping environments today means editing code, not config.
+  </div>
+
+  <nav class="toc">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#overview">Overview &amp; conventions</a></li>
+      <li><a href="#auth">Authentication model</a></li>
+      <li><a href="#login">POST /login</a></li>
+      <li><a href="#installv1">POST /installV1</a></li>
+      <li><a href="#savestop">POST /saveStopDataV1</a></li>
+      <li><a href="#saveoffline">POST /saveOfflineData</a></li>
+      <li><a href="#heartbeat">POST /updateUnitConnectionStatus</a></li>
+      <li><a href="#checkversion">POST /checkIotLatestVersion</a></li>
+      <li><a href="#download">GET (package download)</a></li>
+      <li><a href="#issues">Known issues &amp; risks</a></li>
+      <li><a href="#glossary">Field glossary</a></li>
+    </ol>
+  </nav>
+
+  <!-- OVERVIEW -->
+  <section id="overview">
+    <h2 class="sec">Overview &amp; conventions</h2>
+    <div class="grid">
+      <div class="kv"><div class="k">Base URL</div><div class="v"><code class="inline">https://test.fpanalyzer.se/api/machine/</code></div></div>
+      <div class="kv"><div class="k">Transport</div><div class="v">All writes are <code class="inline">POST</code> with an <code class="inline">application/x-www-form-urlencoded</code> body (Python <code class="inline">requests(data=…)</code>). The package download is a streamed <code class="inline">GET</code>.</div></div>
+      <div class="kv"><div class="k">Response format</div><div class="v">JSON. Most endpoints return <code class="inline">{ "success": bool, "data": {…} }</code>. A call is treated as OK only when HTTP status is <code class="inline">200</code> <em>and</em> <code class="inline">success</code> is <code class="inline">true</code>.</div></div>
+      <div class="kv"><div class="k">Timestamps</div><div class="v"><code class="inline">main.py</code> sends local time as <code class="inline">YYYY-MM-DD HH:MM:SS.ffffff</code>. <code class="inline">fpmain.py</code> sends <code class="inline">datetime.utcnow()</code>. Timezone is not carried in either.</div></div>
+    </div>
+    <div class="callout warn">
+      <span class="lbl">⚠ Inconsistent timestamp basis</span>
+      Two client paths report time in two different bases (local vs UTC) with no timezone marker. If both paths ever hit the same account, server-side reports will be skewed by the Pi's local offset.
+    </div>
+    <p>The standard success envelope, as the client expects it:</p>
+<pre><span class="cmt">// generic success</span>
+{ "success": true, "data": { <span class="cmt">/* endpoint-specific */</span> } }
+
+<span class="cmt">// generic failure (client falls back to local buffering or an error label)</span>
+{ "success": false }</pre>
+  </section>
+
+  <!-- AUTH -->
+  <section id="auth">
+    <h2 class="sec">Authentication model</h2>
+    <p>There is <strong>no token or session</strong>. The flow is:</p>
+    <p>1. The device calls <code class="inline">/login</code> once with an email + password. The response is only a boolean — <em>no token, cookie, or key is issued</em>.<br>
+       2. Every subsequent call re-identifies the caller by resending <code class="inline">company_email_id</code> (the login email), and for device-scoped calls also <code class="inline">unit_name</code>.<br>
+       3. Credentials are cached on the device in <code class="inline">settings.ini</code> and replayed automatically on reconnect.</p>
+    <div class="callout danger">
+      <span class="lbl">✖ Security: credentials at rest &amp; no revocation</span>
+      The password is stored in <code>settings.ini</code> in <strong>plaintext</strong> and re-validated on every reconnect. Because identity is just an email string on each request and no token is issued, there is no way to expire or revoke a single device's access without changing the account password everywhere.
+    </div>
+  </section>
+
+  <!-- LOGIN -->
+  <section id="login">
+    <h2 class="sec">1 — Operator login</h2>
+    <div class="endpoint">
+      <div class="ep-head">
+        <span class="method post">POST</span>
+        <span class="path">/api/machine/login</span>
+        <span class="ep-purpose">Authenticate the operator (User&nbsp;ID + password) entered on the device.</span>
+      </div>
+      <div class="ep-body">
+        <h4>Called from</h4>
+        <div class="callsite">main.py → <b>validateLogin()</b> (via Signin() on the login screen, and checkLogin() on reconnect)</div>
+        <h4>Request body</h4>
+        <table>
+          <tr><th>Field</th><th>Type</th><th>Example</th><th>Notes</th></tr>
+          <tr><td><code>email</code> <span class="req">required</span></td><td>string</td><td><code>test@fpanalyzer.se</code></td><td>The "User ID" field in the UI — an email address.</td></tr>
+          <tr><td><code>password</code> <span class="req">required</span></td><td>string</td><td><code>••••••</code></td><td>Sent in the POST body. Also persisted plaintext locally.</td></tr>
+        </table>
+        <h4>Response</h4>
+<pre>{ "success": true }   <span class="cmt">// valid  → client stores creds, proceeds to unit setup / home</span>
+{ "success": false }  <span class="cmt">// invalid → UI shows "Invalid Login."</span></pre>
+        <div class="callout warn">
+          <span class="lbl">⚠ Only a boolean is returned</span>
+          No token/role/expiry comes back, so the client cannot distinguish "wrong password" from "server error" — any non-<code>success</code> response is shown as "Invalid Login."
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INSTALLV1 -->
+  <section id="installv1">
+    <h2 class="sec">2 — Install / machine-start / restart <span class="sev med">overloaded</span></h2>
+    <div class="endpoint">
+      <div class="ep-head">
+        <span class="method post">POST</span>
+        <span class="path">/api/machine/installV1</span>
+        <span class="ep-purpose">Registers a machine and reports a machine-ON (start/restart) event; returns the server-assigned machine&nbsp;id.</span>
+      </div>
+      <div class="ep-body">
+        <h4>Called from</h4>
+        <div class="callsite">
+          main.py → <b>sendrestartdatatoServer()</b> — start/restart (<code>save_restart_url="installV1"</code>)<br>
+          machineStart.py → <b>sendStartDataToServer()</b> — install/start<br>
+          machineStop.py → <b>sendStopDataToServer()</b> — <b>stop</b> (see warning)
+        </div>
+
+        <div class="callout danger">
+          <span class="lbl">✖ One endpoint, three payloads, three meanings</span>
+          <code>installV1</code> receives the install shape, the start/restart shape, <em>and</em> a stop shape. In particular <b>machineStop.py posts stop events to <code>installV1</code></b>, while <b>main.py posts stop events to <code>saveStopDataV1</code></b> (endpoint&nbsp;3). The server must guess intent from which fields are present. Pick one contract per action.
+        </div>
+
+        <h4>Request body — start / restart / install (main.py, machineStart.py)</h4>
+        <table>
+          <tr><th>Field</th><th>Type</th><th>Example</th><th>Notes</th></tr>
+          <tr><td><code>bluetooth_id</code></td><td>string</td><td><code>*</code></td><td>Always the literal <code>"*"</code> — placeholder, never a real value.</td></tr>
+          <tr><td><code>unit_name</code></td><td>string</td><td><code>UNIT-01</code></td><td>Device unit id from <code>unitsetup.ini</code>.</td></tr>
+          <tr><td><code>wifi_id</code></td><td>string</td><td><code>192.168.1.7</code></td><td><b>Misnamed:</b> this is the device IP from <code>hostname -I</code>, not a wifi identifier.</td></tr>
+          <tr><td><code>pin_no</code></td><td>int (1–4)</td><td><code>1</code></td><td>Machine/channel number (GPIO pin index + 1). GPIO pins: 17,27,22,5 → 1,2,3,4.</td></tr>
+          <tr><td><code>company_email_id</code></td><td>string</td><td><code>test@fpanalyzer.se</code></td><td>Login email = tenant identifier.</td></tr>
+          <tr><td><code>machine_id</code></td><td>int/string</td><td><code>0</code></td><td><code>0</code> for a new machine; the server-assigned id thereafter.</td></tr>
+          <tr><td><code>start_time</code></td><td>string</td><td><code>2026-08-20 14:03:22.114500</code></td><td>Event start timestamp.</td></tr>
+          <tr><td><code>end_time</code></td><td>string</td><td><code>2026-08-20 14:03:22.114500</code></td><td>Event end timestamp (equals start_time at ON).</td></tr>
+        </table>
+
+        <h4>Response</h4>
+<pre>{ "success": true, "data": { "id": 125 } }
+<span class="cmt">// client stores data.id back into the pin's machine_id for later stop calls</span></pre>
+
+        <h4>Alternate request body — stop shape (machineStop.py → same endpoint)</h4>
+        <table>
+          <tr><th>Field</th><th>Type</th><th>Example</th><th>Notes</th></tr>
+          <tr><td><code>start_time</code></td><td>string</td><td><code>2026-08-20 15:10:07.882000</code></td><td>UTC in this path (fpmain.py).</td></tr>
+          <tr><td><code>machine_id</code></td><td>int/string</td><td><code>125</code></td><td>Server machine id.</td></tr>
+          <tr><td><code>company_email_id</code></td><td>string</td><td><code>test@fpanalyzer.se</code></td><td>Login email.</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- SAVESTOP -->
+  <section id="savestop">
+    <h2 class="sec">3 — Machine-stop event</h2>
+    <div class="endpoint">
+      <div class="ep-head">
+        <span class="method post">POST</span>
+        <span class="path">/api/machine/saveStopDataV1</span>
+        <span class="ep-purpose">Reports a machine-OFF (stop) event — the primary GUI path.</span>
+      </div>
+      <div class="ep-body">
+        <h4>Called from</h4>
+        <div class="callsite">main.py → <b>sendStopDataToServer()</b> (<code>save_stop_url="saveStopDataV1"</code>)</div>
+        <h4>Request body</h4>
+        <table>
+          <tr><th>Field</th><th>Type</th><th>Example</th><th>Notes</th></tr>
+          <tr><td><code>start_time</code></td><td>string</td><td><code>2026-08-20 15:10:07.882000</code></td><td><b>Field name is misleading:</b> it carries the <em>stop</em> moment's timestamp (the last-signal time), not a start time.</td></tr>
+          <tr><td><code>machine_id</code></td><td>int/string</td><td><code>125</code></td><td>Server machine id (from the earlier installV1 response).</td></tr>
+          <tr><td><code>company_email_id</code></td><td>string</td><td><code>test@fpanalyzer.se</code></td><td>Login email.</td></tr>
+        </table>
+        <h4>Response</h4>
+<pre>{ "success": true }   <span class="cmt">// parsed but only used for logging; failures aren't retried here</span></pre>
+        <div class="callout danger">
+          <span class="lbl">✖ Stop events are lost when offline</span>
+          On this path, if there is no network the client only writes <code>"offInternetfail"</code> to a local log — it does <b>not</b> buffer the stop to SQLite the way start events are buffered. Any machine-stop during an outage never reaches the server, so run-durations will over-count.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SAVEOFFLINE -->
+  <section id="saveoffline">
+    <h2 class="sec">4 — Bulk offline sync</h2>
+    <div class="endpoint">
+      <div class="ep-head">
+        <span class="method post">POST</span>
+        <span class="path">/api/machine/saveOfflineData</span>
+        <span class="ep-purpose">Uploads locally buffered events once connectivity returns, in batches of 5.</span>
+      </div>
+      <div class="ep-body">
+        <h4>Called from</h4>
+        <div class="callsite">main.py → <b>updatefailureData()</b> (reads the <code>fplostdata</code> SQLite table)</div>
+        <h4>Request body</h4>
+        <table>
+          <tr><th>Field</th><th>Type</th><th>Example</th><th>Notes</th></tr>
+          <tr><td><code>company_email_id</code></td><td>string</td><td><code>test@fpanalyzer.se</code></td><td>Login email.</td></tr>
+          <tr><td><code>unit_name</code></td><td>string</td><td><code>UNIT-01</code></td><td>Device unit id.</td></tr>
+          <tr><td><code>data</code></td><td>string (JSON)</td><td><code>["125::2026-08-20 14:03:22::2026-08-20 14:05:01", …]</code></td><td>JSON-encoded array of <code>"machine_id::start_time::end_time"</code> strings (double-colon delimited).</td></tr>
+        </table>
+        <h4>Response</h4>
+<pre>{ "success": true }
+<span class="cmt">// on success the client DELETEs the batch locally and recurses for the next 5</span></pre>
+        <div class="callout danger">
+          <span class="lbl">✖ Silent data loss in the batch loop</span>
+          <code>updatefailureData()</code> calls <code>fetchone()</code> (consuming the first row) and <em>then</em> iterates the cursor to build <code>data</code>, so the first record of every 5-row batch is omitted from the upload — but <code>deleteData()</code> deletes all 5. Buffered records are destroyed without being sent.
+        </div>
+        <div class="callout info">
+          <span class="lbl">ℹ Only starts are ever buffered</span>
+          Combined with endpoint&nbsp;3's behaviour, the offline buffer only ever contains start events, so this sync can never recover a missed stop.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HEARTBEAT -->
+  <section id="heartbeat">
+    <h2 class="sec">5 — Connection heartbeat</h2>
+    <div class="endpoint">
+      <div class="ep-head">
+        <span class="method post">POST</span>
+        <span class="path">/api/machine/updateUnitConnectionStatus</span>
+        <span class="ep-purpose">Periodic "device is online" ping.</span>
+      </div>
+      <div class="ep-body">
+        <h4>Called from</h4>
+        <div class="callsite">main.py → <b>updateUnitConnectionStatus()</b> (fired by timerFun every ~180&nbsp;s)</div>
+        <h4>Request body</h4>
+        <table>
+          <tr><th>Field</th><th>Type</th><th>Example</th><th>Notes</th></tr>
+          <tr><td><code>company_email_id</code></td><td>string</td><td><code>test@fpanalyzer.se</code></td><td>Login email.</td></tr>
+          <tr><td><code>unit_name</code></td><td>string</td><td><code>UNIT-01</code></td><td>Device unit id.</td></tr>
+        </table>
+        <h4>Response</h4>
+<pre><span class="cmt">// response body is never read — fire-and-forget</span></pre>
+        <div class="callout warn">
+          <span class="lbl">⚠ Response ignored</span>
+          The client does not check the status or body, so a rejected or failed heartbeat is invisible on the device. The 180&nbsp;s timer is driven by a <code>multiprocessing.Process</code> that re-arms itself recursively.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHECKVERSION -->
+  <section id="checkversion">
+    <h2 class="sec">6 — Check for update</h2>
+    <div class="endpoint">
+      <div class="ep-head">
+        <span class="method post">POST</span>
+        <span class="path">/api/machine/checkIotLatestVersion</span>
+        <span class="ep-purpose">Asks the server whether a newer app/firmware package exists.</span>
+      </div>
+      <div class="ep-body">
+        <h4>Called from</h4>
+        <div class="callsite">main.py → <b>checkSoftwareUpdate()</b> (the "update" button on the home screen)</div>
+        <h4>Request body</h4>
+        <table>
+          <tr><th>Field</th><th>Type</th><th>Example</th><th>Notes</th></tr>
+          <tr><td><code>version</code></td><td>string</td><td><code>2.1.7</code></td><td>Current client version (<code>version_no</code>).</td></tr>
+        </table>
+        <h4>Response</h4>
+<pre>{
+  "success": true,
+  "data": {
+    "version": "2.1.8",              <span class="cmt">// latest available</span>
+    "url": "/downloads/test_fp_analyzer_v2.1.8.zip",
+    "info": "release notes text"
+  }
+}</pre>
+        <div class="callout danger">
+          <span class="lbl">✖ Version comparison is broken</span>
+          The client tests <code>data.version &gt;= version_no</code> as a <b>string</b>, so <code>"2.1.10"</code> sorts <em>lower</em> than <code>"2.1.7"</code> and a real update is missed. And because it's <code>&gt;=</code>, an already-current device (equal versions) is still prompted to download. Return an explicit boolean like <code>update_available</code> and compare semver numerically.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DOWNLOAD -->
+  <section id="download">
+    <h2 class="sec">7 — Download update package</h2>
+    <div class="endpoint">
+      <div class="ep-head">
+        <span class="method get">GET</span>
+        <span class="path">https://test.fpanalyzer.se{data.url}</span>
+        <span class="ep-purpose">Streams the update ZIP referenced by endpoint&nbsp;6.</span>
+      </div>
+      <div class="ep-body">
+        <h4>Called from</h4>
+        <div class="callsite">main.py → <b>downLoadLoader()</b></div>
+        <h4>Request</h4>
+        <table>
+          <tr><th>Part</th><th>Value</th><th>Notes</th></tr>
+          <tr><td>Method</td><td><code>GET</code>, streamed</td><td><code>requests.get(url, stream=True)</code>, chunked with a progress bar.</td></tr>
+          <tr><td>URL</td><td><code>https://test.fpanalyzer.se</code> + <code>data.url</code></td><td>Host is hard-coded; path comes from the version-check response.</td></tr>
+        </table>
+        <h4>Response</h4>
+<pre><span class="cmt">// binary application/zip stream, saved as:</span>
+test_fp_analyzer_v&lt;version&gt;.zip
+<span class="cmt">// then extracted to /home/pi, /etc/profile is rewritten, device reboots</span></pre>
+        <div class="callout danger">
+          <span class="lbl">✖ Unverified package → root code execution</span>
+          The ZIP is downloaded and extracted with <b>no checksum or signature check</b>, then the install path rewrites <code>/etc/profile</code> and reboots — all running as root (<code>Exec=sudo …</code>). Anyone able to spoof the response or MITM the download gets persistent root on every device. Sign packages and verify the signature before extracting.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ISSUES -->
+  <section id="issues">
+    <h2 class="sec">Known issues &amp; risks (summary)</h2>
+    <table>
+      <tr><th>#</th><th>Endpoint / area</th><th>Issue</th><th>Severity</th></tr>
+      <tr><td>1</td><td>Package download</td><td>ZIP unverified; extract + <code>/etc/profile</code> rewrite + reboot run as root.</td><td><span class="sev crit">Critical</span></td></tr>
+      <tr><td>2</td><td>login / at-rest</td><td>Password stored plaintext in <code>settings.ini</code>, replayed on reconnect; no token/revocation.</td><td><span class="sev high">High</span></td></tr>
+      <tr><td>3</td><td>saveOfflineData</td><td><code>fetchone()</code> drops the first row of each 5-row batch, but all 5 are deleted → data loss.</td><td><span class="sev high">High</span></td></tr>
+      <tr><td>4</td><td>saveStopDataV1</td><td>Stop events are not buffered offline (only starts are) → missed stops during outages.</td><td><span class="sev high">High</span></td></tr>
+      <tr><td>5</td><td>installV1 / saveStopDataV1</td><td><code>installV1</code> overloaded for 3 actions; stop posted to two different endpoints across files.</td><td><span class="sev med">Medium</span></td></tr>
+      <tr><td>6</td><td>checkIotLatestVersion</td><td>Version compared as a string and with <code>&gt;=</code> → updates missed / current devices re-prompted.</td><td><span class="sev med">Medium</span></td></tr>
+      <tr><td>7</td><td>All time fields</td><td>Local vs UTC mixed across paths; no timezone carried.</td><td><span class="sev med">Medium</span></td></tr>
+      <tr><td>8</td><td>All endpoints</td><td>Only the <strong>test</strong> host exists in source; no prod/config switch.</td><td><span class="sev med">Medium</span></td></tr>
+      <tr><td>9</td><td>installV1 fields</td><td><code>wifi_id</code> actually carries the IP; <code>bluetooth_id</code> is always <code>"*"</code>.</td><td><span class="sev low">Low</span></td></tr>
+      <tr><td>10</td><td>updateUnitConnectionStatus</td><td>Response ignored; failed heartbeats are invisible on the device.</td><td><span class="sev low">Low</span></td></tr>
+    </table>
+  </section>
+
+  <!-- GLOSSARY -->
+  <section id="glossary">
+    <h2 class="sec">Field glossary</h2>
+    <table>
+      <tr><th>Field</th><th>Meaning</th></tr>
+      <tr><td><code>email</code> / <code>company_email_id</code></td><td>The login email; doubles as the tenant/account identifier on every call.</td></tr>
+      <tr><td><code>unit_name</code></td><td>Device unit id set in <code>unitsetup.ini</code> (the "Unit Name" field).</td></tr>
+      <tr><td><code>wifi_id</code></td><td>Device IP address from <code>hostname -I</code> (despite the name).</td></tr>
+      <tr><td><code>bluetooth_id</code></td><td>Unused placeholder; always <code>"*"</code>.</td></tr>
+      <tr><td><code>pin_no</code></td><td>Machine/channel number 1–4, mapped from GPIO pins 17, 27, 22, 5.</td></tr>
+      <tr><td><code>machine_id</code></td><td>Server-assigned machine id; <code>0</code> until the first successful <code>installV1</code>.</td></tr>
+      <tr><td><code>start_time</code> / <code>end_time</code></td><td>Event timestamps; format and timezone vary by code path (see Overview).</td></tr>
+      <tr><td><code>data</code> (saveOfflineData)</td><td>JSON array of <code>"machine_id::start_time::end_time"</code> strings.</td></tr>
+      <tr><td><code>version</code> / <code>url</code> / <code>info</code></td><td>Update metadata from <code>checkIotLatestVersion</code>: latest version, download path, release notes.</td></tr>
+    </table>
+  </section>
+
+  <footer>
+    <p><strong>FP Analyzer Machine API Reference</strong> · Generated August 20, 2026 · Source: FP Analyzer client v2.1.7 (<code>main.py</code>, <code>machineStart.py</code>, <code>machineStop.py</code>, <code>fpmain.py</code>).</p>
+    <p>This document describes what the client <em>currently sends and expects</em>. It is not an authoritative server spec — where the server's real contract differs, the server wins. Flagged issues reflect the client code as read, not confirmed server behaviour.</p>
+  </footer>
+
+</div>
+</body>
+</html>

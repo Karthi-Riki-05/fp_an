@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FP Analyzer — MQTT Architecture &amp; Migration Design</title>
+<style>
+  :root{
+    --brand:#00768D; --brand-dark:#025b6d; --brand-light:#e6f3f6;
+    --ink:#1a2327; --muted:#5b6b71; --line:#dce5e8; --bg:#f4f7f8; --card:#ffffff;
+    --up:#0a7d4d; --down:#7a4bd0; --code-bg:#0f2b31; --code-ink:#e8f2f4;
+    --warn-bg:#fff6e5; --warn-line:#e0a72e; --warn-ink:#8a5a00;
+    --danger-bg:#fdeceb; --danger-line:#d64027; --danger-ink:#9c2013;
+    --ok-bg:#e8f6ee; --ok-line:#1a9c56; --ok-ink:#0d6b38;
+    --info-bg:#eaf3fb; --info-line:#2f7fd1; --info-ink:#1c4e80;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);background:var(--bg);line-height:1.6;font-size:15px}
+  header.top{background:linear-gradient(135deg,var(--brand) 0%,var(--brand-dark) 100%);color:#fff;padding:34px 40px 30px}
+  header.top h1{margin:0 0 6px;font-size:26px;font-weight:700;letter-spacing:.2px}
+  header.top .sub{opacity:.92;font-size:14.5px;max-width:860px}
+  .tags{margin-top:16px;display:flex;flex-wrap:wrap;gap:8px}
+  .tag{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);border-radius:999px;
+    padding:4px 12px;font-size:12.5px;font-family:"SFMono-Regular",Consolas,monospace}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 24px 80px}
+  nav.toc{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 22px;margin:26px 0}
+  nav.toc h2{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted)}
+  nav.toc ol{margin:0;padding-left:20px;columns:2;column-gap:34px}
+  nav.toc li{margin:3px 0}
+  nav.toc a{color:var(--brand);text-decoration:none} nav.toc a:hover{text-decoration:underline}
+  section{margin:36px 0}
+  h2.sec{font-size:20px;border-bottom:2px solid var(--brand-light);padding-bottom:8px;margin:0 0 16px;color:var(--brand-dark)}
+  h3{font-size:15.5px;color:var(--brand-dark);margin:22px 0 6px}
+  p{margin:10px 0}
+  code,.mono{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13px}
+  code.inline{background:var(--brand-light);color:var(--brand-dark);padding:1px 6px;border-radius:5px}
+  pre{background:var(--code-bg);color:var(--code-ink);border-radius:10px;padding:14px 16px;overflow:auto;
+    font-size:12.6px;line-height:1.55;margin:12px 0}
+  pre .cmt{color:#7fb8c4} pre .k{color:#8fd0dc} pre .s{color:#c6e6a0}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13.3px}
+  th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:var(--brand-light);color:var(--brand-dark);font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+  td code{background:#eef3f4;padding:1px 5px;border-radius:4px}
+  .callout{border-radius:10px;padding:12px 15px;margin:14px 0;font-size:13.5px;border-left:4px solid}
+  .callout .lbl{font-weight:700;display:block;margin-bottom:3px;font-size:12.5px;letter-spacing:.3px}
+  .callout.warn{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn-ink)}
+  .callout.danger{background:var(--danger-bg);border-color:var(--danger-line);color:var(--danger-ink)}
+  .callout.ok{background:var(--ok-bg);border-color:var(--ok-line);color:#0d6b38}
+  .callout.info{background:var(--info-bg);border-color:var(--info-line);color:var(--info-ink)}
+  .dir{display:inline-block;font-family:"SFMono-Regular",Consolas,monospace;font-weight:700;font-size:11px;
+    color:#fff;padding:3px 8px;border-radius:5px;letter-spacing:.3px;white-space:nowrap}
+  .dir.up{background:var(--up)} .dir.down{background:var(--down)} .dir.both{background:var(--brand)}
+  .diagram{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px;margin:16px 0;overflow:auto}
+  .sev{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700}
+  .sev.crit{background:var(--danger-line);color:#fff}.sev.high{background:#e8702a;color:#fff}
+  .sev.med{background:var(--warn-line);color:#3a2a00}.sev.low{background:#8aa0a6;color:#fff}
+  .pill{display:inline-block;background:var(--brand-light);color:var(--brand-dark);border-radius:6px;padding:1px 7px;
+    font-family:"SFMono-Regular",Consolas,monospace;font-size:12px}
+  .lead{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:10px;padding:14px 18px;margin:18px 0}
+  footer{color:var(--muted);font-size:12.5px;border-top:1px solid var(--line);margin-top:44px;padding-top:18px}
+  ul.tight{margin:8px 0;padding-left:22px} ul.tight li{margin:5px 0}
+  @media(max-width:720px){nav.toc ol{columns:1}header.top{padding:26px 22px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>FP Analyzer — MQTT Architecture &amp; Migration Design</h1>
+  <div class="sub">Design for replacing the FP Analyzer REST API with MQTT across a 500+ unit Raspberry&nbsp;Pi fleet on a self-hosted Mosquitto broker. Covers topic namespace, message contracts, QoS &amp; idempotency, presence, reconnect/offline buffering, per-device auth at scale, hybrid OTA, and the phased cutover.</div>
+  <div class="tags">
+    <span class="tag">MQTT 5.0</span>
+    <span class="tag">Mosquitto (self-hosted)</span>
+    <span class="tag">500+ devices</span>
+    <span class="tag">Hybrid: MQTT + HTTPS OTA</span>
+    <span class="tag">TLS 8883</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="lead">
+    <strong>Read this first.</strong> At 500+ devices the hard problems are <em>availability</em> and <em>identity</em>, not throughput — one Mosquitto node handles this fleet's event volume trivially. Two design rules from the house MQTT conventions drive everything below: <strong>(1) fault isolation</strong> — the MQTT client thread never touches GPIO, never runs machine logic, never mutates state directly; it only drains a local queue. <strong>(2) every message flow</strong> defines schema, QoS, timeout, retry, degraded-mode, and reconnect behaviour.
+  </div>
+
+  <nav class="toc">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#overview">1. Scope &amp; principles</a></li>
+      <li><a href="#topology">2. Topology &amp; HA</a></li>
+      <li><a href="#connection">3. Connection &amp; session</a></li>
+      <li><a href="#auth">4. Auth &amp; ACL at scale</a></li>
+      <li><a href="#topics">5. Topic namespace</a></li>
+      <li><a href="#contracts">6. Message contracts</a></li>
+      <li><a href="#mapping">7. REST → MQTT mapping</a></li>
+      <li><a href="#qos">8. QoS &amp; idempotency</a></li>
+      <li><a href="#presence">9. Presence (LWT)</a></li>
+      <li><a href="#offline">10. Reconnect &amp; offline buffer</a></li>
+      <li><a href="#ota">11. Hybrid OTA</a></li>
+      <li><a href="#threading">12. Client threading model</a></li>
+      <li><a href="#broker">13. Mosquitto config &amp; scaling</a></li>
+      <li><a href="#security">14. Security checklist</a></li>
+      <li><a href="#migration">15. Migration path</a></li>
+      <li><a href="#assumptions">16. Assumptions &amp; open decisions</a></li>
+    </ol>
+  </nav>
+
+  <!-- 1 -->
+  <section id="overview">
+    <h2 class="sec">1 — Scope &amp; design principles</h2>
+    <p>This design moves the device→cloud reporting path from HTTP request/response to MQTT pub/sub, while keeping HTTPS where it genuinely belongs (large binary transfer). It is a <strong>hybrid</strong> model, not "everything over MQTT".</p>
+    <table>
+      <tr><th>Concern</th><th>Transport</th><th>Why</th></tr>
+      <tr><td>Machine start/stop events, status, presence, commands</td><td>MQTT 5.0, QoS 1</td><td>Sparse, small, many-to-one, needs offline tolerance + live fan-out.</td></tr>
+      <tr><td>Login / register / version check (request→reply)</td><td>MQTT 5.0 request/response</td><td>Response Topic + Correlation Data give a native reply channel.</td></tr>
+      <tr><td>OTA package (multi-MB ZIP)</td><td>HTTPS GET</td><td>MQTT is the wrong transport for large binaries; URL + hash are delivered over MQTT.</td></tr>
+    </table>
+    <h3>Principles</h3>
+    <ul class="tight">
+      <li><strong>Fault isolation.</strong> Network faults must never stop machine monitoring. The GPIO/event producer and the MQTT client are separate threads that communicate only through a durable local queue.</li>
+      <li><strong>Idempotency over exactly-once.</strong> Every event carries a client-generated <code>event_id</code>; the server deduplicates. This is cheaper and more robust than QoS 2, and it also neutralises offline-replay duplicates (which QoS 2 cannot).</li>
+      <li><strong>Capture-time truth.</strong> The event timestamp is stamped the instant the GPIO transition happens and written to the local queue — never derived at send time — so buffered events keep their real time.</li>
+      <li><strong>Visible loss only.</strong> If the local buffer ever overflows, a counter is reported in status; nothing is dropped silently (this is a direct fix for the current <code>saveOfflineData</code> bug).</li>
+    </ul>
+  </section>
+
+  <!-- 2 -->
+  <section id="topology">
+    <h2 class="sec">2 — Topology &amp; high availability</h2>
+    <div class="diagram">
+<pre style="background:transparent;color:var(--ink);margin:0">
+  500+ Raspberry Pi units                Cloud
+  ┌───────────────────┐
+  │ GPIO producer ───┐ │   TLS 8883    ┌──────────────┐    ┌─────────────────┐
+  │ local SQLite queue├─┼──────────────▶│  Mosquitto   │───▶│ Backend consumer│──▶ DB / Dashboard
+  │ MQTT 5 client  ◀──┘ │  (persistent  │   broker     │◀───│ (idempotent     │
+  │ (own thread)      │ │   session)    │  (SPOF ⚠)    │    │  upsert, ACLs)  │
+  └───────────────────┘               └──────────────┘    └─────────────────┘
+        × 500+           evt / status / req ▲   ▼ resp / cmd
+</pre>
+    </div>
+    <div class="callout danger">
+      <span class="lbl">✖ Single Mosquitto = single point of failure for all 500 sites</span>
+      Open-source Mosquitto has <strong>no native clustering</strong>. Throughput is not the risk (one node serves this fleet easily); a broker crash taking every site dark at once is. Pick an HA path deliberately:
+      <ul class="tight" style="margin-top:6px">
+        <li><strong>Active/passive failover</strong> — two nodes behind a <code>keepalived</code> VIP with replicated <code>persistence_location</code>; simplest, but retained/session state must be replicated or rebuilt on failover.</li>
+        <li><strong>Clustering broker</strong> — EMQX / VerneMQ / HiveMQ / NanoMQ speak the same MQTT 5 contract in this doc, add real clustering and shared subscriptions. Recommended if "all sites dark" is unacceptable. Your message design does not change if you switch.</li>
+      </ul>
+    </div>
+    <div class="callout warn">
+      <span class="lbl">⚠ Reconnect storm</span>
+      When the broker restarts, 500 devices try to reconnect at once. Mandatory: randomized exponential backoff on every client (see §10). Without it, the broker is hammered exactly when it is weakest.
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section id="connection">
+    <h2 class="sec">3 — Connection &amp; session</h2>
+    <table>
+      <tr><th>Parameter</th><th>Value</th><th>Notes</th></tr>
+      <tr><td>Protocol</td><td>MQTT 5.0</td><td>Needed for Response Topic / Correlation Data / Reason Codes / Session Expiry.</td></tr>
+      <tr><td>Port / transport</td><td><code>8883</code> TLS</td><td>TLS 1.2+; port 1883 disabled. Use <code>wss</code>/8884 only if a site firewall blocks 8883.</td></tr>
+      <tr><td>Client ID</td><td><code>fp-{company}-{unit}</code></td><td>Globally unique; the unit name is already unique per device.</td></tr>
+      <tr><td>Clean Start</td><td><code>false</code></td><td>Resume the persistent session (subscriptions + inflight) after a drop.</td></tr>
+      <tr><td>Session Expiry Interval</td><td><code>86400</code> s</td><td>Broker keeps session state for 24 h of downtime before discarding.</td></tr>
+      <tr><td>Keep Alive</td><td><code>60</code> s</td><td>Broker declares the device dead at ~1.5× keepalive → drives LWT presence.</td></tr>
+      <tr><td>Receive Maximum</td><td><code>20–40</code></td><td>Caps inflight QoS 1 messages per client; protects the broker at fan-in.</td></tr>
+    </table>
+  </section>
+
+  <!-- 4 -->
+  <section id="auth">
+    <h2 class="sec">4 — Authentication &amp; authorization at scale</h2>
+    <div class="callout danger">
+      <span class="lbl">✖ You cannot hand-manage 500 credentials in a static password file</span>
+      Per-device identity is mandatory so a compromised or cloned unit can be revoked individually and cannot publish as another unit.
+    </div>
+    <h3>Recommended: per-device X.509 (mTLS)</h3>
+    <p>Each unit gets its own client certificate at provisioning; the broker maps the certificate CN to the MQTT username (<code>use_identity_as_username true</code>). No passwords on the device, per-device revocation via CRL, and identity is cryptographic. This also replaces the current plaintext-password login entirely.</p>
+    <h3>Alternative: username/password via a dynamic auth backend</h3>
+    <p>If certs are operationally heavy, use <code>mosquitto-go-auth</code> (or the built-in dynamic security plugin) backed by Postgres/Redis so credentials and ACLs live in a database, not a flat file. Passwords hashed (PBKDF2/bcrypt), never stored plaintext on device.</p>
+    <h3>Per-device topic ACL (both options)</h3>
+    <table>
+      <tr><th>Action</th><th>Topic pattern</th><th>Scope</th></tr>
+      <tr><td>Publish</td><td><code>fp/{company}/{unit}/#</code></td><td>A device may publish only under its own subtree.</td></tr>
+      <tr><td>Subscribe</td><td><code>fp/{company}/{unit}/cmd/#</code>, <code>fp/{company}/{unit}/resp/#</code></td><td>A device may receive only its own commands/replies.</td></tr>
+      <tr><td>Backend (service acct)</td><td><code>fp/+/+/evt/#</code>, <code>fp/+/+/status/#</code>, <code>fp/+/+/req/#</code> (sub); <code>fp/+/+/{resp,cmd}/#</code> (pub)</td><td>Broad, but a distinct high-privilege identity.</td></tr>
+    </table>
+    <p>ACL variables like <code>%u</code> / <code>%c</code> (username / client-id) let one rule enforce "own subtree only" across all 500 devices without per-device rules.</p>
+  </section>
+
+  <!-- 5 -->
+  <section id="topics">
+    <h2 class="sec">5 — Topic namespace</h2>
+    <p>Hierarchical, tenant- and unit-scoped: <code>fp/{company}/{unit}/{class}/{name}</code>. <code>company</code> is a stable slug (map the login email → company id; do not put an email in a topic). Direction is device-relative.</p>
+    <table>
+      <tr><th>Topic</th><th>Dir</th><th>QoS</th><th>Retained</th><th>Purpose</th></tr>
+      <tr><td><code>fp/{c}/{u}/evt/machine</code></td><td><span class="dir up">▲ UP</span></td><td>1</td><td>no</td><td>Machine ON/OFF events (start &amp; stop, unified).</td></tr>
+      <tr><td><code>fp/{c}/{u}/evt/ota</code></td><td><span class="dir up">▲ UP</span></td><td>1</td><td>no</td><td>OTA apply progress/result.</td></tr>
+      <tr><td><code>fp/{c}/{u}/status/conn</code></td><td><span class="dir up">▲ UP</span></td><td>1</td><td><b>yes</b></td><td>Online/offline presence. LWT writes offline here.</td></tr>
+      <tr><td><code>fp/{c}/{u}/status/machines</code></td><td><span class="dir up">▲ UP</span></td><td>1</td><td><b>yes</b></td><td>Retained snapshot of all 4 pin states + fw.</td></tr>
+      <tr><td><code>fp/{c}/{u}/req/{op}</code></td><td><span class="dir up">▲ UP</span></td><td>1</td><td>no</td><td>Request; <code>op</code> ∈ {login, register, version}. Sets Response Topic + Correlation Data.</td></tr>
+      <tr><td><code>fp/{c}/{u}/resp/{op}</code></td><td><span class="dir down">▼ DOWN</span></td><td>1</td><td>no</td><td>Reply to the matching request.</td></tr>
+      <tr><td><code>fp/{c}/{u}/cmd/{cmd}</code></td><td><span class="dir down">▼ DOWN</span></td><td>1</td><td>no*</td><td>Commands; <code>cmd</code> ∈ {ota, config, pin, reboot}. May retain <code>config</code> so a rejoining device gets current settings.</td></tr>
+    </table>
+    <p>Backend consumes with wildcards: <code>fp/+/+/evt/#</code>, <code>fp/+/+/status/#</code>, <code>fp/+/+/req/#</code>. With a clustering broker, use a shared subscription (<code>$share/g1/fp/+/+/evt/#</code>) to load-balance events across multiple consumer instances.</p>
+  </section>
+
+  <!-- 6 -->
+  <section id="contracts">
+    <h2 class="sec">6 — Message contracts (JSON)</h2>
+    <p>All payloads are UTF-8 JSON. Timestamps are ISO-8601 <strong>UTC</strong> with milliseconds (fixes the current local-vs-UTC inconsistency). Every UP event carries <code>event_id</code> (UUIDv4, idempotency key) and <code>seq</code> (monotonic per-device counter for gap detection).</p>
+
+    <h3>6.1 Machine event <span class="pill">evt/machine</span> <span class="dir up">▲ UP</span> QoS 1</h3>
+<pre>{
+  <span class="k">"event_id"</span>: <span class="s">"9f2c1b7a-..."</span>,   <span class="cmt">// client UUID — dedup key</span>
+  <span class="k">"seq"</span>: 10432,                    <span class="cmt">// monotonic per device; server detects gaps</span>
+  <span class="k">"company"</span>: <span class="s">"acme"</span>,
+  <span class="k">"unit"</span>: <span class="s">"UNIT-01"</span>,
+  <span class="k">"pin_no"</span>: 1,                     <span class="cmt">// 1..4  (GPIO 17,27,22,5 → 1..4)</span>
+  <span class="k">"machine_id"</span>: 125,               <span class="cmt">// server id; 0 until registered</span>
+  <span class="k">"state"</span>: <span class="s">"ON"</span>,                 <span class="cmt">// "ON" | "OFF" — unifies start &amp; stop</span>
+  <span class="k">"ts"</span>: <span class="s">"2026-08-20T14:03:22.114Z"</span>, <span class="cmt">// capture time, UTC</span>
+  <span class="k">"buffered"</span>: false,              <span class="cmt">// true when replayed from offline queue</span>
+  <span class="k">"fw"</span>: <span class="s">"2.1.7"</span>
+}</pre>
+      <p class="mono" style="color:var(--muted);font-size:12.5px">timeout: n/a (fire+track PUBACK) · retry: redeliver from queue until PUBACK · degraded: keep enqueuing locally · reconnect: replay oldest-first with <code>buffered=true</code></p>
+
+    <h3>6.2 Connection status <span class="pill">status/conn</span> <span class="dir up">▲ UP</span> QoS 1 · retained · + LWT</h3>
+<pre><span class="cmt">// published retained on connect</span>
+{ <span class="k">"company"</span>:<span class="s">"acme"</span>, <span class="k">"unit"</span>:<span class="s">"UNIT-01"</span>, <span class="k">"online"</span>:true,
+  <span class="k">"ts"</span>:<span class="s">"2026-08-20T14:00:00.000Z"</span>, <span class="k">"fw"</span>:<span class="s">"2.1.7"</span>, <span class="k">"ip"</span>:<span class="s">"192.168.1.7"</span> }
+
+<span class="cmt">// Last Will, registered at CONNECT, retained — broker publishes this on ungraceful drop</span>
+{ <span class="k">"company"</span>:<span class="s">"acme"</span>, <span class="k">"unit"</span>:<span class="s">"UNIT-01"</span>, <span class="k">"online"</span>:false, <span class="k">"reason"</span>:<span class="s">"lwt"</span> }</pre>
+
+    <h3>6.3 Machine snapshot <span class="pill">status/machines</span> <span class="dir up">▲ UP</span> QoS 1 · retained</h3>
+<pre>{ <span class="k">"unit"</span>:<span class="s">"UNIT-01"</span>, <span class="k">"ts"</span>:<span class="s">"..."</span>, <span class="k">"fw"</span>:<span class="s">"2.1.7"</span>,
+  <span class="k">"machines"</span>:[
+    {<span class="k">"pin_no"</span>:1,<span class="k">"machine_id"</span>:125,<span class="k">"state"</span>:<span class="s">"ON"</span>, <span class="k">"enabled"</span>:true},
+    {<span class="k">"pin_no"</span>:2,<span class="k">"machine_id"</span>:126,<span class="k">"state"</span>:<span class="s">"OFF"</span>,<span class="k">"enabled"</span>:true},
+    {<span class="k">"pin_no"</span>:3,<span class="k">"machine_id"</span>:0,  <span class="k">"state"</span>:<span class="s">"OFF"</span>,<span class="k">"enabled"</span>:false},
+    {<span class="k">"pin_no"</span>:4,<span class="k">"machine_id"</span>:127,<span class="k">"state"</span>:<span class="s">"OFF"</span>,<span class="k">"enabled"</span>:true} ] }</pre>
+    <p>A retained snapshot means a rejoining dashboard or a failed-over backend sees current state immediately without waiting for the next transition.</p>
+
+    <h3>6.4 Request / response <span class="pill">req/{op}</span> <span class="dir up">▲</span> → <span class="pill">resp/{op}</span> <span class="dir down">▼</span> QoS 1</h3>
+    <p>The device publishes to <code>req/{op}</code> with MQTT 5 properties <code>Response Topic = fp/{c}/{u}/resp/{op}</code> and <code>Correlation Data = req_id</code>. The backend replies on that topic echoing the correlation id. The client applies a <strong>timeout</strong> and ret/degrades if no reply arrives.</p>
+<pre><span class="cmt">// req/register  (replaces installV1's register role → returns machine_id)</span>
+→ { <span class="k">"req_id"</span>:<span class="s">"c7..."</span>, <span class="k">"company"</span>:<span class="s">"acme"</span>, <span class="k">"unit"</span>:<span class="s">"UNIT-01"</span>, <span class="k">"pin_no"</span>:1, <span class="k">"ts"</span>:<span class="s">"..."</span> }
+← { <span class="k">"req_id"</span>:<span class="s">"c7..."</span>, <span class="k">"success"</span>:true, <span class="k">"pin_no"</span>:1, <span class="k">"machine_id"</span>:125 }
+
+<span class="cmt">// req/version  (replaces checkIotLatestVersion — server decides, no string compare)</span>
+→ { <span class="k">"req_id"</span>:<span class="s">"d1..."</span>, <span class="k">"unit"</span>:<span class="s">"UNIT-01"</span>, <span class="k">"fw"</span>:<span class="s">"2.1.7"</span> }
+← { <span class="k">"req_id"</span>:<span class="s">"d1..."</span>, <span class="k">"update_available"</span>:true, <span class="k">"version"</span>:<span class="s">"2.1.8"</span>,
+    <span class="k">"url"</span>:<span class="s">"https://.../test_fp_analyzer_v2.1.8.zip"</span>,
+    <span class="k">"sha256"</span>:<span class="s">"e3b0c442..."</span>, <span class="k">"size"</span>:10485760, <span class="k">"notes"</span>:<span class="s">"..."</span> }
+
+<span class="cmt">// req/login — only if you keep password auth; with mTLS this disappears (cert = identity)</span>
+→ { <span class="k">"req_id"</span>:<span class="s">"a0..."</span>, <span class="k">"unit"</span>:<span class="s">"UNIT-01"</span>, <span class="k">"company"</span>:<span class="s">"acme"</span> }
+← { <span class="k">"req_id"</span>:<span class="s">"a0..."</span>, <span class="k">"success"</span>:true, <span class="k">"reason"</span>:<span class="s">"ok"</span> }</pre>
+    <p class="mono" style="color:var(--muted);font-size:12.5px">timeout: 10 s wait for correlated reply · retry: 3× with backoff · degraded: proceed with last-known machine_id from retained snapshot, retry later · reconnect: re-issue on session resume</p>
+
+    <h3>6.5 Commands <span class="pill">cmd/{cmd}</span> <span class="dir down">▼ DOWN</span> QoS 1</h3>
+<pre><span class="cmt">// cmd/config  (replaces unitsetup.ini remote edit: filter times + pin enable)</span>
+{ <span class="k">"cmd_id"</span>:<span class="s">"..."</span>, <span class="k">"off_on_ms"</span>:100, <span class="k">"on_off_ms"</span>:100,
+  <span class="k">"pins"</span>:{ <span class="k">"1"</span>:true, <span class="k">"2"</span>:true, <span class="k">"3"</span>:false, <span class="k">"4"</span>:true } }
+
+<span class="cmt">// cmd/ota — see §11</span>
+{ <span class="k">"cmd_id"</span>:<span class="s">"..."</span>, <span class="k">"version"</span>:<span class="s">"2.1.8"</span>, <span class="k">"url"</span>:<span class="s">"https://.../pkg.zip"</span>,
+  <span class="k">"sha256"</span>:<span class="s">"e3b0..."</span>, <span class="k">"size"</span>:10485760, <span class="k">"force"</span>:false }
+
+<span class="cmt">// cmd/reboot</span>
+{ <span class="k">"cmd_id"</span>:<span class="s">"..."</span>, <span class="k">"delay_s"</span>:5 }</pre>
+    <p class="mono" style="color:var(--muted);font-size:12.5px">timeout: device ACKs by publishing an evt · retry: server resends by <code>cmd_id</code> if no evt seen · degraded: unknown/invalid cmd ignored + logged, never applied to GPIO by the MQTT thread (see §12) · reconnect: retained <code>cmd/config</code> re-delivered on subscribe</p>
+  </section>
+
+  <!-- 7 -->
+  <section id="mapping">
+    <h2 class="sec">7 — REST → MQTT mapping (and what each fixes)</h2>
+    <table>
+      <tr><th>Current REST op</th><th>New MQTT</th><th>Fixes</th></tr>
+      <tr><td><code>POST /login</code></td><td><code>req/login</code>→<code>resp/login</code>, or mTLS (no call)</td><td>Plaintext password replay → cert identity or hashed+TLS.</td></tr>
+      <tr><td><code>POST /installV1</code> (register)</td><td><code>req/register</code>→<code>resp/register</code></td><td>Endpoint overloading split out; clean machine_id assignment.</td></tr>
+      <tr><td><code>POST /installV1</code> (start)</td><td><code>evt/machine</code> <code>state:"ON"</code></td><td>Start unified with stop into one contract.</td></tr>
+      <tr><td><code>POST /saveStopDataV1</code> (stop)</td><td><code>evt/machine</code> <code>state:"OFF"</code></td><td>Two-endpoint stop mismatch eliminated.</td></tr>
+      <tr><td><code>POST /saveOfflineData</code></td><td><code>evt/machine</code> replay <code>buffered:true</code></td><td>The <code>fetchone()</code> batch-drop is gone; QoS 1 + idempotency + queue.</td></tr>
+      <tr><td><code>POST /updateUnitConnectionStatus</code></td><td><code>status/conn</code> retained + LWT + keepalive</td><td>Polling heartbeat removed; presence is now event-driven and instant.</td></tr>
+      <tr><td><code>POST /checkIotLatestVersion</code></td><td><code>req/version</code>→<code>resp/version</code></td><td>String version compare → server returns <code>update_available</code> + semver + hash.</td></tr>
+      <tr><td><code>GET …{url}</code> (ZIP)</td><td><code>cmd/ota</code> + HTTPS download + sha256 verify</td><td>Unverified-package RCE closed by mandatory hash check.</td></tr>
+    </table>
+  </section>
+
+  <!-- 8 -->
+  <section id="qos">
+    <h2 class="sec">8 — QoS &amp; idempotency</h2>
+    <ul class="tight">
+      <li><strong>Events / status / commands / req-resp:</strong> QoS 1 (at-least-once). Retained on the two <code>status/*</code> topics and optionally <code>cmd/config</code>.</li>
+      <li><strong>Not QoS 2.</strong> At 500-device fan-in the 4-packet QoS 2 handshake is costly, and it still would not stop duplicates from offline replay. App-layer idempotency covers both cases for less.</li>
+    </ul>
+    <div class="callout ok">
+      <span class="lbl">✔ Idempotent server write — the core of correct sync</span>
+      The backend upserts on a unique key <code>(company, unit, event_id)</code>. A duplicate (QoS 1 redelivery <em>or</em> offline replay) hits the constraint and is acknowledged-and-ignored. Combined with the monotonic <code>seq</code>, the server can also detect and alert on <em>gaps</em> (lost events) rather than discovering them in a report months later.
+    </div>
+  </section>
+
+  <!-- 9 -->
+  <section id="presence">
+    <h2 class="sec">9 — Presence via Last Will &amp; Testament</h2>
+    <p>The 180 s polling heartbeat is deleted. Instead:</p>
+    <ul class="tight">
+      <li>At CONNECT the client registers an LWT: retained <code>status/conn</code> with <code>online:false</code>.</li>
+      <li>On successful connect the client publishes retained <code>status/conn</code> <code>online:true</code>.</li>
+      <li>On graceful shutdown it publishes <code>online:false</code> then disconnects cleanly.</li>
+      <li>On an ungraceful drop the broker publishes the LWT automatically after ~1.5× keepalive.</li>
+    </ul>
+    <p>The backend simply subscribes to <code>fp/+/+/status/conn</code>; presence is accurate within ~90 s with zero device-initiated polling, across all 500 units.</p>
+  </section>
+
+  <!-- 10 -->
+  <section id="offline">
+    <h2 class="sec">10 — Reconnect &amp; offline store-and-forward</h2>
+    <h3>Local durable queue</h3>
+    <p>Keep the existing SQLite buffer but make it the <em>primary</em> path, not an afterthought: the GPIO producer writes <strong>every</strong> event (ON and OFF) to the queue at capture time with its <code>event_id</code>, <code>seq</code>, and UTC <code>ts</code>. The MQTT thread reads the queue, publishes QoS 1, and deletes a row only after PUBACK. Nothing is sent that was not first persisted.</p>
+    <div class="callout ok">
+      <span class="lbl">✔ This corrects two current bugs at once</span>
+      Stops are now buffered exactly like starts, and there is no batch loop that can drop the first row — rows leave the queue one PUBACK at a time.
+    </div>
+    <h3>Reconnect behaviour</h3>
+    <ul class="tight">
+      <li><strong>Backoff:</strong> randomized exponential — base 1 s, ×2, cap 60 s, ±20% jitter — so 500 devices do not reconnect in lockstep after a broker blip.</li>
+      <li><strong>Session resume:</strong> <code>clean_start=false</code> + session expiry keeps subscriptions and inflight messages across short drops.</li>
+      <li><strong>Replay:</strong> on reconnect, drain the queue oldest-first with <code>buffered=true</code> and the original <code>ts</code>; idempotency absorbs any overlap with what the broker already had inflight.</li>
+    </ul>
+    <h3>Degraded mode &amp; overflow</h3>
+    <ul class="tight">
+      <li>Broker unreachable → keep buffering; machine monitoring continues (fault isolation, §12).</li>
+      <li>Queue is bounded (by count and/or age). On overflow, drop <em>oldest</em> and increment <code>dropped_count</code>, reported in the next <code>status/machines</code> — loss is <strong>visible</strong>, never silent.</li>
+    </ul>
+  </section>
+
+  <!-- 11 -->
+  <section id="ota">
+    <h2 class="sec">11 — Hybrid OTA</h2>
+    <ol style="padding-left:20px">
+      <li>Server publishes <code>cmd/ota</code> with <code>version</code>, <code>url</code>, <code>sha256</code>, <code>size</code>.</li>
+      <li>Device downloads the ZIP over <strong>HTTPS</strong> (streamed), enforcing <code>size</code> as an upper bound.</li>
+      <li>Device computes SHA-256 and <strong>aborts unless it matches</strong>. <span class="pill">closes the unverified-package RCE</span></li>
+      <li>Apply transactionally: extract to a staging dir, swap a <code>current</code> symlink, then reboot — so a half-download never bricks the unit (unlike the current in-place <code>/etc/profile</code> rewrite).</li>
+      <li>Report each step on <code>evt/ota</code>: <code>verifying → downloading → applying → success|failed</code> with detail.</li>
+    </ol>
+    <div class="callout warn">
+      <span class="lbl">⚠ Prefer a signature over a bare hash</span>
+      SHA-256 proves integrity, not authenticity — if an attacker controls the version response they control the hash too. Signing the package with a private key the fleet verifies against a pinned public key is the real fix. At minimum, the <code>resp/version</code>/<code>cmd/ota</code> channel must be TLS + authenticated (it is, over MQTT 8883).
+    </div>
+    <p><strong>Never chunk the binary over MQTT.</strong> Payloads are capped (<code>message_size_limit</code>) and QoS 1 reassembly of a 10 MB file across 500 devices would abuse the broker. The URL rides MQTT; the bytes ride HTTPS.</p>
+  </section>
+
+  <!-- 12 -->
+  <section id="threading">
+    <h2 class="sec">12 — Client threading model (fault isolation)</h2>
+    <p>Three cooperating threads/processes on the Pi, communicating only through queues. This is the house rule that keeps a network fault from ever stopping machine capture — and keeps the network layer from ever driving hardware.</p>
+    <div class="diagram">
+<pre style="background:transparent;color:var(--ink);margin:0">
+ ┌───────────────┐  event   ┌────────────────┐  PUBACK   ┌──────────────┐
+ │ GPIO producer │────────▶ │  durable queue │ ────────▶ │  MQTT client │──▶ broker
+ │  (pins 17/27/ │  (write  │   (SQLite/WAL) │  (read+   │  (own thread)│◀── broker
+ │   22/5)       │  at      └────────────────┘   delete) └──────┬───────┘
+ └───────────────┘  capture                                     │ cmd (validated)
+        ▲                                                       ▼
+        │                                              ┌──────────────────┐
+        └────────────── applies config/pin ◀────────── │  control thread  │
+                        (never the MQTT thread)         └──────────────────┘
+</pre>
+    </div>
+    <div class="callout danger">
+      <span class="lbl">✖ Hard rules for the MQTT thread</span>
+      It <strong>must never</strong> access GPIO, <strong>never</strong> run machine/flow logic, and <strong>never</strong> mutate state directly. Inbound commands are validated and handed to the control thread via a queue; the control thread is the only code that touches hardware. A malformed or malicious command therefore cannot drive a relay from the network path.
+    </div>
+  </section>
+
+  <!-- 13 -->
+  <section id="broker">
+    <h2 class="sec">13 — Mosquitto config &amp; scaling for 500+</h2>
+<pre><span class="cmt"># /etc/mosquitto/mosquitto.conf  (essentials)</span>
+listener 8883
+cafile   /etc/mosquitto/certs/ca.crt
+certfile /etc/mosquitto/certs/server.crt
+keyfile  /etc/mosquitto/certs/server.key
+require_certificate  true        <span class="cmt"># mTLS: device cert required</span>
+use_identity_as_username true     <span class="cmt"># cert CN → username for ACLs</span>
+allow_anonymous      false
+persistence          true
+persistence_location /var/lib/mosquitto/
+autosave_interval    30
+max_connections      -1           <span class="cmt"># bounded by OS FDs, not config</span>
+max_inflight_messages 40
+max_queued_messages  10000
+message_size_limit   262144       <span class="cmt"># 256 KB — keeps binaries off MQTT</span>
+sys_interval         10           <span class="cmt"># $SYS metrics for monitoring</span>
+<span class="cmt"># ACLs via acl_file or the dynamic-security / go-auth plugin</span></pre>
+    <h3>OS tuning (the real limit)</h3>
+    <ul class="tight">
+      <li>File descriptors: <code>LimitNOFILE=65535</code> (systemd) / <code>ulimit -n</code> — one FD per connection plus headroom.</li>
+      <li><code>net.core.somaxconn</code>, <code>net.ipv4.tcp_max_syn_backlog</code> raised to survive the reconnect storm.</li>
+      <li><code>fs.file-max</code> comfortably above the FD ceiling.</li>
+    </ul>
+    <div class="callout info">
+      <span class="lbl">ℹ Capacity reality check</span>
+      500 devices with sparse events and a 60 s keepalive is a light load for a single modern Mosquitto node (it handles tens of thousands of connections on modest hardware). Plan capacity around <strong>availability and reconnect bursts</strong>, not steady-state throughput — which is exactly why §2's HA decision matters more than any tuning knob here.
+    </div>
+  </section>
+
+  <!-- 14 -->
+  <section id="security">
+    <h2 class="sec">14 — Security checklist</h2>
+    <table>
+      <tr><th>Control</th><th>Requirement</th><th>Severity if skipped</th></tr>
+      <tr><td>Transport</td><td>TLS 1.2+ on 8883; 1883 disabled; <code>allow_anonymous false</code>.</td><td><span class="sev crit">Critical</span></td></tr>
+      <tr><td>Device identity</td><td>Per-device X.509 (preferred) or DB-backed hashed credentials; individually revocable.</td><td><span class="sev high">High</span></td></tr>
+      <tr><td>Topic ACLs</td><td>Device confined to <code>fp/{c}/{u}/#</code>; cannot publish as another unit.</td><td><span class="sev high">High</span></td></tr>
+      <tr><td>OTA integrity</td><td>Signed package (or at least SHA-256 verify) before apply; staged + symlink swap.</td><td><span class="sev crit">Critical</span></td></tr>
+      <tr><td>Creds at rest</td><td>No plaintext passwords on device; private key file-permission locked.</td><td><span class="sev high">High</span></td></tr>
+      <tr><td>Command safety</td><td>MQTT thread validates + queues commands; only the control thread touches GPIO.</td><td><span class="sev med">Medium</span></td></tr>
+      <tr><td>Least privilege</td><td>Backend uses a distinct high-privilege identity, never a device cert.</td><td><span class="sev med">Medium</span></td></tr>
+    </table>
+  </section>
+
+  <!-- 15 -->
+  <section id="migration">
+    <h2 class="sec">15 — Migration path (500 devices can't flip at once)</h2>
+    <ol style="padding-left:20px">
+      <li><strong>Phase 0 — Stand up.</strong> Deploy Mosquitto (+HA), the backend consumer with idempotent upserts, a cert/provisioning pipeline, and monitoring ($SYS + presence).</li>
+      <li><strong>Phase 1 — Dual-write.</strong> New firmware publishes to MQTT <em>and</em> keeps calling REST. Server dedups; you compare the two streams for parity on a pilot group (say 10–20 units).</li>
+      <li><strong>Phase 2 — Cut reads over.</strong> Make MQTT the source of truth for reporting/dashboards; REST stays as a fallback. Roll firmware fleet-wide in waves via <code>cmd/ota</code>.</li>
+      <li><strong>Phase 3 — Retire REST.</strong> Once all units report healthy on MQTT, decommission the REST endpoints and the polling heartbeat.</li>
+    </ol>
+    <p>Dual-run is not optional at this scale — it's how you avoid a fleet-wide outage during cutover and how you prove the new path before trusting it.</p>
+  </section>
+
+  <!-- 16 -->
+  <section id="assumptions">
+    <h2 class="sec">16 — Assumptions &amp; open decisions</h2>
+    <h3>Locked (say if you want them changed)</h3>
+    <ul class="tight">
+      <li>MQTT 5.0 (needed for native request/response).</li>
+      <li>Hybrid OTA: URL + hash over MQTT, ZIP over HTTPS.</li>
+      <li>QoS 1 + app-layer idempotency (not QoS 2).</li>
+      <li>Per-device identity is mandatory.</li>
+    </ul>
+    <h3>Still yours to decide</h3>
+    <ul class="tight">
+      <li><strong>Auth mechanism:</strong> mTLS (recommended) vs DB-backed username/password. Drives the provisioning pipeline.</li>
+      <li><strong>HA topology:</strong> Mosquitto active/passive failover vs migrating to a clustering broker (EMQX/VerneMQ/HiveMQ). Same contract either way.</li>
+      <li><strong>company slug:</strong> how the current login email maps to a stable <code>company</code> topic segment.</li>
+      <li><strong>Keep password login at all?</strong> With mTLS, <code>req/login</code> can disappear entirely.</li>
+      <li><strong>Config source of truth:</strong> keep <code>unitsetup.ini</code> locally, or make <code>cmd/config</code> (retained) authoritative.</li>
+    </ul>
+  </section>
+
+  <footer>
+    <p><strong>FP Analyzer — MQTT Architecture &amp; Migration Design</strong> · Generated August 20, 2026 · Target: 500+ units, self-hosted Mosquitto, MQTT 5.0.</p>
+    <p>This is a design proposal derived from the FP Analyzer v2.1.7 client behaviour and standard MQTT practice for fleets of this size. Topic names, QoS, and payloads are recommendations to ratify, not an existing implementation. Validate broker HA and the auth/provisioning pipeline against your ops constraints before fleet rollout.</p>
+  </footer>
+
+</div>
+</body>
+</html>

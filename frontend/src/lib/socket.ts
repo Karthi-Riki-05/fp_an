@@ -127,3 +127,56 @@ export interface ResyncSnapshotEvent {
   }>;
   ts: number;
 }
+
+// ── MQTT v2 fleet events ──────────────────────────────────────────────────────
+// Presence, OTA and integrity signals. These are per physical UNIT (one
+// Raspberry Pi), not per machine — a unit carries up to 4 machines on pins 1-4.
+
+export interface UnitPresenceEvent {
+  tenantId: number;
+  unitName: string;
+  online: boolean;
+  /** 'connect' | 'shutdown' | 'lwt' — 'lwt' means the unit dropped without saying goodbye. */
+  reason: string;
+  firmware: string | null;
+  ip: string | null;
+  ts: number;
+}
+
+export interface UnitOtaProgressEvent {
+  tenantId: number;
+  unitName: string;
+  state: 'downloading' | 'verifying' | 'applying' | 'success' | 'failed';
+  version: string | null;
+  detail: string | null;
+  cmdId: string | null;
+  ts: number;
+}
+
+/** Emitted when a unit's event sequence skips — events were lost in transit. */
+export interface SequenceGapEvent {
+  tenantId: number;
+  machineId: number;
+  unitName: string;
+  expected: number;
+  received: number;
+  missing: number;
+  ts: number;
+}
+
+export interface UnitSnapshotEvent {
+  tenantId: number;
+  unitName: string;
+  machines: Array<{
+    machineId: number;
+    pinNo: number;
+    reportedState: string | null;
+    dbState: string;
+    enabled: boolean;
+  }>;
+  /** Pins where the device and the database disagree — means events were lost. */
+  drift: UnitSnapshotEvent['machines'];
+  firmware: string | null;
+  droppedCount: number;
+  ts: number;
+}

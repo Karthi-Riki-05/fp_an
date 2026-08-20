@@ -1,0 +1,79 @@
+# Mosquitto — FP Analyzer MQTT v2 — DEVELOPMENT
+#
+# Identical auth to production (Postgres-backed, same PBKDF2 hashes, same ACL
+# rule) so dev exercises the real code path. The only difference is the
+# listener: plain 1883 instead of TLS 8883.
+#
+# Rendered from this template at container start by entrypoint.sh (envsubst),
+# because credentials must not be committed. Do not edit mosquitto.conf directly
+# inside the container — it is overwritten on every boot.
+#
+# Auth is mosquitto-go-auth backed by Postgres: the broker reads public.mqtt_devices
+# on every CONNECT and every publish/subscribe. Provisioning a unit is a single
+# INSERT — no passwd file, no ACL file, no SIGHUP. That is what scales to 500+.
+
+# ── listeners ────────────────────────────────────────────────────────────────
+# DEV ONLY — plain MQTT, no TLS. Never expose this beyond localhost.
+# Production uses mosquitto.conf.template (8883, TLS required).
+listener 1883
+protocol mqtt
+
+# ── auth ─────────────────────────────────────────────────────────────────────
+allow_anonymous false
+auth_plugin /mosquitto/go-auth.so
+auth_opt_backends postgres
+auth_opt_check_prefix false
+
+auth_opt_pg_host     ${MQTT_PG_HOST}
+auth_opt_pg_port     ${MQTT_PG_PORT}
+auth_opt_pg_dbname   ${MQTT_PG_DATABASE}
+auth_opt_pg_user     ${MQTT_PG_USER}
+auth_opt_pg_password ${MQTT_PG_PASSWORD}
+auth_opt_pg_sslmode  ${MQTT_PG_SSLMODE}
+auth_opt_pg_connect_tries 5
+
+# Password verification. Hashes are written by backend/src/services/mqtt-auth.service.js
+# in go-auth's PBKDF2 encoding: PBKDF2$sha512$<iters>$<b64 salt>$<b64 key>
+auth_opt_hasher pbkdf2
+auth_opt_hasher_algorithm sha512
+auth_opt_hasher_iterations 100000
+auth_opt_hasher_keylen 64
+auth_opt_hasher_salt_size 16
+auth_opt_hasher_salt_encoding base64
+
+auth_opt_pg_userquery  SELECT password_hash FROM public.mqtt_devices WHERE username = $1 AND disabled = false LIMIT 1
+auth_opt_pg_superquery SELECT COUNT(*) FROM public.mqtt_devices WHERE username = $1 AND is_superuser = true AND disabled = false
+
+# One rule enforces "own subtree only" across the whole fleet: the topic pattern
+# is built from the device's own row, so a unit physically cannot publish as
+# another unit. The backend bypasses this via superquery.
+auth_opt_pg_aclquery SELECT 'fp/' || company_id || '/' || unit_name || '/#' FROM public.mqtt_devices WHERE username = $1 AND disabled = false AND $2 >= 0
+
+# Cache auth results so a 500-unit reconnect storm does not become 500 DB round
+# trips per second. Short TTL keeps revocation reasonably prompt.
+auth_opt_cache true
+auth_opt_cache_type go-cache
+auth_opt_auth_cache_seconds 60
+auth_opt_acl_cache_seconds 60
+
+# ── persistence ──────────────────────────────────────────────────────────────
+# Required: this is what holds QoS-1 messages for units that are offline, and
+# what preserves sessions across a broker restart.
+persistence true
+persistence_location /mosquitto/data/
+autosave_interval 30
+
+# ── limits & scaling (see architecture doc §13) ──────────────────────────────
+max_connections -1
+max_inflight_messages 40
+max_queued_messages 10000
+message_size_limit 262144
+sys_interval 10
+
+# ── logging ──────────────────────────────────────────────────────────────────
+log_dest stdout
+log_type error
+log_type warning
+log_type notice
+log_type information
+connection_messages true

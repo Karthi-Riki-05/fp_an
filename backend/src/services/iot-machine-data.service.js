@@ -424,12 +424,15 @@ async function saveStopStart(tenant, dto) {
         );
       }
 
-      const ucMqttMsgId = dto.mqtt_message_id ?? dto.mqttMessageId ?? null;
       const ucInserted = await tx.$queryRawUnsafe(
-        `INSERT INTO machine_data (machine_id, start_time, is_registered, is_valid_data, mqtt_message_id)
-         VALUES ($1, $2::timestamptz, 'no'::tenant_template."MachineDataRegistration", false, $3)
+        `INSERT INTO machine_data
+            (machine_id, start_time, is_registered, is_valid_data, event_id, seq, buffered)
+         VALUES ($1, $2::timestamptz, 'no'::tenant_template."MachineDataRegistration", false, $3::uuid, $4, $5)
          RETURNING id::int AS id`,
-        machine.id, startTime, ucMqttMsgId,
+        machine.id, startTime,
+        dto.event_id ?? dto.eventId ?? null,
+        dto.seq ?? null,
+        dto.buffered === true,
       );
 
       await tx.$executeRawUnsafe(
@@ -472,12 +475,15 @@ async function saveStopStart(tenant, dto) {
     }
 
     // Persist the raw open stop row (end_time stays NULL until installV1 closes it).
-    const mqttMessageId = dto.mqtt_message_id ?? dto.mqttMessageId ?? null;
     const inserted = await tx.$queryRawUnsafe(
-      `INSERT INTO machine_data (machine_id, start_time, is_registered, is_valid_data, mqtt_message_id)
-       VALUES ($1, $2::timestamptz, 'no'::tenant_template."MachineDataRegistration", true, $3)
+      `INSERT INTO machine_data
+          (machine_id, start_time, is_registered, is_valid_data, event_id, seq, buffered)
+       VALUES ($1, $2::timestamptz, 'no'::tenant_template."MachineDataRegistration", true, $3::uuid, $4, $5)
        RETURNING id::int AS id`,
-      machine.id, startTime, mqttMessageId,
+      machine.id, startTime,
+      dto.event_id ?? dto.eventId ?? null,
+      dto.seq ?? null,
+      dto.buffered === true,
     );
 
     const updated = await tx.$queryRawUnsafe(

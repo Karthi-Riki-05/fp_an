@@ -1437,7 +1437,10 @@
     "mqtt_id": "MQTT-klient-ID",
     "socket_connected": "Socket ansluten",
     "socket_disconnected": "Socket frånkopplad",
-    "joined_tenants": "Övervakar {count} företag"
+    "joined_tenants": "Övervakar {count} företag",
+    "iot": "IoT",
+    "iot_units": "IoT-enheter",
+    "iot_firmware": "IoT-firmware"
   },
   "nav": {
     "administration": "Administrationspanel",
