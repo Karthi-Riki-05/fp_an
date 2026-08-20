@@ -27,6 +27,13 @@ ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 COPY --from=deps /app/node_modules ./node_modules
 COPY frontend/ ./
+# Node's default heap is sized from available RAM and overshoots on small
+# instances: on a 2 GB box the build OOMs with "Ineffective mark-compacts near
+# heap limit". Cap it below physical RAM so V8 collects instead of dying, and
+# let swap absorb the peak. Override with --build-arg NODE_BUILD_MEMORY=4096 on
+# a larger builder.
+ARG NODE_BUILD_MEMORY=1536
+ENV NODE_OPTIONS="--max-old-space-size=${NODE_BUILD_MEMORY}"
 RUN npm run build
 
 # ---- production runtime (Next.js standalone output) ------------------------
