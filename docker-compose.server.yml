@@ -53,10 +53,12 @@ services:
     healthcheck:
       # Authenticates as the backend service account over TLS — proves the
       # listener, the certificate chain, and the Postgres auth path all work.
+      # Verifies the hostname too: the server cert carries localhost as a SAN
+      # (see gen-certs.sh), so a broken chain fails the check instead of passing.
       test:
         - CMD-SHELL
         - >-
-          mosquitto_pub -h localhost -p 8883 --cafile /mosquitto/certs/ca.crt --insecure
+          mosquitto_pub -h localhost -p 8883 --cafile /mosquitto/certs/ca.crt
           -t 'health/broker' -m 'ok'
           -u "$$MQTT_USERNAME" -P "$$MQTT_PASSWORD" || exit 1
       interval: 30s
