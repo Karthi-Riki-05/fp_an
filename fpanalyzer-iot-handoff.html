@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FP Analyzer — IoT Firmware Integration Guide</title>
+<style>
+  :root{
+    --brand:#00768D; --brand-dark:#025b6d; --brand-light:#e6f3f6;
+    --ink:#1a2327; --muted:#5b6b71; --line:#dce5e8; --bg:#f4f7f8; --card:#ffffff;
+    --up:#0a7d4d; --down:#7a4bd0; --code-bg:#0f2b31; --code-ink:#e8f2f4;
+    --warn-bg:#fff6e5; --warn-line:#e0a72e; --warn-ink:#8a5a00;
+    --danger-bg:#fdeceb; --danger-line:#d64027; --danger-ink:#9c2013;
+    --ok-bg:#e8f6ee; --ok-line:#1a9c56; --ok-ink:#0d6b38;
+    --info-bg:#eaf3fb; --info-line:#2f7fd1; --info-ink:#1c4e80;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);background:var(--bg);line-height:1.6;font-size:15px}
+  header.top{background:linear-gradient(135deg,var(--brand) 0%,var(--brand-dark) 100%);color:#fff;padding:34px 40px 30px}
+  header.top h1{margin:0 0 6px;font-size:26px;font-weight:700;letter-spacing:.2px}
+  header.top .sub{opacity:.93;font-size:14.5px;max-width:880px}
+  .tags{margin-top:16px;display:flex;flex-wrap:wrap;gap:8px}
+  .tag{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);border-radius:999px;
+    padding:4px 12px;font-size:12.5px;font-family:"SFMono-Regular",Consolas,monospace}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 24px 80px}
+  nav.toc{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 22px;margin:26px 0}
+  nav.toc h2{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted)}
+  nav.toc ol{margin:0;padding-left:20px;columns:2;column-gap:34px}
+  nav.toc li{margin:3px 0}
+  nav.toc a{color:var(--brand);text-decoration:none} nav.toc a:hover{text-decoration:underline}
+  section{margin:36px 0}
+  h2.sec{font-size:20px;border-bottom:2px solid var(--brand-light);padding-bottom:8px;margin:0 0 16px;color:var(--brand-dark)}
+  h3{font-size:15.5px;color:var(--brand-dark);margin:22px 0 6px}
+  h4{font-size:14px;color:var(--ink);margin:18px 0 4px}
+  p{margin:10px 0}
+  code,.mono{font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;font-size:13px}
+  code.inline{background:var(--brand-light);color:var(--brand-dark);padding:1px 6px;border-radius:5px}
+  pre{background:var(--code-bg);color:var(--code-ink);border-radius:10px;padding:14px 16px;overflow-x:auto;
+    font-size:12.6px;line-height:1.55;margin:12px 0}
+  pre .cmt{color:#7fb8c4} pre .k{color:#8fd0dc} pre .s{color:#c6e6a0}
+  .tablewrap{overflow-x:auto;margin:10px 0}
+  table{width:100%;border-collapse:collapse;font-size:13.3px}
+  th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:var(--brand-light);color:var(--brand-dark);font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+  td code{background:#eef3f4;padding:1px 5px;border-radius:4px}
+  .callout{border-radius:10px;padding:12px 15px;margin:14px 0;font-size:13.5px;border-left:4px solid}
+  .callout .lbl{font-weight:700;display:block;margin-bottom:3px;font-size:12.5px;letter-spacing:.3px}
+  .callout.warn{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn-ink)}
+  .callout.danger{background:var(--danger-bg);border-color:var(--danger-line);color:var(--danger-ink)}
+  .callout.ok{background:var(--ok-bg);border-color:var(--ok-line);color:var(--ok-ink)}
+  .callout.info{background:var(--info-bg);border-color:var(--info-line);color:var(--info-ink)}
+  .dir{display:inline-block;font-family:"SFMono-Regular",Consolas,monospace;font-weight:700;font-size:11px;
+    color:#fff;padding:3px 8px;border-radius:5px;letter-spacing:.3px;white-space:nowrap}
+  .dir.up{background:var(--up)} .dir.down{background:var(--down)}
+  .diagram{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px;margin:16px 0;overflow-x:auto}
+  .diagram pre{background:transparent;color:var(--ink);padding:0;margin:0;font-size:12.2px;line-height:1.5}
+  .lead{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:10px;padding:14px 18px;margin:18px 0}
+  .pill{display:inline-block;background:var(--brand-light);color:var(--brand-dark);border-radius:6px;padding:1px 7px;
+    font-family:"SFMono-Regular",Consolas,monospace;font-size:12px}
+  .req{color:var(--danger-ink);font-weight:700;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px}
+  .opt{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.4px}
+  ul.tight{margin:8px 0;padding-left:22px} ul.tight li{margin:5px 0}
+  ol.steps{margin:10px 0;padding-left:22px} ol.steps li{margin:8px 0}
+  footer{color:var(--muted);font-size:12.5px;border-top:1px solid var(--line);margin-top:44px;padding-top:18px}
+  @media(max-width:720px){nav.toc ol{columns:1}header.top{padding:26px 22px}.wrap{padding:0 16px 60px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>FP Analyzer — IoT Firmware Integration Guide</h1>
+  <div class="sub">
+    Everything the Raspberry Pi firmware needs in order to talk to the FP Analyzer server:
+    how to connect, what to publish, what to subscribe to, and the rules that decide whether
+    a machine stop is recorded correctly or silently lost.
+  </div>
+  <div class="tags">
+    <span class="tag">MQTT 5.0</span>
+    <span class="tag">TLS 8883</span>
+    <span class="tag">Mosquitto + Postgres auth</span>
+    <span class="tag">per-unit topics</span>
+    <span class="tag">server implemented &amp; tested</span>
+    <span class="tag">21 Aug 2026</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+<div class="lead">
+  <strong>Read this before writing firmware.</strong> This document describes what the server
+  <em>actually implements</em>, verified against a live broker and database. It supersedes
+  <code class="inline">fpanalyzer-mqtt-architecture.html</code> wherever the two differ — that document
+  was the design we built from, and four things were changed deliberately (see §2).
+</div>
+
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">What the server does</a></li>
+    <li><a href="#changes">What changed from your design</a></li>
+    <li><a href="#connect">Connection parameters</a></li>
+    <li><a href="#creds">Getting credentials</a></li>
+    <li><a href="#flow">The lifecycle, step by step</a></li>
+    <li><a href="#topics">Topic reference</a></li>
+    <li><a href="#evt">evt/machine — the only data event</a></li>
+    <li><a href="#status">status/conn and status/machines</a></li>
+    <li><a href="#req">req/resp — asking the server</a></li>
+    <li><a href="#cmd">cmd/* — commands from the server</a></li>
+    <li><a href="#ota">Firmware updates</a></li>
+    <li><a href="#rules">Five rules that cause most bugs</a></li>
+    <li><a href="#python">Reference implementation</a></li>
+    <li><a href="#test">Testing without firmware</a></li>
+    <li><a href="#trouble">Troubleshooting</a></li>
+    <li><a href="#weneed">What we need from you</a></li>
+  </ol>
+</nav>
+
+<!-- 1 -->
+<section id="overview">
+  <h2 class="sec">1 — What the server does</h2>
+  <p>
+    The server records <strong>machine downtime</strong>. A machine stops, the Pi reports it, a stop
+    record opens. The machine restarts, the Pi reports that, the record closes and the duration
+    becomes downtime in the OEE reports. Everything else in this document exists to make that one
+    thing reliable when the network is not.
+  </p>
+
+  <div class="diagram">
+<pre>
+  Factory floor                          Cloud
+  ┌──────────────────────┐
+  │ GPIO producer   ─┐   │   TLS 8883    ┌────────────┐    ┌──────────────────┐
+  │ local queue     ─┼───┼──────────────▶│ Mosquitto  │───▶│ Express backend  │──▶ Postgres
+  │ MQTT 5 client  ◀─┘   │  (QoS 1,      │  broker    │◀───│ (idempotent)     │──▶ dashboard
+  │  (own thread)        │  persistent)  └────────────┘    └──────────────────┘     (WebSocket)
+  └──────────────────────┘
+        one per Pi                  auth against public.mqtt_devices
+</pre>
+  </div>
+
+  <div class="callout ok">
+    <span class="lbl">One credential per Pi, not per machine</span>
+    A Pi carries up to four machines on pins 1–4. It opens <strong>one</strong> MQTT connection with
+    <strong>one</strong> username, and <code class="inline">pin_no</code> inside the payload says which
+    machine an event belongs to. This is the biggest structural change from the old HTTP firmware.
+  </div>
+</section>
+
+<!-- 2 -->
+<section id="changes">
+  <h2 class="sec">2 — What changed from your design</h2>
+  <p>Most of your architecture document was adopted as written: the unified ON/OFF event, client-generated
+     <code class="inline">event_id</code> for idempotency, LWT presence, the durable local queue, hybrid OTA,
+     and the three-thread fault-isolation model. Four things differ.</p>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Your design</th><th>What the server implements</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>fp/{company-slug}/{unit}/…</code></td>
+        <td><code>fp/{companyId}/{unit}/…</code> — an <strong>integer</strong></td>
+        <td>That integer <em>is</em> the tenant id; it selects the Postgres schema directly. A slug would need a lookup table that buys nothing.</td>
+      </tr>
+      <tr>
+        <td>Per-device X.509 (mTLS)</td>
+        <td><strong>Username + password over TLS</strong></td>
+        <td>Credentials live in Postgres and are individually revocable, which was the actual requirement. Topics and ACLs do not change if we move to mTLS later.</td>
+      </tr>
+      <tr>
+        <td>First-boot enrollment over MQTT</td>
+        <td><strong>Provisioned out of band</strong></td>
+        <td>A factory-fresh unit has no broker credentials, so it cannot connect at all. Everything after provisioning is MQTT.</td>
+      </tr>
+      <tr>
+        <td><code>req/login</code> returns an auth result</td>
+        <td>Stub that always succeeds</td>
+        <td>Reaching the topic already required valid broker credentials — the connection <em>is</em> the authentication.</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- 3 -->
+<section id="connect">
+  <h2 class="sec">3 — Connection parameters</h2>
+  <div class="tablewrap">
+  <table>
+    <tbody>
+      <tr><th>Broker</th><td><code>mqtts://dev.fpanalyzer.se:8883</code></td></tr>
+      <tr><th>TLS</th><td><strong>Required.</strong> There is no plain-text listener.</td></tr>
+      <tr><th>CA certificate</th><td>We issue it — a private CA, not a public one. Install as <code>/etc/fpanalyzer/ca.crt</code>.</td></tr>
+      <tr><th>Protocol</th><td>MQTT 5.0 preferred; 3.1.1 also works</td></tr>
+      <tr><th>Username</th><td><code>fp-{companyId}-{unitName}</code> — we issue this</td></tr>
+      <tr><th>Password</th><td>32 random bytes — we issue this, shown once</td></tr>
+      <tr><th>Client ID</th><td><strong>exactly the username</strong> — a mismatch is refused</td></tr>
+      <tr><th>Clean Start</th><td><code>false</code></td></tr>
+      <tr><th>Session Expiry</th><td><code>86400</code> (24 h)</td></tr>
+      <tr><th>Keep Alive</th><td><code>60</code> s</td></tr>
+      <tr><th>Receive Maximum</th><td>20–40</td></tr>
+      <tr><th>HTTP API base</th><td><code>https://dev.fpanalyzer.se/api/v1/machine/</code> — note <code>/api/v1/</code>, not <code>/api/</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout warn">
+    <span class="lbl">Your ACL confines you to your own subtree</span>
+    You may publish and subscribe only under <code class="inline">fp/{companyId}/{unitName}/#</code>.
+    We tested this: a valid unit publishing into another company's subtree is dropped by the broker and
+    never reaches the backend. The server also refuses to reply to a Response Topic outside your subtree.
+  </div>
+</section>
+
+<!-- 4 -->
+<section id="creds">
+  <h2 class="sec">4 — Getting credentials</h2>
+  <p>An administrator provisions each physical unit, either in the admin UI
+     (<em>IoT → IoT units → Add unit</em>) or on the server:</p>
+<pre><span class="cmt"># issues credentials for one Raspberry Pi</span>
+node backend/scripts/provision-mqtt-unit.js 11 UNIT-01</pre>
+  <p>You receive three things per Pi:</p>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Item</th><th>Example</th><th>Where it goes</th></tr></thead>
+    <tbody>
+      <tr><td>username / client id</td><td><code>fp-11-UNIT-01</code></td><td>MQTT CONNECT</td></tr>
+      <tr><td>password</td><td><code>kJ8x2mQ…</code> (32 chars)</td><td>MQTT CONNECT — <strong>shown once, not recoverable</strong></td></tr>
+      <tr><td>CA certificate</td><td><code>ca.crt</code></td><td><code>/etc/fpanalyzer/ca.crt</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Revocation takes effect within about 60 seconds (the broker caches auth results for that long).
+     Re-provisioning a unit issues a new password that must be entered on the device.</p>
+</section>
+
+<!-- 5 -->
+<section id="flow">
+  <h2 class="sec">5 — The lifecycle, step by step</h2>
+
+  <h3>Once, before the Pi ships</h3>
+  <p>An administrator provisions the unit and you write the username, password and <code class="inline">ca.crt</code>
+     onto the device. Nothing is needed from the firmware at this stage.</p>
+
+  <h3>Every boot</h3>
+  <ol class="steps">
+    <li><strong>Sync the clock.</strong> NTP, before the first publish. See §12 — this matters more than it looks.</li>
+    <li><strong>Register the Last Will</strong> <em>before</em> calling connect:
+      <pre>topic   fp/{companyId}/{unit}/status/conn      retain=true  qos=1
+payload {"online": false, "reason": "lwt"}</pre>
+    </li>
+    <li><strong>Connect</strong> over TLS 8883, <code class="inline">clean_start=false</code>, client id = username.</li>
+    <li><strong>Publish presence</strong>, retained, which overwrites the stored Last Will:
+      <pre>fp/{companyId}/{unit}/status/conn
+{"online": true, "reason": "connect", "fw": "2.1.7", "ip": "192.168.1.7"}</pre>
+    </li>
+    <li><strong>Subscribe</strong> to <code class="inline">fp/{companyId}/{unit}/resp/#</code> and
+        <code class="inline">fp/{companyId}/{unit}/cmd/#</code>.</li>
+    <li><strong>Publish a retained pin snapshot</strong> to <code class="inline">status/machines</code>.</li>
+    <li><em>Optional:</em> ask <code class="inline">req/version</code> whether an update applies.</li>
+  </ol>
+
+  <h3>While running</h3>
+  <div class="diagram">
+<pre>
+  GPIO transition
+     │
+     ├─▶ stamp UTC time + generate a UUIDv4  ← at CAPTURE, never at send time
+     ├─▶ write the event to the local SQLite queue
+     ├─▶ MQTT thread publishes fp/{c}/{u}/evt/machine  qos=1
+     └─▶ delete the queue row ONLY after PUBACK
+</pre>
+  </div>
+
+  <h3>When the network drops</h3>
+  <p>Keep capturing. Keep queuing. Machine monitoring must never stop because the network did.
+     On reconnect, drain the queue oldest-first with <code class="inline">buffered: true</code>
+     and the <strong>original</strong> <code class="inline">ts</code> and
+     <code class="inline">event_id</code>.</p>
+  <p>Reconnect with randomized exponential backoff — base 1 s, ×2, cap 60 s, ±20 % jitter.
+     With hundreds of units this is not optional; without it the broker gets hammered exactly when
+     it is weakest.</p>
+
+  <h3>On power loss</h3>
+  <p>Nothing to do. The broker publishes your Last Will automatically after roughly 1.5× keepalive
+     (~90 s), and the dashboard shows the unit offline.</p>
+</section>
+
+<!-- 6 -->
+<section id="topics">
+  <h2 class="sec">6 — Topic reference</h2>
+  <p>All topics are <code class="inline">fp/{companyId}/{unitName}/{class}/{name}</code>.
+     <code class="inline">companyId</code> is an integer we give you;
+     <code class="inline">unitName</code> is the unit's name, 1–50 characters of
+     <code class="inline">A–Z a–z 0–9 . _ -</code>, stable for the life of the device.</p>
+
+  <h3>Device → server</h3>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Topic</th><th>Dir</th><th>QoS</th><th>Retain</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>…/evt/machine</code></td><td><span class="dir up">▲ UP</span></td><td>1</td><td>no</td><td>Machine ON/OFF transition — <strong>the only event carrying data</strong></td></tr>
+      <tr><td><code>…/evt/ota</code></td><td><span class="dir up">▲ UP</span></td><td>1</td><td>no</td><td>Firmware update progress</td></tr>
+      <tr><td><code>…/status/conn</code></td><td><span class="dir up">▲ UP</span></td><td>1</td><td><strong>yes</strong></td><td>Presence; also the Last Will</td></tr>
+      <tr><td><code>…/status/machines</code></td><td><span class="dir up">▲ UP</span></td><td>1</td><td><strong>yes</strong></td><td>Snapshot of all four pins</td></tr>
+      <tr><td><code>…/req/register</code></td><td><span class="dir up">▲ UP</span></td><td>1</td><td>no</td><td>Get the machine id for a pin</td></tr>
+      <tr><td><code>…/req/version</code></td><td><span class="dir up">▲ UP</span></td><td>1</td><td>no</td><td>Ask whether an update applies</td></tr>
+      <tr><td><code>…/req/login</code></td><td><span class="dir up">▲ UP</span></td><td>1</td><td>no</td><td>Compatibility stub, always succeeds</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Server → device — subscribe to these</h3>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Topic</th><th>Dir</th><th>QoS</th><th>Retain</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>…/resp/{op}</code></td><td><span class="dir down">▼ DOWN</span></td><td>1</td><td>no</td><td>Reply to <code>req/{op}</code></td></tr>
+      <tr><td><code>…/cmd/config</code></td><td><span class="dir down">▼ DOWN</span></td><td>1</td><td><strong>yes</strong></td><td>Pin enable flags + debounce windows</td></tr>
+      <tr><td><code>…/cmd/ota</code></td><td><span class="dir down">▼ DOWN</span></td><td>1</td><td>no</td><td>Firmware URL + SHA-256</td></tr>
+      <tr><td><code>…/cmd/reboot</code></td><td><span class="dir down">▼ DOWN</span></td><td>1</td><td>no</td><td>Delayed restart</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout info">
+    <span class="lbl">Anything else is ignored</span>
+    The backend consumes only the topics above. Publishing to another topic under your own subtree is
+    accepted by the broker and silently dropped by the server — no error will come back.
+  </div>
+</section>
+
+<!-- 7 -->
+<section id="evt">
+  <h2 class="sec">7 — <code>evt/machine</code> — the only data event</h2>
+<pre>fp/11/UNIT-01/evt/machine        <span class="cmt">qos 1, retain false</span>
+{
+  "event_id": "9f2c1b7a-4c31-4a6e-9c21-1d5f0b7a2e11",
+  "seq":      10432,
+  "pin_no":   1,
+  "state":    "OFF",
+  "ts":       "2026-08-21T10:00:00.000Z",
+  "buffered": false,
+  "fw":       "2.1.7"
+}</pre>
+
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Field</th><th>Required</th><th>Rules</th></tr></thead>
+    <tbody>
+      <tr><td><code>event_id</code></td><td><span class="req">yes</span></td>
+          <td>UUIDv4, lowercase. Generated <strong>once at capture</strong> and reused on every retry and
+              replay. This is the deduplication key — the single most important field in this document.</td></tr>
+      <tr><td><code>seq</code></td><td><span class="opt">recommended</span></td>
+          <td>Monotonic per unit, persisted across reboots. Gaps are detected and surfaced on the dashboard
+              as lost events.</td></tr>
+      <tr><td><code>pin_no</code></td><td><span class="req">yes</span></td>
+          <td>Integer 1–4. Anything else is rejected outright.</td></tr>
+      <tr><td><code>state</code></td><td><span class="req">yes</span></td>
+          <td><code>"ON"</code> or <code>"OFF"</code>, case-insensitive.
+              <strong>OFF = machine stopped. ON = machine restarted.</strong></td></tr>
+      <tr><td><code>ts</code></td><td><span class="req">yes</span></td>
+          <td>ISO-8601 <strong>UTC with milliseconds and a <code>Z</code> suffix</strong>. Stamped at GPIO
+              capture, never at send time. Rejected if before 2020 or more than 24 h in the future.</td></tr>
+      <tr><td><code>buffered</code></td><td><span class="opt">optional</span></td>
+          <td><code>true</code> when replayed from the local queue. Defaults to false.</td></tr>
+      <tr><td><code>fw</code></td><td><span class="opt">optional</span></td>
+          <td>Firmware version string; also updates the unit's reported version.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>What the server does with it</h3>
+  <ul class="tight">
+    <li><strong><code>state: "OFF"</code></strong> → opens a stop record with <code class="inline">start_time = ts</code>.</li>
+    <li><strong><code>state: "ON"</code></strong> → closes the most recent open stop record with <code class="inline">end_time = ts</code> and computes the duration.</li>
+    <li>A unit+pin the server has never seen is <strong>created automatically</strong> as an unconfigured
+        machine and appears in the admin list awaiting assignment. No registration call is needed.</li>
+  </ul>
+
+  <div class="callout ok">
+    <span class="lbl">The ON event does not need to know when the stop began</span>
+    There is no timestamp matching anywhere. The old firmware had to repeat the exact
+    <code class="inline">start_time</code> string on the restart message, and if it did not match
+    byte-for-byte the wrong record was closed. That whole class of bug is gone.
+  </div>
+</section>
+
+<!-- 8 -->
+<section id="status">
+  <h2 class="sec">8 — <code>status/conn</code> and <code>status/machines</code></h2>
+
+  <h3>status/conn — presence</h3>
+  <p>Publish <strong>retained</strong>, QoS 1, immediately after connecting. On a clean shutdown publish
+     <code class="inline">{"online": false, "reason": "shutdown"}</code> then disconnect cleanly.</p>
+<pre>{"online": true, "reason": "connect", "fw": "2.1.7", "ip": "192.168.1.7"}</pre>
+  <p>This replaces the old 180-second HTTP heartbeat entirely. <strong>Do not poll.</strong></p>
+
+  <h3>status/machines — snapshot</h3>
+  <p>Publish <strong>retained</strong>, QoS 1, after connect and whenever pin configuration changes.</p>
+<pre>{
+  "fw": "2.1.7",
+  "dropped_count": 0,
+  "machines": [
+    {"pin_no": 1, "state": "ON",  "enabled": true},
+    {"pin_no": 2, "state": "OFF", "enabled": true},
+    {"pin_no": 3, "state": "OFF", "enabled": false},
+    {"pin_no": 4, "state": "ON",  "enabled": true}
+  ]
+}</pre>
+  <p><code class="inline">dropped_count</code> is your local buffer overflow counter. Report it; never
+     drop events silently. The dashboard shows it as a warning against the unit.</p>
+  <div class="callout warn">
+    <span class="lbl">Drift is logged, not reconciled</span>
+    If your reported state disagrees with the database, the server logs it and flags the unit but does
+    <strong>not</strong> correct the records — inventing transitions that never happened would corrupt
+    downtime reporting. Drift means events were lost; it should be investigated, not papered over.
+  </div>
+</section>
+
+<!-- 9 -->
+<section id="req">
+  <h2 class="sec">9 — <code>req/resp</code> — asking the server</h2>
+  <p>Publish to <code class="inline">req/{op}</code>. On MQTT 5 set <strong>Response Topic</strong>
+     (must be inside your own subtree) and <strong>Correlation Data</strong>; the server echoes both.
+     On 3.1.1 omit them — the reply lands on <code class="inline">resp/{op}</code> and
+     <code class="inline">req_id</code> is echoed in the body.</p>
+  <p>Timeout 10 s, retry 3× with backoff. If no reply arrives, carry on with last-known values and retry
+     later. <strong>Never block machine capture on a reply.</strong></p>
+
+  <h4>req/register — get the machine id for a pin</h4>
+<pre>→ {"req_id": "c7a1…", "pin_no": 1, "fw": "2.1.7", "ip": "192.168.1.7"}
+← {"req_id": "c7a1…", "success": true, "pin_no": 1, "machine_id": 125, "configured": true}</pre>
+  <p>Idempotent — asking twice returns the same id. <code class="inline">configured: false</code> means no
+     operator has bound the machine to equipment yet; <strong>keep reporting events anyway</strong>, they
+     are stored and become valid once binding happens.</p>
+  <p>You do not strictly need this call — <code class="inline">evt/machine</code> resolves the machine from
+     <code class="inline">(unit, pin_no)</code> on its own. Use it if you want the id for local display.</p>
+
+  <h4>req/version — should I update?</h4>
+<pre>→ {"req_id": "d1b2…", "fw": "2.1.7"}
+← {"req_id": "d1b2…", "success": true, "update_available": true,
+   "version": "2.1.8", "url": "https://…/fp_2.1.8.zip",
+   "sha256": "e3b0c442…", "size": 10485760, "notes": "…", "mandatory": false}</pre>
+  <div class="callout danger">
+    <span class="lbl">Do no version arithmetic on the device</span>
+    The server decides. Act on <code class="inline">update_available</code> alone. The old firmware
+    compared version strings, which is why every <code class="inline">x.y.10</code> release was missed —
+    <code class="inline">"2.1.10" &lt; "2.1.9"</code> as text.
+  </div>
+</section>
+
+<!-- 10 -->
+<section id="cmd">
+  <h2 class="sec">10 — <code>cmd/*</code> — commands from the server</h2>
+  <p>Subscribe to <code class="inline">fp/{companyId}/{unit}/cmd/#</code> after connecting.</p>
+  <div class="callout danger">
+    <span class="lbl">Hard rule: the MQTT thread never touches GPIO</span>
+    Validate the command, hand it to the control thread through a queue, and let that thread apply it.
+    A malformed or hostile command must not be able to drive a relay from the network path.
+    This is your own §12 — we are holding you to it.
+  </div>
+
+  <h4>cmd/config — retained</h4>
+<pre>{"cmd_id": "…", "off_on_ms": 100, "on_off_ms": 100,
+ "pins": {"1": true, "2": true, "3": false, "4": true}}</pre>
+  <p>Retained, so a rebooting unit receives current settings on subscribe without asking. Only keys
+     present are being changed. Pin keys outside 1–4 are stripped server-side.</p>
+
+  <h4>cmd/reboot</h4>
+<pre>{"cmd_id": "…", "delay_s": 5}</pre>
+</section>
+
+<!-- 11 -->
+<section id="ota">
+  <h2 class="sec">11 — Firmware updates</h2>
+  <p>The URL rides MQTT; the bytes ride HTTPS. The binary is never chunked over the broker.</p>
+<pre>fp/11/UNIT-01/cmd/ota
+{"cmd_id": "…", "version": "2.1.8",
+ "url": "https://dev.fpanalyzer.se/downloads/fp_2.1.8.zip",
+ "sha256": "e3b0c442…", "size": 10485760, "force": false}</pre>
+
+  <p>Required device behaviour, in order:</p>
+  <ol class="steps">
+    <li>Download over HTTPS, streaming, treating <code class="inline">size</code> as an upper bound.</li>
+    <li>Compute SHA-256 and <strong>abort unless it matches</strong>.</li>
+    <li>Extract to a staging directory, swap a <code class="inline">current</code> symlink, then reboot.
+        Never extract in place — a half-download must not brick the unit.</li>
+    <li>Report each step on <code class="inline">evt/ota</code>.</li>
+  </ol>
+
+  <h4>evt/ota — progress</h4>
+<pre>{"cmd_id": "…", "state": "verifying", "version": "2.1.8", "detail": "sha256 ok"}</pre>
+  <p><code class="inline">state</code> is one of <code class="inline">downloading</code>,
+     <code class="inline">verifying</code>, <code class="inline">applying</code>,
+     <code class="inline">success</code>, <code class="inline">failed</code>. Anything else is ignored.
+     On failure put the reason in <code class="inline">detail</code> — it is shown in the admin fleet view.</p>
+
+  <div class="callout danger">
+    <span class="lbl">The hash check is mandatory</span>
+    The install path runs as root. The server refuses to publish a release without a SHA-256, and the
+    device must refuse to install one. This closes the unverified-package finding in your own API audit.
+  </div>
+</section>
+
+<!-- 12 -->
+<section id="rules">
+  <h2 class="sec">12 — Five rules that cause most bugs</h2>
+  <ol class="steps">
+    <li><strong><code>event_id</code> must survive a reboot.</strong> Write the event to the queue with its
+        UUID <em>before</em> publishing, and delete the row only after PUBACK. A fresh UUID on retry
+        creates a duplicate record; the same one is absorbed silently. This is the entire deduplication
+        mechanism.</li>
+    <li><strong>UTC only, with milliseconds and a <code>Z</code>.</strong> The old firmware sent local time
+        on one code path and UTC on another, with no timezone marker. Everything is UTC now.</li>
+    <li><strong>Sync NTP at boot.</strong> <code class="inline">ts</code> is capture time and the server
+        does <em>not</em> reject old timestamps — buffered replay depends on that. But a clock that is
+        wrong by hours produces wrong reports with no error anywhere. This is the failure mode most likely
+        to waste a day.</li>
+    <li><strong>Client ID must equal the username.</strong> Not similar — identical. A mismatch is refused
+        at CONNECT.</li>
+    <li><strong>Persist <code>seq</code> across reboots.</strong> Otherwise every restart looks like a gap
+        and the dashboard reports lost events that were never lost.</li>
+  </ol>
+</section>
+
+<!-- 13 -->
+<section id="python">
+  <h2 class="sec">13 — Reference implementation</h2>
+  <p>Skeleton only — the queue and GPIO layers are yours.</p>
+<pre><span class="k">import</span> json, time, uuid
+<span class="k">import</span> paho.mqtt.client <span class="k">as</span> mqtt
+
+COMPANY_ID, UNIT = <span class="s">11</span>, <span class="s">"UNIT-01"</span>
+USER = <span class="s">f"fp-{COMPANY_ID}-{UNIT}"</span>
+BASE = <span class="s">f"fp/{COMPANY_ID}/{UNIT}"</span>
+FW   = <span class="s">"2.1.7"</span>
+
+c = mqtt.Client(client_id=USER, clean_session=<span class="k">False</span>, protocol=mqtt.MQTTv5)
+c.username_pw_set(USER, PASSWORD)
+c.tls_set(ca_certs=<span class="s">"/etc/fpanalyzer/ca.crt"</span>)
+
+<span class="cmt"># Last Will registered BEFORE connect. ts is omitted deliberately: the broker</span>
+<span class="cmt"># fires this minutes later, so any timestamp we wrote here would be wrong.</span>
+c.will_set(<span class="s">f"{BASE}/status/conn"</span>,
+           json.dumps({<span class="s">"online"</span>: <span class="k">False</span>, <span class="s">"reason"</span>: <span class="s">"lwt"</span>}),
+           qos=<span class="s">1</span>, retain=<span class="k">True</span>)
+
+c.connect(<span class="s">"dev.fpanalyzer.se"</span>, <span class="s">8883</span>, keepalive=<span class="s">60</span>)
+c.loop_start()
+c.subscribe([(<span class="s">f"{BASE}/resp/#"</span>, <span class="s">1</span>), (<span class="s">f"{BASE}/cmd/#"</span>, <span class="s">1</span>)])
+c.publish(<span class="s">f"{BASE}/status/conn"</span>,
+          json.dumps({<span class="s">"online"</span>: <span class="k">True</span>, <span class="s">"reason"</span>: <span class="s">"connect"</span>, <span class="s">"fw"</span>: FW}),
+          qos=<span class="s">1</span>, retain=<span class="k">True</span>)
+
+<span class="k">def</span> utc_now():
+    <span class="k">return</span> time.strftime(<span class="s">"%Y-%m-%dT%H:%M:%S.000Z"</span>, time.gmtime())
+
+<span class="k">def</span> on_gpio_change(pin_no, is_running):
+    <span class="cmt"># Identity and time are stamped HERE, at capture — never at send time.</span>
+    event = {
+        <span class="s">"event_id"</span>: str(uuid.uuid4()),
+        <span class="s">"seq"</span>:      next_seq(),        <span class="cmt"># monotonic, persisted to disk</span>
+        <span class="s">"pin_no"</span>:   pin_no,
+        <span class="s">"state"</span>:    <span class="s">"ON"</span> <span class="k">if</span> is_running <span class="k">else</span> <span class="s">"OFF"</span>,
+        <span class="s">"ts"</span>:       utc_now(),
+        <span class="s">"buffered"</span>: <span class="k">False</span>,
+        <span class="s">"fw"</span>:       FW,
+    }
+    queue_insert(event)                     <span class="cmt"># persist BEFORE publishing</span>
+
+<span class="k">def</span> drain_queue():
+    <span class="k">for</span> row <span class="k">in</span> queue_oldest_first():
+        info = c.publish(<span class="s">f"{BASE}/evt/machine"</span>, json.dumps(row), qos=<span class="s">1</span>)
+        info.wait_for_publish()
+        queue_delete(row[<span class="s">"event_id"</span>])      <span class="cmt"># only after PUBACK</span></pre>
+</section>
+
+<!-- 14 -->
+<section id="test">
+  <h2 class="sec">14 — Testing without firmware</h2>
+  <p>You can exercise the whole server path from a laptop with <code class="inline">mosquitto_pub</code>
+     before any firmware exists.</p>
+<pre><span class="cmt"># replace COMPANY_ID, UNIT and PASSWORD with your provisioned values</span>
+export C=11 U=UNIT-01 PW='your-password'
+export OPTS="-h dev.fpanalyzer.se -p 8883 --cafile /etc/fpanalyzer/ca.crt -u fp-$C-$U -P $PW"
+
+<span class="cmt"># 1. come online (retained)</span>
+mosquitto_pub $OPTS -t "fp/$C/$U/status/conn" -q 1 -r \
+  -m '{"online":true,"reason":"connect","fw":"2.1.7"}'
+
+<span class="cmt"># 2. machine on pin 1 stops</span>
+mosquitto_pub $OPTS -t "fp/$C/$U/evt/machine" -q 1 \
+  -m "{\"event_id\":\"$(uuidgen | tr 'A-Z' 'a-z')\",\"seq\":1,\"pin_no\":1,\
+\"state\":\"OFF\",\"ts\":\"$(date -u +%Y-%m-%dT%H:%M:%S.000Z)\",\"buffered\":false}"
+
+<span class="cmt"># 3. machine restarts — note the NEW event_id</span>
+mosquitto_pub $OPTS -t "fp/$C/$U/evt/machine" -q 1 \
+  -m "{\"event_id\":\"$(uuidgen | tr 'A-Z' 'a-z')\",\"seq\":2,\"pin_no\":1,\
+\"state\":\"ON\",\"ts\":\"$(date -u +%Y-%m-%dT%H:%M:%S.000Z)\",\"buffered\":false}"</pre>
+  <p>Then open <strong>IoT → IoT units</strong> in the admin UI. The unit should show
+     <em>Online</em>, and a stop record with its duration should appear without refreshing the page.</p>
+</section>
+
+<!-- 15 -->
+<section id="trouble">
+  <h2 class="sec">15 — Troubleshooting</h2>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Symptom</th><th>Cause</th></tr></thead>
+    <tbody>
+      <tr><td>Connection refused: not authorised</td><td>Client ID is not exactly the username, wrong password, or the unit was revoked</td></tr>
+      <tr><td>TLS handshake failure</td><td>Missing or wrong <code>ca.crt</code>, or connecting to the wrong port. The CA is private — a public trust store will not work</td></tr>
+      <tr><td>Connection times out</td><td>Port 8883 not reachable from your network</td></tr>
+      <tr><td>Event accepted but nothing appears</td><td><code>pin_no</code> outside 1–4, or <code>event_id</code> is not a valid lowercase UUIDv4</td></tr>
+      <tr><td>Duplicate stop records</td><td>A new <code>event_id</code> generated on retry instead of reusing the stored one</td></tr>
+      <tr><td>Stop never closes</td><td>No <code>ON</code> event sent after the machine restarted</td></tr>
+      <tr><td>Downtime figures wrong by hours</td><td>Clock not NTP-synced, or local time sent instead of UTC</td></tr>
+      <tr><td>“Sequence gap” warnings on the dashboard</td><td><code>seq</code> not persisted across reboot, or events lost between queue and broker</td></tr>
+      <tr><td>No reply to <code>req/{op}</code></td><td>Not subscribed to <code>resp/#</code> before publishing, or the Response Topic was outside your own subtree</td></tr>
+      <tr><td><code>cmd/ota</code> never arrives</td><td>No release published, or the release has no SHA-256 — the server refuses to send one</td></tr>
+      <tr><td>Revocation seems slow</td><td>Broker auth cache — up to 60 s</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- 16 -->
+<section id="weneed">
+  <h2 class="sec">16 — What we need from you</h2>
+  <ol class="steps">
+    <li><strong>Confirm you will build to this document</strong>, not to the architecture HTML —
+        particularly the integer <code class="inline">{companyId}</code> topic segment.</li>
+    <li><strong>Your unit naming scheme.</strong> <code class="inline">unitName</code> becomes an MQTT
+        topic segment: 1–50 characters of <code class="inline">A–Z a–z 0–9 . _ -</code>, stable for the
+        life of the device.</li>
+    <li><strong>Confirm pins per unit.</strong> We assume up to four (GPIO 17, 27, 22, 5 → pins 1–4).
+        The server rejects anything outside 1–4.</li>
+    <li><strong>Fix the v1 client bugs you documented</strong>, since those devices are still in the
+        field: the <code class="inline">fetchone()</code> batch loop that uploads four of every five
+        records but deletes all five; stops not being buffered offline; the hard-coded
+        <code class="inline">test.fpanalyzer.se</code> in four files; the plaintext password in
+        <code class="inline">settings.ini</code>.</li>
+    <li><strong>Tell us whether you want mTLS in a later phase.</strong> The design is ready for it —
+        a broker config change plus a certificate pipeline, no protocol change.</li>
+  </ol>
+
+  <h3>Open on our side, in the interest of honesty</h3>
+  <ul class="tight">
+    <li><strong>Broker high availability.</strong> Still a single Mosquitto node. Your §2 is right that
+        this is the real risk at fleet scale, not throughput. Not yet resolved.</li>
+    <li><strong>Package signing.</strong> We enforce SHA-256, which proves the file is intact but not who
+        made it. As your document notes, whoever controls the version response controls the hash.
+        Signing is the proper fix and is not built.</li>
+  </ul>
+</section>
+
+<footer>
+  FP Analyzer — IoT Firmware Integration Guide · 21 August 2026 ·
+  Server source of truth: <code>backend/src/services/mqtt.service.js</code><br>
+  Behaviour described here was verified against a live Mosquitto broker and PostgreSQL database:
+  broker authentication, cross-tenant ACL isolation, machine auto-registration, stop open/close with
+  duration, duplicate <code>event_id</code> suppression, LWT presence, and sequence-gap detection.
+  Where this document and the earlier architecture proposal disagree, this document describes what the
+  server actually does.
+</footer>
+
+</div>
+</body>
+</html>
