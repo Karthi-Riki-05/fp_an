@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>S01 Identity and Access</title>
+<meta name="description" content="FP Analyzer v3 prototype, module S01: sign-in, two-step, invitations, members, roles, terminals, security, SSO, terminal sign-in and platform company and support screens.">
+<!-- Written for: the FP owner, client reviewers and developers building S01. Prototype only; all names and numbers are fictional. -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Poppins:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="../assets/fp.css">
+<style>
+.auth{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);min-height:calc(100vh - 45px)}
+.auth-art{background:var(--hero);color:var(--hero-text);padding:40px 48px;display:flex;flex-direction:column;gap:22px;position:relative;overflow:hidden}
+.auth-art::after{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:36px 36px;pointer-events:none}
+.auth-art h2{font-size:clamp(30px,3.6vw,46px);font-weight:700;letter-spacing:-.03em;line-height:1.05;margin-top:auto}
+.auth-art h2 span{color:#5BD4DF}
+.auth-art p{color:var(--hero-text-2);font-size:16px;max-width:460px}
+.auth-art .wm b{color:#fff}.auth-art .wm span{color:#5BD4DF}
+.auth-art .ribbon{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:16px;margin-top:auto;max-width:520px;position:relative;z-index:1}
+.auth-art .foot{font-size:12.5px;color:#7FA3AB;display:flex;gap:18px;position:relative;z-index:1}
+.auth-form{display:flex;flex-direction:column;padding:32px 24px;background:var(--surface)}
+.auth-form .inner{width:100%;max-width:410px;margin:auto;display:flex;flex-direction:column;gap:16px}
+.auth-form h1{font-size:28px;font-weight:700;letter-spacing:-.02em}
+.auth-top{display:flex;align-items:center;justify-content:space-between}
+.auth-top .wm b{color:var(--logo-fp)}
+.or{display:flex;align-items:center;gap:12px;color:var(--text-3);font-size:12px}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--border)}
+.otp{display:flex;gap:8px;justify-content:space-between}
+.otp span{flex:1 1 0;min-width:0;max-width:52px;height:60px;border-radius:12px;border:1.5px solid var(--border-strong);display:grid;place-items:center;font-size:26px;font-weight:800;background:var(--surface)}
+.otp span.f{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+.otp.bad span{border-color:var(--stop)}
+.auth-solo{min-height:calc(100vh - 45px);display:grid;place-items:center;padding:30px 16px;background:radial-gradient(900px 400px at 50% 0%,color-mix(in srgb,var(--brand) 10%,transparent),transparent 70%)}
+.auth-card{width:min(460px,100%);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-2);padding:28px;display:flex;flex-direction:column;gap:16px}
+.auth-card h1{font-size:24px;font-weight:700}
+.qrbox{width:168px;height:168px;border-radius:14px;background:#fff;padding:12px;border:1px solid var(--border);flex:none}
+.codes{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;font-family:var(--mono);font-size:13.5px;background:var(--surface-2);border-radius:12px;padding:12px}
+.co-tile{display:flex;gap:14px;align-items:center;padding:16px;border:1.5px solid var(--border);border-radius:16px;background:var(--surface);cursor:pointer;text-align:left;width:100%}
+.co-tile:hover{border-color:var(--brand)}
+.co-tile .lg{width:48px;height:48px;border-radius:12px;display:grid;place-items:center;font-weight:800;color:#fff;flex:none}
+.co-tile.dis{opacity:.55;cursor:not-allowed;background:var(--surface-2)}
+.strength{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.strength i{height:5px;border-radius:3px;background:var(--surface-3)}
+.strength i.on{background:var(--run-fill)}
+.perm-area{border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.perm-area>h4{background:var(--surface-2);padding:10px 14px;font-size:13px;display:flex;justify-content:space-between}
+.perm{display:grid;grid-template-columns:minmax(0,1fr) repeat(5,64px);gap:0;align-items:center;border-top:1px solid var(--border);font-size:13px}
+.perm>div{padding:9px 12px}
+.perm>div:not(:first-child){text-align:center;border-left:1px solid var(--border)}
+.perm small{display:block;color:var(--text-3);font-size:12px}
+.perm .y{color:var(--run)}.perm .n{color:var(--text-3)}
+.perm.hd{background:var(--surface);font-size:11px;font-weight:800;text-transform:uppercase;color:var(--text-3);letter-spacing:.04em}
+.pair-code{display:flex;gap:10px;justify-content:center;font-family:var(--mono);font-weight:800;font-size:44px;letter-spacing:.06em}
+.pair-code span{background:var(--surface-2);border:1px solid var(--border);border-radius:14px;padding:6px 14px}
+.k-keys{display:grid;grid-template-columns:repeat(10,1fr);gap:.5em}
+.k-keys span{height:3.4em;border-radius:.8em;background:var(--surface-2);border:1px solid var(--border);display:grid;place-items:center;font-weight:800;font-size:1.15em}
+.k-keys span.w2{grid-column:span 2}
+.k-slots{display:flex;gap:.6em;justify-content:center}
+.k-slots span{width:3.2em;height:3.8em;border-radius:.8em;border:.13em solid var(--border-strong);display:grid;place-items:center;font-size:1.7em;font-weight:800;font-family:var(--mono);background:var(--surface)}
+.k-slots span.f{border-color:var(--brand)}
+.k-names{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.7em}
+.k-name{display:grid;justify-items:center;gap:.5em;padding:1em .6em;border:.13em solid var(--border);border-radius:1.2em;background:var(--surface);font-weight:750}
+.k-name .av{width:3.4em;height:3.4em;font-size:1em}
+.k-name small{font-size:.8em;color:var(--text-3);font-weight:600}
+.k-name.on{border-color:var(--brand);box-shadow:0 0 0 .25em var(--brand-soft)}
+.reader{width:9em;height:9em;border-radius:50%;display:grid;place-items:center;position:relative}
+.reader .core{width:5.4em;height:5.4em;border-radius:1.5em;background:linear-gradient(145deg,#13A8B8,#0B5D73);display:grid;place-items:center;color:#fff;z-index:1}
+.reader .core .i{width:2.8em;height:2.8em}
+.reader .w{position:absolute;inset:0;border-radius:50%;border:.15em solid rgba(43,194,208,.6);animation:wave 2.4s ease-out infinite;opacity:0}
+.reader .w:nth-child(2){animation-delay:.8s}
+@keyframes wave{0%{transform:scale(.5);opacity:.9}100%{transform:scale(1.05);opacity:0}}
+.opbar{display:flex;align-items:center;gap:1em;padding:0 1.6em;height:4.4em;background:var(--nav-bg);color:#EAF2F5;flex:none}
+.opbar .av{width:2.6em;height:2.6em;font-size:.95em}
+.opbar b{font-size:1.15em}
+.opbar .idle{margin-left:auto;background:#F2B544;color:#2A1A00;font-weight:800;border-radius:999px;padding:.45em 1em;font-size:.95em}
+.opbar .end{height:3em;border-radius:.9em;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;font-weight:800;padding:0 1.2em;display:flex;align-items:center;gap:.5em}
+.auth-card{max-width:100%;min-width:0}
+@media (max-width:520px){.auth-card{padding:20px}}
+@media (max-width:760px){.support-bar[style]{margin:-14px -14px 14px!important}}
+@media (max-width:900px){.auth{grid-template-columns:minmax(0,1fr)}.auth-art{display:none}.perm{grid-template-columns:minmax(0,1fr) repeat(5,44px);font-size:12px}.perm>div{padding:8px 6px}}
+</style>
+</head>
+<body data-module="S01">
+<main id="screens">
+
+<!-- ============ 1 Login ============ -->
+<section class="screen" id="login">
+  <div class="auth">
+    <div class="auth-art">
+      <div class="row" style="position:relative;z-index:1"><svg style="width:40px;height:40px"><use href="#mark"/></svg><span class="wm" style="font-size:24px"><b>fp</b><span>analyzer</span></span></div>
+      <h2 style="position:relative;z-index:1">Every stop,<br><span>understood.</span></h2>
+      <p style="position:relative;z-index:1">Live machine status, honest OEE and the reasons behind every loss, for the people who keep the line running.</p>
+      <div class="ribbon">
+        <div class="row between small" style="color:#9FC4CC;font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px"><span>Line 2 · Edging · this shift</span><span>OEE</span></div>
+        <div class="tl-row" style="grid-template-columns:40px minmax(0,1fr) 40px"><b>K-3</b><div class="tl sm"><i class="r" style="flex:38"></i><i class="s" style="flex:3"></i><i class="r" style="flex:22"></i><i class="p" style="flex:5"></i><i class="r" style="flex:32"></i></div><span class="num small">84%</span></div>
+        <div class="tl-row" style="grid-template-columns:40px minmax(0,1fr) 40px"><b>K-5</b><div class="tl sm"><i class="r" style="flex:30"></i><i class="c" style="flex:8"></i><i class="r" style="flex:26"></i><i class="s" style="flex:4"></i><i class="r" style="flex:28"></i><i class="m" style="flex:4"></i></div><span class="num small">76%</span></div>
+        <div class="tl-row" style="grid-template-columns:40px minmax(0,1fr) 40px"><b>K-7</b><div class="tl sm"><i class="r" style="flex:44"></i><i class="a" style="flex:6"></i><i class="r" style="flex:18"></i><i class="p" style="flex:7"></i><i class="r" style="flex:25"></i></div><span class="num small">81%</span></div>
+      </div>
+      <div class="foot"><span>Data hosted in the EU</span><span>Your factory's data stays your factory's</span></div>
+    </div>
+    <div class="auth-form">
+      <div class="auth-top"><span class="row"><svg style="width:34px;height:34px"><use href="#mark"/></svg><span class="wm"><b>fp</b><span>analyzer</span></span></span>
+        <button class="btn sm ghost" type="button" data-toast="Languages: Svenska, English, Suomi, Deutsch, Polski">🌐 English <svg class="i xs"><use href="#i-chevd"/></svg></button></div>
+      <div class="inner">
+        <div><h1>Welcome back</h1><p class="dim mt-s">Sign in to see your plant.</p></div>
+        <div class="steps" style="margin:0"><span class="step done"><i>✓</i>Who you are</span><span class="step cur"><i>2</i>Password</span></div>
+        <div class="field"><label>Work email or mobile number</label>
+          <div class="ig"><svg class="i sm"><use href="#i-user"/></svg><input value="lena.holm@nordvik-tra.example" aria-label="Email or mobile"><button class="link small" type="button" data-toast="Back to step 1">Change</button></div></div>
+        <div class="field"><label>Password</label>
+          <div class="ig"><svg class="i sm"><use href="#i-lock"/></svg><input type="password" value="correcthorse" aria-label="Password"><svg class="i sm"><use href="#i-eye"/></svg></div></div>
+        <div class="row between"><label class="check"><input type="checkbox" checked>Keep me signed in on this computer</label><a href="#" data-go="reset" class="small b">Forgot password?</a></div>
+        <button class="btn primary lg block" type="button" data-go="mfa">Sign in</button>
+        <div class="or">or</div>
+        <button class="btn lg block" type="button" data-toast="Sends a 6-digit code to +46 70 ••• •• 18">
+          <svg class="i sm"><use href="#i-phone"/></svg>Get a sign-in code by SMS</button>
+        <button class="btn lg block" type="button" data-toast="Shows a QR code; approve on your FP phone app and match the number">
+          <svg class="i sm"><use href="#i-qr"/></svg>Sign in with your phone</button>
+        <button class="btn lg block" type="button" data-toast="Your company uses Microsoft sign-in; you will be sent there">
+          <svg class="i sm"><use href="#i-key"/></svg>Single sign-on (company account)</button>
+        <p class="tiny muted center">Step 1 asks only for your email or mobile. If your company uses single sign-on we send you there; otherwise you see this password step.</p>
+      </div>
+      <div class="row small" style="justify-content:center;gap:16px"><a href="#">Help</a><a href="#">Privacy</a><span class="muted">EU hosted</span></div>
+    </div>
+  </div>
+  <div style="padding:0 22px 30px">
+  <div class="states"><h4><svg class="i sm"><use href="#i-layers"/></svg>Other states</h4>
+    <div class="state-grid">
+      <figure class="state"><figcaption>Loading</figcaption><button class="btn primary lg block" type="button" disabled><span class="skel" style="width:18px;height:18px;border-radius:50%"></span>Signing in…</button></figure>
+      <figure class="state"><figcaption>Wrong password</figcaption>
+        <div class="field"><label>Password</label><div class="ig" style="border-color:var(--stop);box-shadow:0 0 0 3px var(--stop-soft)"><input type="password" value="xxxxxxxx" aria-label="Password"></div>
+        <span class="err"><svg class="i xs"><use href="#i-alert"/></svg>Email or password is not right. 3 tries left before a 5-minute pause.</span></div></figure>
+      <figure class="state"><figcaption>Locked</figcaption><div class="banner err"><svg class="i"><use href="#i-lock"/></svg><div><b>Too many tries.</b> You can try again in <span class="num b" data-run="252">4:12</span>. Or reset your password.</div></div></figure>
+      <figure class="state"><figcaption>SSO required</figcaption><div class="banner info"><svg class="i"><use href="#i-key"/></svg><div><b>Nordvik Trä signs in with Microsoft.</b> Passwords are switched off for nordvik-tra.example.</div></div><button class="btn primary block" type="button">Continue with Microsoft</button></figure>
+      <figure class="state"><figcaption>Offline</figcaption><div class="banner warn"><svg class="i"><use href="#i-wifioff"/></svg><div><b>No connection.</b> Check the network. Signing in needs the internet; the phone app can open offline with a saved session.</div></div></figure>
+      <figure class="state"><figcaption>Mobile number entered</figcaption><div class="field"><label>Work email or mobile number</label><input class="input" value="+46 70 123 45 18" aria-label="Mobile"></div><button class="btn primary block" type="button">Send code</button><p class="tiny muted">Companies can require a phone number for every member (policy on by default).</p></figure>
+    </div>
+  </div>
+  </div>
+</section>
+
+<!-- ============ 2 Two-step code ============ -->
+<section class="screen" id="mfa">
+  <div class="auth-solo">
+    <div class="auth-card">
+      <div class="row"><svg style="width:34px;height:34px"><use href="#mark"/></svg><span class="wm"><b style="color:var(--logo-fp)">fp</b><span>analyzer</span></span></div>
+      <div><h1>Two-step check</h1><p class="dim mt-s">Enter the 6-digit code from your authenticator app.</p></div>
+      <div class="otp"><span>4</span><span>8</span><span>2</span><span class="f">0</span><span></span><span></span></div>
+      <label class="check"><input type="checkbox">Trust this computer for 30 days</label>
+      <button class="btn primary lg block" type="button" data-go="company-picker">Verify</button>
+      <div class="row between small"><a href="#" data-toast="Enter one of your 10 recovery codes">Use a recovery code</a><a href="#" data-go="login">Back to sign-in</a></div>
+    </div>
+  </div>
+  <div style="padding:0 22px 30px"><div class="states"><h4>Other states</h4><div class="state-grid">
+    <figure class="state"><figcaption>Wrong code</figcaption><div class="otp bad"><span>1</span><span>1</span><span>1</span><span>1</span><span>1</span><span>1</span></div><span class="err"><svg class="i xs"><use href="#i-alert"/></svg>That code did not work. Check the time on your phone and try the newest code.</span></figure>
+    <figure class="state"><figcaption>Expired challenge</figcaption><div class="banner warn"><svg class="i"><use href="#i-clock"/></svg><div><b>This sign-in took too long.</b> For your safety, start again.</div></div><button class="btn block" type="button" data-go="login">Start again</button></figure>
+  </div></div></div>
+</section>
+
+<!-- ============ 3 Two-step setup ============ -->
+<section class="screen" id="mfa-setup">
+  <div class="auth-solo">
+    <div class="auth-card" style="width:min(620px,100%)">
+      <div class="steps" style="margin:0"><span class="step done"><i>✓</i>Scan</span><span class="step done"><i>✓</i>Confirm</span><span class="step cur"><i>3</i>Save recovery codes</span></div>
+      <h1>Turn on two-step sign-in</h1>
+      <div class="row nowrap" style="align-items:flex-start;gap:18px">
+        <svg class="qrbox" viewBox="0 0 29 29" aria-label="QR code"><path fill="#0D1B22" d="M0 0h7v7H0zM1 1v5h5V1zM2 2h3v3H2zM22 0h7v7h-7zM23 1v5h5V1zM24 2h3v3h-3zM0 22h7v7H0zM1 23v5h5v-5zM2 24h3v3H2zM9 0h2v2H9zM12 1h3v2h-3zM9 4h4v2H9zM16 3h2v4h-2zM19 0h2v3h-2zM8 8h3v2H8zM13 8h2v3h-2zM17 9h4v2h-4zM23 9h2v2h-2zM0 9h2v3H0zM4 10h3v2H4zM9 12h5v2H9zM16 13h3v3h-3zM21 12h2v2h-2zM25 13h4v2h-4zM1 14h3v2H1zM6 15h2v3H6zM10 16h4v2h-4zM20 16h3v2h-3zM9 20h2v3H9zM13 19h4v2h-4zM18 20h2v4h-2zM22 19h3v2h-3zM26 18h3v3h-3zM12 23h3v3h-3zM9 26h2v3H9zM21 23h4v2h-4zM23 26h3v3h-3zM27 23h2v2h-2zM16 26h3v3h-3z"/></svg>
+        <div class="stack" style="min-width:0">
+          <p class="dim">Scan with Microsoft Authenticator, Google Authenticator or any TOTP app. Cannot scan? Type this key:</p>
+          <div class="secret"><span>JBSW Y3DP EHPK 3PXP</span><button class="btn sm ghost" type="button" data-toast="Key copied">Copy</button></div>
+          <span class="badge b-run">✓ Code 482 071 confirmed</span>
+        </div>
+      </div>
+      <div class="banner warn"><svg class="i"><use href="#i-alert"/></svg><div><b>Save these recovery codes now.</b> They are shown only once. Each code works one time if you lose your phone.</div></div>
+      <div class="codes"><span>8KQ2-7HMD</span><span>T4WZ-9PLC</span><span>J3RV-2XNA</span><span>BM6E-5QYK</span><span>H8SD-4TFW</span><span>Z2CL-7VGP</span><span>Q9NU-3KRB</span><span>W5YA-8MEH</span><span>D7PX-6JTS</span><span>R3GK-1ZQV</span></div>
+      <div class="row"><button class="btn sm" type="button" data-toast="Downloaded fp-recovery-codes.txt"><svg class="i xs"><use href="#i-download"/></svg>Download</button><button class="btn sm" type="button" data-toast="Print dialog opens"><svg class="i xs"><use href="#i-print"/></svg>Print</button><button class="btn sm" type="button" data-toast="Codes copied"><svg class="i xs"><use href="#i-copy"/></svg>Copy</button></div>
+      <label class="check"><input type="checkbox" checked>I have saved my recovery codes</label>
+      <button class="btn primary lg block" type="button" data-to="@home">Finish</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4 Company picker ============ -->
+<section class="screen" id="company-picker">
+  <div class="auth-solo">
+    <div class="auth-card" style="width:min(540px,100%)">
+      <div><h1>Choose a company</h1><p class="dim mt-s">You are a member of 3 companies. Pick where to work now.</p></div>
+      <div class="stack">
+        <button class="co-tile" type="button" data-to="s17-dashboards-reports#home"><span class="lg" style="background:#0A8796">NT</span><span class="sp"><b>Nordvik Trä AB</b><small class="muted" style="display:block">Production manager · 2 sites</small></span><span class="badge b-brand">Default</span><svg class="i sm"><use href="#i-chev"/></svg></button>
+        <button class="co-tile" type="button" data-toast="Opens Björkdal Möbler AB"><span class="lg" style="background:#5B8DEF">BM</span><span class="sp"><b>Björkdal Möbler AB</b><small class="muted" style="display:block">Viewer · 1 site</small></span><svg class="i sm"><use href="#i-chev"/></svg></button>
+        <div class="co-tile dis" aria-disabled="true"><span class="lg" style="background:#93A5AF">VP</span><span class="sp"><b>Västkust Plast AB</b><small class="muted" style="display:block">Suspended · contact the company's admin</small></span><span class="badge b-off">Suspended</span></div>
+      </div>
+      <label class="check"><input type="checkbox" checked>Remember Nordvik Trä AB as my default</label>
+      <p class="tiny muted">You can switch company at any time from the site menu at the top of the sidebar.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5 Accept invitation ============ -->
+<section class="screen" id="invite">
+  <div class="auth-solo">
+    <div class="auth-card">
+      <span class="av lg" style="background:#0A8796">NT</span>
+      <div><h1>Join Nordvik Trä AB</h1><p class="dim mt-s"><b>Lena Holm</b> invited you as <b>Shift lead</b> for Line 2 and Line 3.</p></div>
+      <div class="g g2"><div class="field"><label>First name</label><input class="input" value="Elin"></div><div class="field"><label>Last name</label><input class="input" value="Sand"></div></div>
+      <div class="field"><label>Email</label><input class="input" value="elin.sand@nordvik-tra.example" disabled></div>
+      <div class="field"><label>Mobile number</label><input class="input" value="+46 70 555 21 09"><span class="hint">Needed for alerts and SMS sign-in. Your company requires it.</span></div>
+      <div class="field"><label>Choose a password</label><input class="input" type="password" value="longerpassword12"><div class="strength"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div><span class="hint">Strong. At least 12 characters.</span></div>
+      <button class="btn primary lg block" type="button" data-to="@home">Join company</button>
+      <div class="or">or</div>
+      <button class="btn lg block" type="button" data-to="@home"><svg class="i sm"><use href="#i-key"/></svg>Join with Microsoft</button>
+    </div>
+  </div>
+  <div style="padding:0 22px 30px"><div class="states"><h4>Other states</h4><div class="state-grid">
+    <figure class="state"><figcaption>Expired</figcaption><div class="banner warn"><svg class="i"><use href="#i-clock"/></svg><div><b>This invitation expired on 15 October.</b> Ask Lena Holm to send a new one.</div></div></figure>
+    <figure class="state"><figcaption>Email mismatch</figcaption><div class="banner err"><svg class="i"><use href="#i-mail"/></svg><div><b>You are signed in as elin@gmail.example.</b> This invitation is for elin.sand@nordvik-tra.example. Sign out and open the link again.</div></div></figure>
+    <figure class="state"><figcaption>Seat limit</figcaption><div class="banner neutral"><svg class="i"><use href="#i-users"/></svg><div><b>Nordvik Trä AB has no free seats.</b> We told their admin. You can join as soon as a seat is free.</div></div></figure>
+  </div></div></div>
+</section>
+
+<!-- ============ 6 Forgot / reset ============ -->
+<section class="screen" id="reset">
+  <div class="auth-solo" style="gap:20px;grid-template-columns:repeat(auto-fit,minmax(min(380px,100%),460px));justify-content:center;display:grid">
+    <div class="auth-card">
+      <span class="eyebrow">Step 1 · forgot</span>
+      <h1>Reset your password</h1>
+      <p class="dim">Enter your work email. If it belongs to an account we send a link that works for 30 minutes.</p>
+      <div class="field"><label>Work email</label><input class="input" value="lena.holm@nordvik-tra.example"></div>
+      <button class="btn primary lg block" type="button" data-toast="If the email exists, a link is on its way">Send reset link</button>
+      <div class="banner ok"><svg class="i"><use href="#i-mail"/></svg><div>Check your inbox. The same message appears whether or not the email exists, so nobody can test addresses here.</div></div>
+    </div>
+    <div class="auth-card">
+      <span class="eyebrow">Step 2 · from the email link</span>
+      <h1>Choose a new password</h1>
+      <div class="field"><label>New password</label><input class="input" type="password" value="sawdust-and-glue-2026"><div class="strength"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div><span class="hint">Very strong. Long phrases are easier to remember than symbols.</span></div>
+      <div class="field"><label>Repeat password</label><input class="input" type="password" value="sawdust-and-glue-2026"></div>
+      <label class="check"><input type="checkbox" checked>Sign me out on all other devices</label>
+      <button class="btn primary lg block" type="button" data-go="login">Save and sign in</button>
+    </div>
+  </div>
+  <div style="padding:0 22px 30px"><div class="states"><h4>Other states</h4><div class="state-grid">
+    <figure class="state"><figcaption>Link expired</figcaption><div class="banner warn"><svg class="i"><use href="#i-clock"/></svg><div><b>This link has expired or was already used.</b> Links work once, for 30 minutes.</div></div><button class="btn block" type="button">Send a new link</button></figure>
+  </div></div></div>
+</section>
+
+<!-- ============ 7 My account ============ -->
+<section class="screen" id="account" data-ask='["Which devices am I signed in on?","How do I change my display time zone?"]'>
+  <div class="ph"><div><h1>My account</h1><p>Your profile, sign-in and active sessions.</p></div></div>
+  <div class="g g-side">
+    <div class="stack">
+      <div class="card"><div class="card-h"><h3>Profile</h3></div><div class="card-b">
+        <div class="row" style="margin-bottom:16px"><span class="av xl">LH</span><div><b style="font-size:17px">Lena Holm</b><p class="muted small">Production manager · Nordvik Trä AB</p></div></div>
+        <div class="g g2">
+          <div class="field"><label>First name</label><input class="input" value="Lena"></div>
+          <div class="field"><label>Last name</label><input class="input" value="Holm"></div>
+          <div class="field"><label>Email</label><input class="input" value="lena.holm@nordvik-tra.example"></div>
+          <div class="field"><label>Mobile number</label><input class="input" value="+46 70 123 45 18"><span class="hint">Used for alerts and SMS sign-in</span></div>
+          <div class="field"><label>Language</label><select class="select"><option>English</option><option>Svenska</option></select></div>
+          <div class="field"><label>Display time zone</label><select class="select"><option>Plant time (Europe/Stockholm, now 10:48)</option><option>My browser (Europe/Helsinki, now 11:48)</option></select><span class="hint">Shifts always follow the plant's time zone</span></div>
+        </div></div>
+        <div class="card-f"><button class="btn primary" type="button" data-toast="Profile saved">Save changes</button></div></div>
+      <div class="card"><div class="card-h"><h3>Active sessions</h3><button class="btn sm danger-ghost" type="button" data-toast="All other sessions signed out">Sign out everywhere else</button></div>
+        <div class="tbl-wrap"><table class="table"><thead><tr><th>Device</th><th>Where</th><th>Last active</th><th></th></tr></thead><tbody>
+          <tr class="sel"><td><b>Chrome on Windows</b><span class="t2">This computer</span></td><td>Hultsfred, SE</td><td>Now</td><td class="act"><span class="badge b-brand">Current</span></td></tr>
+          <tr><td><b>FP app on iPhone 15</b><span class="t2">Face ID unlock</span></td><td>Hultsfred, SE</td><td>12 min ago</td><td class="act"><button class="btn sm" type="button" data-toast="Signed out on iPhone">Sign out</button></td></tr>
+          <tr><td><b>Safari on Mac</b></td><td>Stockholm, SE</td><td>3 days ago</td><td class="act"><button class="btn sm" type="button" data-toast="Signed out on Mac">Sign out</button></td></tr>
+        </tbody></table></div></div>
+    </div>
+    <div class="stack">
+      <div class="card pad"><h3 style="font-size:15.5px;margin-bottom:10px">Password</h3><p class="small muted">Changed 2 months ago</p><button class="btn block mt" type="button" data-toast="Change password dialog">Change password</button></div>
+      <div class="card pad"><div class="row between"><h3 style="font-size:15.5px">Two-step sign-in</h3><span class="badge b-run">On</span></div><p class="small muted mt-s">Authenticator app · 8 of 10 recovery codes left</p>
+        <div class="row mt"><button class="btn sm" type="button" data-go="mfa-setup">New recovery codes</button><button class="btn sm ghost" type="button" data-toast="Your company requires two-step sign-in; it cannot be turned off">Turn off</button></div></div>
+      <div class="card pad"><h3 style="font-size:15.5px;margin-bottom:6px">Notifications</h3><p class="small muted">Phones, quiet hours, voice and mutes</p><a class="btn block mt" href="s07-alerts-andon.html#my">Open my notifications</a></div>
+      <div class="card pad"><h3 style="font-size:15.5px;margin-bottom:6px">My data</h3><p class="small muted">Download what FP stores about you, or ask for corrections.</p><button class="btn block mt" type="button" data-toast="Request sent to your company admin">Request my data</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 8 Members ============ -->
+<section class="screen" id="members" data-ask='["Who has not logged in for 30 days?","Which operators have no badge?","How many seats are left?"]'>
+  <div class="ph"><div><h1>Members</h1><p>People who can use FP at Nordvik Trä AB.</p></div>
+    <div class="ph-a"><button class="btn" type="button" data-toast="Add an operator with name, PIN and badge only (no email)"><svg class="i sm"><use href="#i-badge"/></svg>Add operator without email</button><button class="btn primary" type="button" data-toast="Invite dialog: email, role, scope"><svg class="i sm"><use href="#i-mail"/></svg>Invite by email</button></div></div>
+  <div class="banner warn mb"><svg class="i"><use href="#i-users"/></svg><div><b>46 of 50 seats used.</b> Operators without email do not use a seat on your plan.</div><span class="sp"></span><a href="s20-plans-billing.html#plan" class="b">See plan</a></div>
+  <div class="filters"><div class="ig" style="width:260px;height:34px"><svg class="i sm"><use href="#i-search"/></svg><input placeholder="Search name or email"></div>
+    <button class="fchip" type="button">Role: <b>All</b><svg class="i xs"><use href="#i-chevd"/></svg></button><button class="fchip" type="button">Scope: <b>All sites</b><svg class="i xs"><use href="#i-chevd"/></svg></button><button class="fchip on" type="button">Status: <b>Active</b></button><button class="fchip" type="button">Pending invites <span class="badge">3</span></button>
+    <span class="sp"></span><span class="small muted">2 selected</span><button class="btn sm" type="button" data-toast="Change role for 2 people">Change role</button></div>
+  <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th><input type="checkbox" aria-label="Select all"></th><th>Name</th><th>Role</th><th>Scope</th><th>Status</th><th>Last login</th><th>PIN / badge</th><th></th></tr></thead><tbody>
+    <tr><td><input type="checkbox" aria-label="Select"></td><td><div class="row nowrap"><span class="av sm">LH</span><span><b>Lena Holm</b><span class="t2">lena.holm@nordvik-tra.example</span></span></div></td><td>Production manager, Admin</td><td>Whole company</td><td><span class="badge b-run">Active</span></td><td>Now</td><td class="muted">—</td><td class="act"><button class="btn sm ghost" data-go="member" type="button">Open</button></td></tr>
+    <tr class="sel"><td><input type="checkbox" checked aria-label="Select"></td><td><div class="row nowrap"><span class="av sm c2">ES</span><span><b>Elin Sand</b><span class="t2">elin.sand@nordvik-tra.example</span></span></div></td><td>Shift lead</td><td>Line 2, Line 3</td><td><span class="badge b-run">Active</span></td><td>12 min ago</td><td><svg class="i sm"><use href="#i-pin"/></svg> <svg class="i sm"><use href="#i-badge"/></svg></td><td class="act"><button class="btn sm ghost" data-go="member" type="button">Open</button></td></tr>
+    <tr class="sel"><td><input type="checkbox" checked aria-label="Select"></td><td><div class="row nowrap"><span class="av sm c3">SK</span><span><b>Sami Koski</b><span class="t2">No email · badge only</span></span></div></td><td>Operator</td><td>Line 2</td><td><span class="badge b-run">Active</span></td><td>Today 06:02 · T-02</td><td><svg class="i sm"><use href="#i-pin"/></svg> <svg class="i sm"><use href="#i-badge"/></svg></td><td class="act"><button class="btn sm ghost" data-go="member" type="button">Open</button></td></tr>
+    <tr><td><input type="checkbox" aria-label="Select"></td><td><div class="row nowrap"><span class="av sm c4">ND</span><span><b>Nils Dahl</b><span class="t2">ola.berg@nordvik-tra.example</span></span></div></td><td>Maintenance</td><td>Hultsfred plant</td><td><span class="badge b-run">Active</span></td><td>Yesterday</td><td><svg class="i sm"><use href="#i-badge"/></svg></td><td class="act"><button class="btn sm ghost" data-go="member" type="button">Open</button></td></tr>
+    <tr class="warn"><td><input type="checkbox" aria-label="Select"></td><td><div class="row nowrap"><span class="av sm c5">PN</span><span><b>Pekka Niemi</b><span class="t2">No email · badge only</span></span></div></td><td>Operator</td><td>Line 3</td><td><span class="badge b-stop">PIN locked</span></td><td>Mon 14:05</td><td><svg class="i sm"><use href="#i-pin"/></svg></td><td class="act"><button class="btn sm" type="button" data-toast="PIN unlocked">Unlock</button></td></tr>
+    <tr><td><input type="checkbox" aria-label="Select"></td><td><div class="row nowrap"><span class="av sm" style="background:var(--surface-3);color:var(--text-2)">JE</span><span><b>johan.ek@consult.example</b><span class="t2">Invited 2 days ago</span></span></div></td><td>Consultant (read)</td><td>Whole company · until 31 Dec</td><td><span class="badge b-warn">Invite pending</span></td><td class="muted">—</td><td class="muted">—</td><td class="act"><button class="btn sm ghost" type="button" data-toast="Invite sent again">Resend</button></td></tr>
+  </tbody></table></div></div>
+  <div class="states"><h4>Other states</h4><div class="state-grid">
+    <figure class="state"><figcaption>First run (empty)</figcaption><div class="empty"><span class="ic"><svg class="i lg"><use href="#i-users"/></svg></span><h3>Only you so far</h3><p>Invite your supervisors by email. Add operators without email: they sign in on terminals with a badge or PIN.</p><div class="row"><button class="btn primary" type="button">Invite by email</button><button class="btn" type="button">Add operators</button></div></div></figure>
+    <figure class="state"><figcaption>Seat limit reached</figcaption><div class="banner err"><svg class="i"><use href="#i-users"/></svg><div><b>All 50 seats are used.</b> Remove someone, or add seats (SEK 49 per seat per month).</div></div><button class="btn primary" type="button">Add seats</button></figure>
+  </div></div>
+</section>
+
+<!-- ============ 9 Member detail ============ -->
+<section class="screen" id="member">
+  <div class="ph"><div class="row"><span class="av lg c2">ES</span><div><h1>Elin Sand</h1><p>elin.sand@nordvik-tra.example · +46 70 555 21 09 · member since March 2025</p></div></div>
+    <div class="ph-a"><button class="btn danger-ghost" type="button" data-toast="Remove from company: confirm dialog">Remove from company</button><button class="btn primary" type="button" data-toast="Saved; Elin's access changes now">Save</button></div></div>
+  <div class="g g2">
+    <div class="card"><div class="card-h"><h3>Roles</h3><span class="muted">Tick one or more</span></div><div class="card-b stack">
+      <label class="radio-card"><input type="checkbox" class="check" style="margin-top:2px"><span><b>Admin</b><small>Everything in the company, including members, billing and security.</small></span></label>
+      <label class="radio-card"><input type="checkbox" style="margin-top:2px"><span><b>Production manager</b><small>All production data, dashboards, reports, targets and actions.</small></span></label>
+      <label class="radio-card on"><input type="checkbox" checked style="margin-top:2px"><span><b>Shift lead</b><small>Live floor, review and correct stops, alerts, handover, Ask FP. Can export reports.</small></span></label>
+      <label class="radio-card"><input type="checkbox" style="margin-top:2px"><span><b>Operator</b><small>Terminal and phone: register stops, production, scrap, checklists.</small></span></label>
+      <label class="radio-card"><input type="checkbox" style="margin-top:2px"><span><b>Maintenance</b><small>Maintenance board, requests, PM plans, andon calls.</small></span></label>
+    </div></div>
+    <div class="stack">
+      <div class="card"><div class="card-h"><h3>Where Elin works (scope)</h3><span class="muted">Roles apply only here</span></div><div class="card-b">
+        <ul class="tree">
+          <li><div class="tn"><svg class="i xs tw"><use href="#i-chevd"/></svg><input type="checkbox" aria-label="Hultsfred" style="accent-color:var(--brand)"> <span class="lvl">Site</span> Hultsfred plant</div>
+            <ul>
+              <li><div class="tn on"><svg class="i xs tw"><use href="#i-chev"/></svg><input type="checkbox" checked aria-label="Line 2" style="accent-color:var(--brand)"> <span class="lvl">Line</span> Line 2 · Edging <span class="muted small">3 machines</span></div></li>
+              <li><div class="tn on"><svg class="i xs tw"><use href="#i-chev"/></svg><input type="checkbox" checked aria-label="Line 3" style="accent-color:var(--brand)"> <span class="lvl">Line</span> Line 3 · Packing <span class="muted small">4 machines</span></div></li>
+              <li><div class="tn"><svg class="i xs tw"><use href="#i-chev"/></svg><input type="checkbox" aria-label="Line 4" style="accent-color:var(--brand)"> <span class="lvl">Line</span> Line 4 · Press</div></li>
+            </ul></li>
+          <li><div class="tn"><svg class="i xs tw"><use href="#i-chev"/></svg><input type="checkbox" aria-label="Vetlanda" style="accent-color:var(--brand)"> <span class="lvl">Site</span> Vetlanda plant</div></li>
+        </ul></div></div>
+      <div class="card"><div class="card-h"><h3>Terminal sign-in</h3></div><div class="card-b stack">
+        <div class="li"><span class="ic"><svg class="i"><use href="#i-pin"/></svg></span><div><b>PIN</b><small>Set 4 months ago · not locked</small></div><button class="btn sm" type="button" data-toast="New PIN shown once to the admin">Reset PIN</button></div>
+        <div class="li"><span class="ic"><svg class="i"><use href="#i-badge"/></svg></span><div><b>Badge</b><small>Card ••• 4471 · enrolled on T-02</small></div><button class="btn sm" type="button" data-toast="Hold the new badge to any terminal reader now (60 s)">Enrol new badge</button></div>
+        <div class="li"><span class="ic"><svg class="i"><use href="#i-unlock"/></svg></span><div><b>Lockout</b><small>Not locked</small></div><button class="btn sm" type="button" disabled>Unlock</button></div>
+      </div></div>
+    </div>
+  </div>
+  <div class="states"><h4>Other states</h4><div class="state-grid">
+    <figure class="state"><figcaption>Last admin</figcaption><div class="banner warn"><svg class="i"><use href="#i-shield"/></svg><div><b>Lena is the only admin.</b> Give another member the Admin role before removing it from Lena.</div></div></figure>
+    <figure class="state"><figcaption>Badge enrolment waiting</figcaption><div class="row"><span class="reader" style="font-size:9px"><span class="w"></span><span class="w"></span><span class="core"><svg class="i"><use href="#i-badge"/></svg></span></span><div><b>Hold the badge to a terminal reader</b><p class="small muted">Waiting <span class="num" data-run="12">0:12</span> of 1:00 · any terminal at Hultsfred</p></div></div></figure>
+  </div></div>
+  <div class="card pad mt"><b>What can they do?</b><p class="small muted mt-s">With <b>Shift lead</b> on <b>Line 2 and Line 3</b>, Maja can: register and correct stops, scrap and production; acknowledge andon; see OEE and reports for those lines. She cannot: change settings, invite people or export data.</p></div>
+  <div class="states"><span class="badge b-stop">Last admin: "You are the only admin. Make someone else admin before removing yourself."</span></div>
+</section>
+
+<!-- ============ 10 Roles ============ -->
+<section class="screen" id="roles" data-ask='["Which roles can export data?","Who can see cost figures?"]'>
+  <div class="ph"><div><h1>Roles</h1><p>What each role can do. Templates are fixed; copy one to make your own.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="New custom role"><svg class="i sm"><use href="#i-plus"/></svg>New role</button></div></div>
+  <div class="g g-side-l">
+    <div class="card"><div class="card-b" style="padding-top:14px">
+      <div class="sect">Templates</div>
+      <div class="list">
+        <div class="li"><span class="ic"><svg class="i"><use href="#i-shield"/></svg></span><div><b>Admin</b><small>2 members</small></div><button class="btn sm ghost" type="button">Copy</button></div>
+        <div class="li"><span class="ic"><svg class="i"><use href="#i-chart"/></svg></span><div><b>Production manager</b><small>3 members</small></div><button class="btn sm ghost" type="button">Copy</button></div>
+        <div class="li" style="background:var(--brand-soft);border-radius:10px;padding-left:8px;padding-right:8px"><span class="ic"><svg class="i"><use href="#i-users"/></svg></span><div><b>Shift lead</b><small>6 members</small></div><span class="badge b-brand">Open</span></div>
+        <div class="li"><span class="ic"><svg class="i"><use href="#i-hand"/></svg></span><div><b>Operator</b><small>31 members</small></div><button class="btn sm ghost" type="button">Copy</button></div>
+        <div class="li"><span class="ic"><svg class="i"><use href="#i-wrench"/></svg></span><div><b>Maintenance</b><small>4 members</small></div><button class="btn sm ghost" type="button">Copy</button></div>
+        <div class="li"><span class="ic"><svg class="i"><use href="#i-eye"/></svg></span><div><b>Viewer</b><small>2 members</small></div><button class="btn sm ghost" type="button">Copy</button></div>
+      </div>
+      <div class="sect mt">Custom</div>
+      <div class="list"><div class="li"><span class="ic"><svg class="i"><use href="#i-star"/></svg></span><div><b>Quality lead</b><small>1 member · copied from Shift lead</small></div><button class="btn sm ghost" type="button">Edit</button></div></div>
+    </div></div>
+    <div class="stack">
+      <div class="row between"><div><h3 style="font-size:17px">Permissions by role</h3><p class="small muted">Plain words; hover a row to see the technical name.</p></div><div class="legend"><span><b class="y" style="color:var(--run)">✓</b> allowed</span><span>— not allowed</span><span><b style="color:var(--reason)">◐</b> own scope only</span></div></div>
+      <div class="perm hd" style="border:1px solid var(--border);border-radius:14px 14px 0 0;border-bottom:0"><div>Area · permission</div><div>Admin</div><div>Prod. mgr</div><div>Shift lead</div><div>Operator</div><div>Maint.</div></div>
+      <div class="perm-area"><h4>Production data</h4>
+        <div class="perm"><div>See live floor and stops<small>stops:view</small></div><div class="y">✓</div><div class="y">✓</div><div class="y">◐</div><div class="y">◐</div><div class="y">✓</div></div>
+        <div class="perm"><div>Register and correct stops<small>stops:register, stops:review</small></div><div class="y">✓</div><div class="y">✓</div><div class="y">◐</div><div class="y">◐</div><div class="n">—</div></div>
+        <div class="perm"><div>Correct machine state<small>telemetry:override</small></div><div class="y">✓</div><div class="y">✓</div><div class="n">—</div><div class="n">—</div><div class="n">—</div></div>
+        <div class="perm"><div>See cost of losses<small>oee:view_cost</small></div><div class="y">✓</div><div class="y">✓</div><div class="n">—</div><div class="n">—</div><div class="n">—</div></div>
+      </div>
+      <div class="perm-area"><h4>Data out</h4>
+        <div class="perm"><div>Export data and reports<small>exports:create · set per role by the admin</small></div><div class="y">✓</div><div class="y">✓</div><div class="y">✓</div><div class="n">—</div><div class="n">—</div></div>
+        <div class="perm"><div>Handle privacy requests<small>privacy:requests · e.g. admin or HR</small></div><div class="y">✓</div><div class="n">—</div><div class="n">—</div><div class="n">—</div><div class="n">—</div></div>
+        <div class="perm"><div>See technician KPIs<small>maintenance:person_kpis · off by default</small></div><div class="y">✓</div><div class="n">—</div><div class="n">—</div><div class="n">—</div><div class="n">—</div></div>
+      </div>
+      <div class="perm-area"><h4>AI</h4>
+        <div class="perm"><div>Use Ask FP<small>ai:use · operators optional</small></div><div class="y">✓</div><div class="y">✓</div><div class="y">✓</div><div class="n">—</div><div class="n">—</div></div>
+        <div class="perm"><div>Configure AI and budget<small>ai:configure</small></div><div class="y">✓</div><div class="n">—</div><div class="n">—</div><div class="n">—</div><div class="n">—</div></div>
+      </div>
+      <div class="perm-area"><h4>People and setup</h4>
+        <div class="perm"><div>Manage members and roles<small>members:manage</small></div><div class="y">✓</div><div class="n">—</div><div class="n">—</div><div class="n">—</div><div class="n">—</div></div>
+        <div class="perm"><div>Edit plant structure<small>equipment:manage</small></div><div class="y">✓</div><div class="y">✓</div><div class="n">—</div><div class="n">—</div><div class="n">—</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="states"><h4>Other states</h4><div class="state-grid">
+    <figure class="state"><figcaption>Delete a role in use</figcaption><div class="banner warn"><svg class="i"><use href="#i-alert"/></svg><div><b>Quality lead is used by 1 member.</b> Give Anna another role first, then delete.</div></div></figure>
+  </div></div>
+</section>
+
+<!-- ============ 11 Terminals ============ -->
+<section class="screen" id="terminals" data-ask='["Which terminals are offline?","Which terminal was used most this week?"]'>
+  <div class="ph"><div><h1>Terminals</h1><p>Shared tablets and screens on the floor. Operators sign in on them with badge or PIN.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="Pairing code shown below"><svg class="i sm"><use href="#i-plus"/></svg>Add terminal</button></div></div>
+  <div class="g g-side">
+    <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Name</th><th>Site</th><th>Scope</th><th>Mode</th><th>Status</th><th>Last seen</th><th></th></tr></thead><tbody>
+      <tr><td><b>T-02 · Line 2</b><span class="t2">Samsung Tab Active5</span></td><td>Hultsfred</td><td>Line 2</td><td>Line screen</td><td><span class="badge b-run">Online</span></td><td>Now</td><td class="act"><button class="btn sm ghost" type="button">Edit</button></td></tr>
+      <tr><td><b>T-03 · Line 3</b><span class="t2">Samsung Tab Active5</span></td><td>Hultsfred</td><td>Line 3</td><td>Machine screen</td><td><span class="badge b-run">Online</span></td><td>Now</td><td class="act"><button class="btn sm ghost" type="button">Edit</button></td></tr>
+      <tr class="warn"><td><b>T-04 · Press</b><span class="t2">iPad 10th gen</span></td><td>Hultsfred</td><td>K-9, K-11</td><td>Machine screen</td><td><span class="badge b-warn">Offline 22 min</span></td><td>10:26</td><td class="act"><button class="btn sm ghost" type="button">Edit</button></td></tr>
+      <tr><td><b>TV-1 · Hall A</b><span class="t2">Board display</span></td><td>Hultsfred</td><td>Hall A</td><td>Board</td><td><span class="badge b-run">Online</span></td><td>Now</td><td class="act"><button class="btn sm ghost" type="button">Edit</button></td></tr>
+    </tbody></table></div></div>
+    <div class="card pad hl stack center">
+      <span class="eyebrow">Add terminal · pairing</span>
+      <h3 style="font-size:17px">Type this code on the new terminal</h3>
+      <div class="pair-code"><span>K7Q4</span><span>2MXP</span></div>
+      <p class="small muted">Valid for <b class="num" data-run="463">7:43</b> · then make a new one</p>
+      <div class="field" style="text-align:left"><label>Name</label><input class="input" value="T-05 · Packing"></div>
+      <div class="field" style="text-align:left"><label>Scope</label><select class="select"><option>Line 3 · Packing</option></select></div>
+      <div class="field" style="text-align:left"><label>Mode</label><select class="select"><option>Machine screen</option><option>Line screen</option><option>Board</option></select></div>
+    </div>
+  </div>
+  <div class="states"><h4>Other states</h4><div class="state-grid">
+    <figure class="state"><figcaption>Code expired</figcaption><div class="banner warn"><svg class="i"><use href="#i-clock"/></svg><div><b>The pairing code expired.</b> Codes last 10 minutes.</div></div><button class="btn" type="button">New code</button></figure>
+    <figure class="state"><figcaption>Revoke</figcaption><div class="banner err"><svg class="i"><use href="#i-power"/></svg><div><b>Revoke T-04?</b> It signs out at once and must be paired again. Waiting registrations on it are sent first if it is online.</div></div><button class="btn danger" type="button">Revoke terminal</button></figure>
+  </div></div>
+</section>
+
+<!-- ============ 12 Security settings ============ -->
+<section class="screen" id="security" data-ask='["Who accessed our company through FP support?","How many members have no two-step sign-in?"]'>
+  <div class="ph"><div><h1>Security</h1><p>Sign-in rules for everyone at Nordvik Trä AB.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="Security settings saved">Save</button></div></div>
+  <div class="g g2">
+    <div class="stack">
+      <div class="card"><div class="card-h"><h3>Sign-in</h3></div><div class="card-b stack">
+        <div class="row between"><div><b>Require two-step sign-in</b><p class="small muted">For admins and managers. Operators on terminals use badge or PIN.</p></div><label class="switch"><input type="checkbox" checked><span class="tr"></span></label></div>
+        <div class="row between"><div><b>Require a mobile number</b><p class="small muted">Every member needs a phone for alerts and SMS sign-in.</p></div><label class="switch"><input type="checkbox" checked><span class="tr"></span></label></div>
+        <div class="row between"><div><b>Allow SMS sign-in codes</b></div><label class="switch"><input type="checkbox" checked><span class="tr"></span></label></div>
+        <div class="g g2"><div class="field"><label>Minimum password length</label><div class="ig"><input value="12"><span class="unit">characters</span></div></div>
+          <div class="field"><label>Sign out after idle</label><div class="ig"><input value="8"><span class="unit">hours</span></div></div>
+          <div class="field"><label>Terminal idle sign-out</label><div class="ig"><input value="15"><span class="unit">minutes</span></div></div>
+          <div class="field"><label>Phone app lock</label><div class="ig"><input value="15"><span class="unit">minutes</span></div></div></div>
+        <div class="field"><label>Allowed email domains for invites</label><input class="input" value="nordvik-tra.example, consult.example"></div>
+      </div></div>
+      <div class="card"><div class="card-h"><h3>Single sign-on</h3><button class="btn sm" type="button" data-go="sso">Add connection</button></div><div class="card-b">
+        <div class="li"><span class="ic"><svg class="i"><use href="#i-key"/></svg></span><div><b>Microsoft Entra ID</b><small>nordvik-tra.example · new users get Viewer · tested 3 days ago</small></div><span class="badge b-run">Active</span></div></div></div>
+    </div>
+    <div class="stack">
+      <div class="card"><div class="card-h"><h3>FP support access</h3></div><div class="card-b stack">
+        <div class="stack tight">
+          <label class="radio-card"><span class="rd"></span><span><b>No access</b><small>FP support cannot open your company.</small></span></label>
+          <label class="radio-card on"><span class="rd"></span><span><b>Ask us each time</b><small>An admin approves every support session. Recommended.</small></span></label>
+          <label class="radio-card"><span class="rd"></span><span><b>Read only without asking</b><small>Support can look, never change. Every session is logged.</small></span></label>
+        </div></div></div>
+      <div class="card"><div class="card-h"><h3>Support access history</h3><a href="s19-audit-privacy.html#audit" class="small b">Audit log</a></div><div class="tbl-wrap"><table class="table compact"><thead><tr><th>When</th><th>Who</th><th>Mode</th><th>Reason</th></tr></thead><tbody>
+        <tr><td>14 Oct 09:12 · 25 min</td><td>Mira S. (FP)</td><td>Read only</td><td>Ticket 4471: K-11 shows no data</td></tr>
+        <tr><td>2 Sep 13:40 · 40 min</td><td>Mira S. (FP)</td><td>Act as Lena H.</td><td>Ticket 4310: board setup</td></tr>
+      </tbody></table></div></div>
+      <a class="card pad row" href="s14-operations.html#protect" style="color:var(--text)"><span class="ic" style="width:40px;height:40px;border-radius:12px;background:var(--run-soft);color:var(--run);display:grid;place-items:center"><svg class="i"><use href="#i-shieldok"/></svg></span><div class="sp"><b>Data protection</b><p class="small muted">Stored in the EU (Stockholm). Last backup 02:10 today.</p></div><svg class="i sm"><use href="#i-chev"/></svg></a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 13 SSO connection ============ -->
+<section class="screen" id="sso">
+  <div class="ph"><div><h1>SSO connection</h1><p>Let members sign in with your company account (OpenID Connect).</p></div><div class="ph-a"><button class="btn" type="button" data-toast="Opening a test sign-in window">Test login</button><button class="btn primary" type="button" data-toast="Connection saved">Save</button></div></div>
+  <div class="g g-side">
+    <div class="card"><div class="card-b stack" style="padding-top:18px">
+      <div class="field"><label>Provider</label><div class="seg"><button class="on" type="button">Microsoft Entra ID</button><button type="button">Google Workspace</button><button type="button">Other OIDC</button></div></div>
+      <div class="field"><label>Issuer URL</label><input class="input mono" value="https://login.microsoftonline.example/7f3c…/v2.0"></div>
+      <div class="g g2"><div class="field"><label>Client ID</label><input class="input mono" value="a41e9b70-2c1d-4e55-9f0a-8b1e4d23c6af"></div>
+        <div class="field"><label>Client secret</label><input class="input" type="password" value="••••••••••••" aria-describedby="sec-h"><span class="hint" id="sec-h">Write-only. Saved secrets are never shown again.</span></div></div>
+      <div class="field"><label>Email domains that use this connection</label><input class="input" value="nordvik-tra.example"></div>
+      <div class="row between"><div><b>Create members on first sign-in</b><p class="small muted">New colleagues can sign in without an invite.</p></div><label class="switch"><input type="checkbox" checked><span class="tr"></span></label></div>
+      <div class="field"><label>Default role for new members</label><select class="select"><option>Viewer</option><option>Operator</option></select></div>
+      <div class="row between"><div><b>Switch off passwords for these domains</b><p class="small muted">Recommended once the test login works.</p></div><label class="switch"><input type="checkbox"><span class="tr"></span></label></div>
+    </div></div>
+    <div class="stack">
+      <div class="card pad"><h3 style="font-size:15px;margin-bottom:8px">Add this to Microsoft</h3><p class="small muted mb">Redirect URL</p><div class="secret"><span>https://app.fp.example/auth/oidc/callback</span><button class="btn sm ghost" type="button" data-toast="Copied">Copy</button></div></div>
+      <div class="card pad"><h3 style="font-size:15px;margin-bottom:10px">Last test</h3><div class="banner ok"><svg class="i"><use href="#i-check"/></svg><div><b>Test passed</b> · 3 days ago · signed in as lena.holm@nordvik-tra.example</div></div></div>
+    </div>
+  </div>
+  <div class="states"><h4>Other states</h4><div class="state-grid">
+    <figure class="state"><figcaption>Testing</figcaption><div class="banner info"><svg class="i"><use href="#i-refresh"/></svg><div>Waiting for the test sign-in in the other window…</div></div></figure>
+    <figure class="state"><figcaption>Configuration invalid</figcaption><div class="banner err"><svg class="i"><use href="#i-alert"/></svg><div><b>The issuer did not answer.</b> We could not read /.well-known/openid-configuration at that URL. Check the tenant ID.</div></div></figure>
+  </div></div>
+</section>
+
+<!-- ============ 14 Terminal pairing (device) ============ -->
+<section class="screen" id="t-pair">
+  <div class="devices">
+    <div><div class="tablet"><div class="tb-scr">
+      <div class="k-top"><svg style="width:2.6em;height:2.6em"><use href="#mark"/></svg><div><b>Set up this terminal</b><small>FP Analyzer · kiosk mode</small></div><span class="k-conn" style="margin-left:auto"><svg class="i xs"><use href="#i-wifi"/></svg>Wi-Fi: Nordvik-Prod</span></div>
+      <div class="k-body" style="align-items:center;justify-content:center;gap:1.4em">
+        <div class="center"><div class="k-h" style="font-size:1.8em">Type the pairing code</div><p class="dim" style="font-size:1.05em;margin-top:.4em">An admin finds it in FP → People &amp; access → Terminals → Add terminal</p></div>
+        <div class="k-slots"><span>K</span><span>7</span><span>Q</span><span>4</span><span style="border:0;width:1em;background:none">–</span><span>2</span><span>M</span><span class="f"></span><span></span></div>
+        <div class="k-keys" style="width:min(56em,100%)">
+          <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>0</span>
+          <span>Q</span><span>W</span><span>E</span><span>R</span><span>T</span><span>Y</span><span>U</span><span>P</span><span>A</span><span>S</span>
+          <span>D</span><span>F</span><span>G</span><span>H</span><span>J</span><span>K</span><span>L</span><span>Z</span><span>X</span><span>C</span>
+          <span>V</span><span>B</span><span>N</span><span>M</span><span class="w2">⌫</span><span class="w2" role="button" data-to="s10-mobile-kiosk#k-status" style="background:var(--brand);color:var(--on-brand)">Pair</span><span class="w2" role="button" data-toast="Point the camera at the QR code on the admin screen">Scan QR</span>
+        </div>
+      </div>
+    </div></div><div class="dev-cap"><b>Terminal pairing</b> · first start of a new tablet</div></div>
+  </div>
+  <div style="padding:0 22px 30px"><div class="states"><h4>Other states</h4><div class="state-grid">
+    <figure class="state"><figcaption>Invalid code</figcaption><div class="banner err"><svg class="i"><use href="#i-alert"/></svg><div><b>That code is not valid or has expired.</b> Ask your admin for a new code.</div></div></figure>
+    <figure class="state"><figcaption>Paired</figcaption><div class="banner ok"><svg class="i"><use href="#i-check"/></svg><div><b>Paired as T-05 · Packing</b> · Nordvik Trä AB, Hultsfred · Line 3. Starting…</div></div></figure>
+  </div></div></div>
+</section>
+
+<!-- ============ 15 Terminal operator picker (device) ============ -->
+<section class="screen" id="t-picker">
+  <div class="devices">
+    <div><div class="tablet"><div class="tb-scr">
+      <div class="k-top"><div><b>Sign in · Line 2</b><small>Terminal T-02 · Hultsfred</small></div><span class="clk num">10:48</span><span class="k-conn"><svg class="i xs"><use href="#i-wifi"/></svg>Online</span></div>
+      <div class="k-body" style="display:grid;grid-template-columns:minmax(0,1fr) 22em;gap:1.4em">
+        <div class="stack" style="gap:1em;min-width:0">
+          <div class="row" style="gap:1.2em"><span class="reader" role="button" title="Scan badge" data-to="s18-operator#home"><span class="w"></span><span class="w"></span><span class="core"><svg class="i"><use href="#i-badge"/></svg></span></span><div><div class="k-h" style="font-size:1.7em">Scan your badge</div><p class="dim" style="font-size:1em">Or pick your name and type your PIN</p></div></div>
+          <div class="ig" style="height:3.4em;font-size:1em;border-radius:1em"><svg class="i"><use href="#i-search"/></svg><input placeholder="Search name" style="font-size:1em"></div>
+          <div class="k-names" data-pick>
+            <div class="k-name on"><span class="av c2">SK</span>Sami Koski<small>Today 06:02</small></div>
+            <div class="k-name"><span class="av">AV</span>Aino Virtanen<small>Yesterday</small></div>
+            <div class="k-name"><span class="av c3">JL</span>Jonas Lind<small>Yesterday</small></div>
+            <div class="k-name"><span class="av c4">ME</span>Maja Ek<small>Mon</small></div>
+            <div class="k-name"><span class="av c5">PN</span>Pekka Niemi<small>Mon</small></div>
+            <div class="k-name"><span class="av" style="background:var(--surface-3);color:var(--text-2)">+</span>Someone else<small>Search</small></div>
+          </div>
+        </div>
+        <div class="k-card" style="display:flex;flex-direction:column;gap:.9em">
+          <div class="k-h">Hi Sami, your PIN</div>
+          <div class="kdots"><i class="f"></i><i class="f"></i><i></i><i></i></div>
+          <div class="k-pad" data-pin-to="s18-operator#home"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>⌫</span><span>0</span><span class="go" role="button" data-to="s18-operator#home">✓</span></div>
+        </div>
+      </div>
+    </div></div><div class="dev-cap"><b>Terminal operator picker</b> · badge first, PIN as fallback</div></div>
+  </div>
+  <div style="padding:0 22px 30px"><div class="states"><h4>Other states</h4><div class="state-grid">
+    <figure class="state"><figcaption>Wrong PIN</figcaption><div class="banner err"><svg class="i"><use href="#i-alert"/></svg><div><b>Wrong PIN.</b> 2 tries left, then a 5-minute pause.</div></div></figure>
+    <figure class="state"><figcaption>Locked</figcaption><div class="banner err"><svg class="i"><use href="#i-lock"/></svg><div><b>Sami's PIN is locked.</b> Use your badge, or ask your shift lead to unlock it.</div></div></figure>
+    <figure class="state"><figcaption>No access here</figcaption><div class="banner warn"><svg class="i"><use href="#i-hand"/></svg><div><b>You are not set up for Line 2.</b> Ask your supervisor to add Line 2 to your machines.</div></div></figure>
+    <figure class="state"><figcaption>Offline</figcaption><div class="banner warn"><svg class="i"><use href="#i-wifioff"/></svg><div><b>No connection.</b> Badge sign-in works for people seen here in the last 12 hours. PIN needs the connection.</div></div></figure>
+  </div></div></div>
+</section>
+
+<!-- ============ 16 Terminal operator bar (device) ============ -->
+<section class="screen" id="t-bar">
+  <div class="devices">
+    <div><div class="tablet"><div class="tb-scr">
+      <div class="opbar"><span class="av c2">SK</span><div><b>Sami Koski</b><div style="font-size:.85em;color:#9FC4CC">Line 2 · signed in 06:02</div></div><span class="idle" role="button" data-toast="You stay signed in">Signing out in <span class="num" data-run="48">0:48</span> · tap to stay</span><span class="end" role="button" data-to="s18-operator#signout"><svg class="i sm"><use href="#i-logout"/></svg>End shift</span></div>
+      <div class="k-body" style="opacity:.55">
+        <div class="k-open" data-to="s08-registration#one-tap"><span class="ic"><svg class="i"><use href="#i-q"/></svg></span><div><b>K-5 stopped 6:12 ago</b><small>What happened? It takes 2 taps.</small></div></div>
+        <div class="g g3" style="gap:1em;flex:1"><div class="k-card" style="height:100%"></div><div class="k-card" style="height:100%"></div><div class="k-card" style="height:100%"></div></div>
+      </div>
+    </div></div><div class="dev-cap"><b>Operator bar</b> · always on top; idle countdown appears in the last minute</div></div>
+  </div>
+</section>
+
+<!-- ============ 17 Support banner ============ -->
+<section class="screen" id="support-banner">
+  <div class="support-bar" style="margin:-22px -22px 18px;border-radius:0"><svg class="i sm"><use href="#i-eye"/></svg><span>Support session: Mira S. (FP) · read only · until 11:30 · reason: Ticket 4471, K-11 shows no data</span><span class="sp"></span><button class="btn sm" type="button" data-toast="Only FP staff see End; company users see Details">Details</button></div>
+  <div class="ph"><div><h1>Support banner</h1><p>Everyone in the company sees this red bar while FP support is inside their company.</p></div></div>
+  <div class="g g2">
+    <div class="card pad stack"><span class="eyebrow">What company users see</span><div class="support-bar" style="border-radius:10px"><svg class="i sm"><use href="#i-eye"/></svg><span>Support session: Mira S. (FP) · read only · until 11:30</span><span class="sp"></span><button class="btn sm" type="button">Details</button></div><p class="small dim">Details shows reason, ticket, start time and who approved. Admins can end it.</p></div>
+    <div class="card pad stack"><span class="eyebrow">What FP staff see</span><div class="support-bar" style="border-radius:10px;background:#7A1A10"><svg class="i sm"><use href="#i-user"/></svg><span>You are acting as Lena H. · Nordvik Trä AB · 24 min left</span><span class="sp"></span><button class="btn sm" type="button">End session</button></div><p class="small dim">Every action is written to both the company's and the platform's audit log.</p></div>
+  </div>
+</section>
+
+<!-- ============ 18 Platform: Companies ============ -->
+<section class="screen" id="p-companies" data-ask='["Which companies had no activity this week?","Which companies are on an old schema?"]'>
+  <div class="ph"><div><h1>Companies</h1><p>Every customer on the platform.</p></div><div class="ph-a"><button class="btn primary" type="button" data-go="p-company"><svg class="i sm"><use href="#i-plus"/></svg>Create company</button></div></div>
+  <div class="filters"><div class="ig" style="width:260px;height:34px"><svg class="i sm"><use href="#i-search"/></svg><input placeholder="Search name or slug"></div><button class="fchip on" type="button">Active <span class="badge">38</span></button><button class="fchip" type="button">Pilot <span class="badge">4</span></button><button class="fchip" type="button">Suspended <span class="badge">1</span></button><button class="fchip" type="button">Host: <b>All</b></button></div>
+  <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Company</th><th>Status</th><th>Host</th><th>Schema</th><th>Members</th><th>Last activity</th><th></th></tr></thead><tbody>
+    <tr><td><b>Nordvik Trä AB</b><span class="t2">nordvik-tra</span></td><td><span class="badge b-run">Active</span></td><td>db-sto-1</td><td>v3.4.2</td><td>46</td><td>Now</td><td class="act"><button class="btn sm ghost" type="button" data-go="p-company">Open</button></td></tr>
+    <tr><td><b>Björkdal Möbler AB</b><span class="t2">bjorkdal</span></td><td><span class="badge b-run">Active</span></td><td>db-sto-1</td><td>v3.4.2</td><td>22</td><td>4 min ago</td><td class="act"><button class="btn sm ghost" type="button">Open</button></td></tr>
+    <tr class="warn"><td><b>Solgran Kök AB</b><span class="t2">solgran</span></td><td><span class="badge b-warn">Pilot · day 19</span></td><td>db-sto-1</td><td><span class="badge b-warn">v3.4.1</span></td><td>9</td><td>1 h ago</td><td class="act"><button class="btn sm ghost" type="button">Open</button></td></tr>
+    <tr><td><b>Västkust Plast AB</b><span class="t2">vastkust</span></td><td><span class="badge b-off">Suspended</span></td><td>db-sto-1</td><td>v3.4.2</td><td>14</td><td>12 days ago</td><td class="act"><button class="btn sm ghost" type="button">Open</button></td></tr>
+  </tbody></table></div></div>
+  <div class="card mt"><div class="card-h"><h3>Create company · provisioning</h3><span class="badge b-warn">Step 4 failed</span></div><div class="card-b">
+    <div class="vsteps">
+      <div class="vstep done"><span class="dt">✓</span><div><b>Company record</b><small>Lindqvist Golv AB · slug lindqvist · EU Stockholm</small></div><span class="small muted">2 s</span></div>
+      <div class="vstep done"><span class="dt">✓</span><div><b>Database created</b><small>fp_co_lindqvist on db-sto-1</small></div><span class="small muted">6 s</span></div>
+      <div class="vstep done"><span class="dt">✓</span><div><b>Schema v3.4.2 applied</b><small>142 migrations</small></div><span class="small muted">38 s</span></div>
+      <div class="vstep bad"><span class="dt">!</span><div><b>Template pack applied</b><small>Reason list "Wood and furniture v2" failed: duplicate code SAW-03</small></div><button class="btn sm" type="button" data-toast="Retrying step 4">Retry step</button></div>
+      <div class="vstep"><span class="dt">5</span><div><b>First admin invited</b><small>Waiting</small></div></div>
+    </div></div></div>
+</section>
+
+<!-- ============ 19 Platform: Company detail ============ -->
+<section class="screen" id="p-company">
+  <div class="ph"><div class="row"><span class="av lg" style="background:#0A8796;border-radius:12px">NT</span><div><h1>Nordvik Trä AB</h1><p>nordvik-tra · Plus plan · db-sto-1 · EU Stockholm · customer since 2019</p></div></div>
+    <div class="ph-a"><button class="btn" type="button" data-go="p-support"><svg class="i sm"><use href="#i-eye"/></svg>Start support session</button><button class="btn" type="button" data-toast="Suspend: reason required, company users see a notice">Suspend</button><button class="btn danger-ghost" type="button" data-toast="Deletion needs a second approver">Delete…</button></div></div>
+  <div class="g g3">
+    <div class="card pad stack"><span class="sect" style="margin:0">Status</span><span class="badge b-run" style="align-self:flex-start">Active</span><dl class="kv"><dt>Members</dt><dd>46</dd><dt>Devices</dt><dd>18 online / 19</dd><dt>Last activity</dt><dd>Now</dd></dl></div>
+    <div class="card pad stack"><span class="sect" style="margin:0">Database</span><dl class="kv"><dt>Host</dt><dd>db-sto-1</dd><dt>Schema</dt><dd>v3.4.2 · current</dd><dt>Size</dt><dd>14.2 GB</dd><dt>Credential</dt><dd>rotated 41 days ago</dd></dl>
+      <div class="row"><button class="btn sm" type="button" data-toast="Credential rotated; app reconnects in 30 s">Rotate credential</button><button class="btn sm" type="button" data-toast="Move wizard: pick target host, planned window">Move to host…</button></div></div>
+    <div class="card pad stack"><span class="sect" style="margin:0">Support sessions</span><div class="li"><span class="ic"><svg class="i"><use href="#i-eye"/></svg></span><div><b>14 Oct · read only</b><small>Mira S. · Ticket 4471 · 25 min</small></div></div><div class="li"><span class="ic"><svg class="i"><use href="#i-user"/></svg></span><div><b>2 Sep · act as Lena H.</b><small>Mira S. · Ticket 4310 · 40 min</small></div></div></div>
+  </div>
+  <div class="states"><h4>Other states</h4><div class="state-grid">
+    <figure class="state"><figcaption>Deletion waiting for second approver</figcaption><div class="banner warn"><svg class="i"><use href="#i-users"/></svg><div><b>Deletion requested by Mira S.</b> Needs approval by another platform admin within 72 h. Data is kept 30 days after deletion.</div></div><div class="row"><button class="btn danger" type="button">Approve deletion</button><button class="btn" type="button">Reject</button></div></figure>
+  </div></div>
+</section>
+
+<!-- ============ 20 Platform: Support session dialog ============ -->
+<section class="screen" id="p-support">
+  <div class="stage-dim" style="min-height:640px">
+    <div class="under"><div class="ph"><div><h1>Nordvik Trä AB</h1><p>nordvik-tra · Plus plan</p></div></div><div class="g g3"><div class="card pad" style="height:160px"></div><div class="card pad" style="height:160px"></div><div class="card pad" style="height:160px"></div></div></div>
+    <div class="over"><div class="dlg">
+      <div class="dlg-h"><span class="av" style="border-radius:10px;background:#B42318"><svg class="i sm"><use href="#i-eye"/></svg></span><div><h2>Start a support session</h2><p>Nordvik Trä AB asks to approve each session.</p></div></div>
+      <div class="dlg-b">
+        <div class="field"><label>Mode</label><div class="stack tight" data-pick>
+          <label class="radio-card on"><span class="rd"></span><span><b>Read only</b><small>See screens, change nothing.</small></span></label>
+          <label class="radio-card"><span class="rd"></span><span><b>Act as a member</b><small>Do what that member can do. Every change is logged as you.</small></span></label></div></div>
+        <div class="field"><label>As member (for act as)</label><select class="select" disabled><option>Lena Holm · Production manager</option></select></div>
+        <div class="field"><label>Reason (company sees this)</label><textarea class="textarea">K-11 shows no data since 10:26. Checking channel mapping.</textarea></div>
+        <div class="g g2"><div class="field"><label>Ticket</label><input class="input" value="4471"></div><div class="field"><label>Length</label><div class="ig"><input value="30"><span class="unit">minutes</span></div></div></div>
+      </div>
+      <div class="dlg-f"><button class="btn" type="button" data-go="p-company">Cancel</button><button class="btn primary" type="button" data-toast="Request sent to Nordvik Trä admins">Request access</button></div>
+    </div></div>
+  </div>
+  <div class="states"><h4>Other states</h4><div class="state-grid">
+    <figure class="state"><figcaption>Awaiting approval</figcaption><div class="banner info"><svg class="i"><use href="#i-clock"/></svg><div><b>Waiting for Nordvik Trä to approve.</b> Lena Holm and 1 other admin were notified. Expires in <span class="num b" data-run="532">8:52</span>.</div></div></figure>
+    <figure class="state"><figcaption>Denied</figcaption><div class="banner err"><svg class="i"><use href="#i-x"/></svg><div><b>Lena Holm declined.</b> "Please call me first: 070 123 45 18."</div></div></figure>
+  </div></div>
+</section>
+
+</main>
+<script src="../assets/fp.js"></script>
+</body>
+</html>

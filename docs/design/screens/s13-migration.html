@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>S13 Migration Cutover</title>
+<meta name="description" content="FP Analyzer v3 prototype, module S13: migration projects, project detail, run detail, mapping assistant, reconciliation, device cutover board and the customer status page.">
+<!-- Written for: the FP owner, client reviewers and developers building S13. Prototype only; all names and numbers are fictional. -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Poppins:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="../assets/fp.css">
+<style>
+.wave{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:900px){.wave{grid-template-columns:minmax(0,1fr)}}
+.wave .card{padding:16px}
+.wave .co{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--border);font-size:13.5px}
+.phase{display:flex;gap:6px;flex-wrap:wrap}
+.log{font-family:var(--mono);font-size:12.5px;background:var(--surface-2);border-radius:var(--radius-sm);padding:12px 14px;line-height:1.7;overflow-x:auto;white-space:pre}
+.log .ok{color:var(--run)}.log .w{color:var(--reason)}.log .e{color:var(--stop)}
+.cmp{display:grid;grid-template-columns:minmax(0,1.4fr) repeat(3,minmax(0,1fr));gap:0;font-size:13.5px}
+.cmp>div{padding:10px 12px;border-top:1px solid var(--border)}
+.cmp .h{font-size:11.5px;font-weight:800;text-transform:uppercase;color:var(--text-3);border-top:0}
+.cmp .bad{background:var(--stop-soft);color:var(--stop);font-weight:750}
+.cmp .ok{color:var(--run);font-weight:750}
+.cut .kcard{border-left-color:var(--c)}
+.cust-hero{border-radius:var(--radius);background:var(--hero);color:var(--hero-text);padding:24px;display:grid;gap:14px}
+.cust-hero h2{font-size:24px}
+.cust-hero p{color:var(--hero-text-2)}
+.cust-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:760px){.cust-steps{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+.cust-steps div{background:rgba(255,255,255,.08);border-radius:12px;padding:12px;font-size:13px}
+.cust-steps b{display:block;font-size:14px}
+.cust-steps .d{background:rgba(34,197,94,.22)}
+.cust-steps .c{background:rgba(255,255,255,.2);outline:2px solid #fff}
+</style>
+</head>
+<body data-module="S13">
+<main id="screens">
+
+<section class="screen" id="projects" data-ask='["Which companies move in wave 2?"]'>
+  <div class="ph"><div><h1>Moves to v3</h1><p>Every customer moving from the old FP to v3, grouped in waves.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="New migration project"><svg class="i sm"><use href="#i-plus"/></svg>New project</button></div></div>
+  <div class="g g4 keep2 mb"><div class="card kpi"><div class="kpi-l">Moved</div><div class="kpi-v num" style="color:var(--run)">14</div></div><div class="card kpi"><div class="kpi-l">In progress</div><div class="kpi-v num">5</div></div><div class="card kpi"><div class="kpi-l">Waiting</div><div class="kpi-v num">19</div></div><div class="card kpi"><div class="kpi-l">Blocked</div><div class="kpi-v num" style="color:var(--stop)">1</div></div></div>
+  <div class="wave">
+    <div class="card"><div class="row between"><b>Wave 1 · done</b><span class="badge b-run">14 / 14</span></div><div class="co"><span>Nordvik Trä AB</span><span class="badge b-run">Moved 12 Sep</span></div><div class="co"><span>+ 13 more</span><span></span></div></div>
+    <div class="card hl"><div class="row between"><b>Wave 2 · now</b><span class="badge b-brand">2 Nov</span></div>
+      <div class="co"><span>Lindqvist Golv</span><span class="badge b-warn">Parity open</span></div><div class="co"><span>Västkust Plast</span><span class="badge b-setup">Test run 2</span></div><div class="co"><span>Solgran Kök</span><span class="badge b-stop">Blocked</span></div><div class="co"><span>+ 2 more</span><span></span></div></div>
+    <div class="card"><div class="row between"><b>Wave 3</b><span class="badge">30 Nov</span></div><div class="co"><span>19 companies</span><span class="badge">Waiting</span></div></div>
+  </div>
+</section>
+
+<section class="screen" id="project" data-ask='["What is left before Lindqvist Golv can switch?"]'>
+  <div class="ph"><div><span class="eyebrow">Wave 2 · switch on Mon 2 Nov 05:00</span><h1>Lindqvist Golv</h1><p>12 machines · 4 FP Boxes · data since 2017 (2.1 million stops)</p></div><div class="ph-a"><button class="btn" type="button" data-go="run">Start test run</button></div></div>
+  <div class="steps"><span class="step done"><i>✓</i>Copy data</span><span class="step done"><i>✓</i>Map reasons</span><span class="step done"><i>✓</i>Compare numbers</span><span class="step cur"><i>4</i>Parity signed</span><span class="step"><i>5</i>Switch devices</span><span class="step"><i>6</i>Watch 7 days</span></div>
+  <div class="g g-side">
+    <div class="card"><div class="card-h"><h3>Test runs</h3></div><div class="tbl-wrap"><table class="table"><thead><tr><th>Run</th><th>Date</th><th>Copied</th><th>Numbers match</th><th></th></tr></thead><tbody>
+      <tr><td><b>#3</b></td><td>20 Oct</td><td>2.1 M stops</td><td><span class="badge b-run">99.98 %</span></td><td class="act"><button class="btn sm ghost" type="button" data-go="recon">Compare</button></td></tr>
+      <tr><td><b>#2</b></td><td>13 Oct</td><td>2.1 M stops</td><td><span class="badge b-warn">97.1 %</span></td><td class="act"><button class="btn sm ghost" type="button" data-go="run">Log</button></td></tr></tbody></table></div></div>
+    <div class="stack"><div class="card pad"><b>Blocking the switch</b><div class="li mt-s"><span class="ic" style="background:var(--reason-soft);color:var(--reason)"><svg class="i"><use href="#i-checks"/></svg></span><div><b>Parity: 3 items open</b><small>Customer is checking exports</small></div><a class="btn sm" href="s09-platform-console.html#parity-review">Open</a></div></div>
+      <div class="card pad"><dl class="kv"><dt>Customer contact</dt><dd>Pekka Niemi</dd><dt>FP owner</dt><dd>Mira S.</dd><dt>Rollback until</dt><dd>9 Nov</dd></dl></div></div>
+  </div>
+</section>
+
+<section class="screen" id="run" data-ask='["Why did test run 2 have mismatches?"]'>
+  <div class="ph"><div><h1>Test run #3 · Lindqvist Golv</h1><p>Copies everything into a test copy of v3. Nothing changes for the customer.</p></div><span class="badge b-run" style="height:28px">Finished · 2 h 14 m</span></div>
+  <div class="g g4 keep2 mb"><div class="card kpi"><div class="kpi-l">Stops</div><div class="kpi-v num">2.1<small>M</small></div></div><div class="card kpi"><div class="kpi-l">Registrations</div><div class="kpi-v num">1.6<small>M</small></div></div><div class="card kpi"><div class="kpi-l">Skipped</div><div class="kpi-v num">212</div><div class="kpi-f">see log</div></div><div class="card kpi"><div class="kpi-l">Errors</div><div class="kpi-v num">0</div></div></div>
+  <div class="card pad"><b>Log</b><div class="log mt-s"><span class="ok">05:00:01  OK</span>   start · source v2 db-lg-2 · target v3 test
+<span class="ok">05:02:40  OK</span>   machines 12 · lines 3 · shifts 4
+<span class="ok">05:58:12  OK</span>   stops 2 104 551 copied
+<span class="w">06:40:03  NOTE</span> 212 registrations point to deleted machines → kept as "archived machine"
+<span class="ok">07:14:20  OK</span>   reconciliation 99.98 % · finished</div></div>
+  <div class="row mt"><button class="btn primary" type="button" data-toast="Resumed from step 4">Resume</button></div>
+</section>
+
+<section class="screen" id="mapping" data-ask='["Which old reasons have no match yet?"]'>
+  <div class="ph"><div><h1>Mapping assistant</h1><p>Old names → new names. FP suggests a match; FP staff and the customer confirm.</p></div></div>
+  <div class="tabs" data-tabs="mp"><button class="on" data-t="r" type="button">Reasons <span class="cnt">64</span></button><button data-t="m" type="button">Machines <span class="cnt">12</span></button><button data-t="s" type="button">Shifts <span class="cnt">4</span></button><button data-t="u" type="button">Users <span class="cnt">31</span></button></div>
+  <div data-pane="mp:r"><div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>In old FP</th><th>Becomes in v3</th><th>Sure?</th><th>Checked by</th></tr></thead><tbody>
+    <tr><td>"Stopp matning"</td><td>Machine › Jam in feeder</td><td><span class="badge b-run">high</span></td><td>Pekka N.</td></tr>
+    <tr><td>"Byte verktyg"</td><td>Setup › Tool change</td><td><span class="badge b-run">high</span></td><td>Pekka N.</td></tr>
+    <tr class="warn"><td>"Diverse"</td><td><select class="input" style="height:32px"><option>Other › Not specified</option></select></td><td><span class="badge b-warn">check</span></td><td>—</td></tr></tbody></table></div></div></div>
+  <div data-pane="mp:m" hidden><div class="card pad muted">12 machines, all matched by name.</div></div><div data-pane="mp:s" hidden><div class="card pad muted">4 shifts matched.</div></div><div data-pane="mp:u" hidden><div class="card pad muted">31 users; 3 without email get an invite code.</div></div>
+</section>
+
+<section class="screen" id="recon" data-ask='["Which machine totals do not match?"]'>
+  <div class="ph"><div><h1>Compare numbers</h1><p>Old FP and v3 side by side, per machine and month. Everything should match before the switch.</p></div><div class="ph-a"><div class="seg"><button type="button">August</button><button class="on" type="button">September</button></div></div></div>
+  <div class="card pad"><div class="cmp">
+    <div class="h">Machine</div><div class="h">Stop time old</div><div class="h">Stop time v3</div><div class="h">Difference</div>
+    <div><b>Press 1</b></div><div class="num">41 h 12 m</div><div class="num">41 h 12 m</div><div class="ok">0</div>
+    <div><b>Saw 2</b></div><div class="num">18 h 40 m</div><div class="num">18 h 40 m</div><div class="ok">0</div>
+    <div><b>Sander 1</b></div><div class="num">22 h 05 m</div><div class="num">21 h 51 m</div><div class="bad">−14 min</div>
+    <div><b>Packing</b></div><div class="num">9 h 30 m</div><div class="num">9 h 30 m</div><div class="ok">0</div>
+  </div><div class="banner warn mt"><svg class="i"><use href="#i-info"/></svg><div><b>Sander 1:</b> v3 merges stops closer than 30 s (old FP did not). Expected; accepted by Pekka N.</div></div></div>
+  <div class="row mt"><button class="btn primary" type="button" data-toast="Reconciliation signed by Lena Holm">Sign</button><span class="small muted">Mismatches must be explained before signing.</span></div>
+</section>
+
+<section class="screen" id="cutover" data-ask='["Which units are not switched yet?"]'>
+  <div class="ph"><div><h1>Switch devices · Lindqvist Golv</h1><p>Each FP Box moves from the old FP to v3. Events are kept on the box while it switches.</p></div><div class="ph-a"><button class="btn danger" type="button" data-toast="Asks for confirmation">Roll back all</button></div></div>
+  <div class="kanban cut" style="grid-template-columns:repeat(4,minmax(220px,1fr))">
+    <div class="kcol"><h4>Waiting <span class="badge">1</span></h4><div class="kcard" style="--c:var(--offline)"><b>U-12</b><small>Packing · firmware 2.2 needs update first</small></div></div>
+    <div class="kcol"><h4>Switching <span class="badge">1</span></h4><div class="kcard" style="--c:var(--setup)"><b>U-11</b><small>Sander 1 · new certificate sent 05:12</small></div></div>
+    <div class="kcol"><h4>Sending to v3 <span class="badge">2</span></h4><div class="kcard" style="--c:var(--run-fill)"><b>U-09</b><small>Press 1 · 412 events since 05:04</small></div><div class="kcard" style="--c:var(--run-fill)"><b>U-10</b><small>Saw 2 · 388 events</small></div></div>
+    <div class="kcol"><h4>Problem <span class="badge">0</span></h4><p class="small muted" style="padding:6px">Nothing here. A box lands here if it cannot reach v3 in 10 min; it then keeps sending to the old FP.</p></div>
+  </div>
+  <div class="row mt" style="gap:8px"><button class="btn" type="button" data-toast="U-07 marked switched">Switched</button><button class="btn" type="button" data-toast="Last v3 event 12 s ago · OK">Verify</button><button class="btn danger-ghost" type="button" data-toast="U-07 back on the old server">Rollback</button></div>
+</section>
+
+<section class="screen" id="cust-status" data-ask='["What changes for us on Monday?"]'>
+  <div class="banner neutral mb"><svg class="i"><use href="#i-info"/></svg><div>Prototype note: shown inside the sample company. In the app, each company in a wave sees its own move here (this sample: Lindqvist Golv, wave 2).</div></div>
+  <div class="cust-hero mb">
+    <span class="badge" style="background:rgba(255,255,255,.14);color:#fff;width:max-content">Your move to the new FP Analyzer</span>
+    <h2>Monday 2 November, 05:00</h2>
+    <p>Production keeps running. Machine data is never lost: the FP Boxes keep everything while they switch. You sign in with the same email.</p>
+    <div class="cust-steps"><div class="d"><b>✓ Data copied</b>tested 3 times</div><div class="d"><b>✓ Numbers match</b>checked by Pekka N.</div><div class="c"><b>Check what you use</b>2 items left</div><div><b>Switch</b>Mon 2 Nov</div></div>
+  </div>
+  <div class="g g2">
+    <div class="card pad"><b>What you need to do</b><div class="li mt-s"><span class="ic" style="background:var(--reason-soft);color:var(--reason)"><svg class="i"><use href="#i-checks"/></svg></span><div><b>Check 2 changed features</b><small>about 10 minutes</small></div><a class="btn sm primary" href="s09-platform-console.html#parity-review">Check now</a></div><div class="li"><span class="ic"><svg class="i"><use href="#i-phone"/></svg></span><div><b>Install the new phone app</b><small>before Monday</small></div><span></span></div></div>
+    <div class="card pad"><b>Questions?</b><p class="small muted mt-s">Your contact at FP is Mira Sandell. Call the support line any time on switch day.</p><button class="btn sm mt" type="button" data-toast="Message sent to Mira S.">Send a message</button></div>
+  </div>
+</section>
+
+</main>
+<script src="../assets/fp.js"></script>
+</body>
+</html>

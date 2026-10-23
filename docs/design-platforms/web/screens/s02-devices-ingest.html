@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>S02 Devices and Ingest</title>
+<meta name="description" content="FP Analyzer v3 prototype, module S02: device list, add-device wizard, device detail, channels, signal rules, dead letters, ingest health and device profiles.">
+<!-- Written for: the FP owner, client reviewers and developers building S02. Prototype only; all names and numbers are fictional. -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Poppins:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="../assets/fp.css">
+<style>
+.pres{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:6px}
+.pres.on{background:var(--run-fill);box-shadow:0 0 0 3px var(--run-soft)}.pres.off{background:var(--offline)}.pres.pend{background:var(--reason-dot)}
+.trust{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:800;border-radius:6px;padding:2px 7px}
+.trust.t1{background:var(--run-soft);color:var(--run)}.trust.t2{background:var(--setup-soft);color:var(--setup)}.trust.t3{background:var(--reason-soft);color:var(--reason)}
+.prof{border:1.5px solid var(--border);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;cursor:pointer;background:var(--surface)}
+.prof.on{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+.prof .caps{display:flex;gap:5px;flex-wrap:wrap}
+.livev{font-family:var(--mono);font-weight:700}
+.unconf td{background:color-mix(in srgb,var(--reason-soft) 70%,transparent)!important}
+</style>
+</head>
+<body data-module="S02">
+<main id="screens">
+
+<section class="screen" id="devices" data-ask='["Which devices are offline right now?","Which devices run old firmware?","Which device has the most rejected messages?"]'>
+  <div class="ph"><div><h1>Devices</h1><p>FP Boxes and other connected devices at Nordvik Trä.</p></div><div class="ph-a"><button class="btn" type="button" data-go="channels">Channels <span class="badge b-warn">4 not connected</span></button><button class="btn primary" type="button" data-go="add-device"><svg class="i sm"><use href="#i-plus"/></svg>Add device</button></div></div>
+  <div class="g g4 keep2 mb">
+    <div class="card kpi"><div class="kpi-l">Online</div><div class="kpi-v num">17<small>/ 19</small></div></div>
+    <div class="card kpi"><div class="kpi-l">Messages today</div><div class="kpi-v num">212k</div></div>
+    <div class="card kpi"><div class="kpi-l">Rejected today</div><div class="kpi-v num" style="color:var(--reason)">14</div><div class="kpi-f"><a href="#" data-go="dead-letters">Review</a></div></div>
+    <div class="card kpi"><div class="kpi-l">Median delay</div><div class="kpi-v num">0.4<small>s</small></div></div>
+  </div>
+  <div class="filters"><div class="ig" style="width:240px;height:34px"><svg class="i sm"><use href="#i-search"/></svg><input placeholder="Search name or serial"></div><button class="fchip" type="button">Profile: <b>All</b></button><button class="fchip" type="button">Presence: <b>All</b></button><button class="fchip" type="button">Site: <b>Hultsfred</b></button></div>
+  <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Device</th><th>Profile</th><th>Trust</th><th>Presence</th><th>Firmware</th><th>Channels</th><th></th></tr></thead><tbody>
+    <tr><td><b>U-07 · Line 2 box</b><span class="t2">FPB-2408-0007</span></td><td>FP Box v2 (4 digital)</td><td><span class="trust t1"><svg class="i xs"><use href="#i-shieldok"/></svg>Signed device</span></td><td><span class="pres on"></span>Online</td><td>2.4.1</td><td>4 / 4 connected</td><td class="act"><button class="btn sm ghost" type="button" data-go="device">Open</button><button class="btn sm ghost icon" type="button" aria-label="More" data-toast="Rotate credential · Revoke · Restart · Identify (blink LED)"><svg class="i sm"><use href="#i-more"/></svg></button></td></tr>
+    <tr><td><b>U-09 · Press counter</b><span class="t2">FPB-2408-0009</span></td><td>FP Box v2 (counter)</td><td><span class="trust t1"><svg class="i xs"><use href="#i-shieldok"/></svg>Signed device</span></td><td><span class="pres on"></span>Online</td><td>2.4.1</td><td>2 / 2</td><td class="act"><button class="btn sm ghost" type="button" data-go="device">Open</button></td></tr>
+    <tr class="warn"><td><b>U-11 · Sander</b><span class="t2">FPB-2311-0011</span></td><td>FP Box v1 (4 digital)</td><td><span class="trust t1"><svg class="i xs"><use href="#i-shieldok"/></svg>Signed device</span></td><td><span class="pres off"></span>Offline 22 min</td><td><span class="badge b-warn">2.2.0 · update</span></td><td>3 / 4</td><td class="act"><button class="btn sm ghost" type="button" data-go="device">Open</button></td></tr>
+    <tr><td><b>SH-03 · Compressor power</b><span class="t2">Shelly Pro 3EM · shellypro3em-a1b2</span></td><td>Shelly energy meter</td><td><span class="trust t2"><svg class="i xs"><use href="#i-shield"/></svg>Broker login</span></td><td><span class="pres on"></span>Online</td><td>1.3.2</td><td>3 / 3</td><td class="act"><button class="btn sm ghost" type="button" data-go="device">Open</button></td></tr>
+    <tr><td><b>PLC-1 · Edge line</b><span class="t2">Siemens S7-1200 via OPC UA</span></td><td>OPC UA tags</td><td><span class="trust t3"><svg class="i xs"><use href="#i-alert"/></svg>Network only</span></td><td><span class="pres on"></span>Online</td><td>—</td><td>6 / 9</td><td class="act"><button class="btn sm ghost" type="button" data-go="device">Open</button></td></tr>
+    <tr><td><b>U-22 · new</b><span class="t2">FPB-2410-0022</span></td><td>FP Box v2 (4 digital)</td><td><span class="trust t1">Signed device</span></td><td><span class="pres pend"></span>Waiting for first connect</td><td>—</td><td>0 / 4</td><td class="act"><button class="btn sm ghost" type="button" data-go="device">Open</button></td></tr>
+  </tbody></table></div></div>
+  <div class="states"><h4>Other states</h4><div class="state-grid">
+    <figure class="state"><figcaption>Loading</figcaption><div class="stack tight"><div class="skel"></div><div class="skel"></div><div class="skel" style="width:70%"></div></div></figure>
+    <figure class="state"><figcaption>No devices yet</figcaption><div class="empty"><span class="ic"><svg class="i lg"><use href="#i-cpu"/></svg></span><h3>Connect your first machine</h3><p>Plug in an FP Box, or connect a Shelly, PLC or other device. You need its claim code or QR sticker.</p><button class="btn primary" type="button" data-go="add-device">Add device</button></div></figure>
+  </div></div>
+</section>
+
+<section class="screen" id="add-device">
+  <div class="ph"><div><h1>Add device</h1><p>Register a device and claim it for Nordvik Trä.</p></div></div>
+  <div class="steps"><span class="step done"><i>✓</i>Profile</span><span class="step done"><i>✓</i>Name</span><span class="step done"><i>✓</i>Claim</span><span class="step cur"><i>4</i>Credential</span></div>
+  <div class="g g2">
+    <div class="card"><div class="card-h"><h3>1 · What kind of device?</h3></div><div class="card-b g g2" data-pick>
+      <div class="prof on"><b>FP Box v2</b><span class="small muted">FP's own box. 4 digital inputs, counter, buffer 7 days.</span><div class="caps"><span class="chip">On/off</span><span class="chip">Counter</span><span class="trust t1">Signed device</span></div></div>
+      <div class="prof"><b>Shelly Plus / Pro</b><span class="small muted">Relay, input or energy meter. Connects to our broker.</span><div class="caps"><span class="chip">On/off</span><span class="chip">Power</span><span class="trust t2">Broker login</span></div></div>
+      <div class="prof"><b>PLC (OPC UA)</b><span class="small muted">Read tags from a PLC on your network.</span><div class="caps"><span class="chip">Any tag</span><span class="trust t3">Network only</span></div></div>
+      <div class="prof"><b>Other MQTT device</b><span class="small muted">Send our JSON format, or ask FP for a profile.</span><div class="caps"><span class="chip">Custom</span></div></div>
+    </div></div>
+    <div class="stack">
+      <div class="card"><div class="card-h"><h3>3 · Claim</h3></div><div class="card-b row" style="align-items:flex-start">
+        <div class="drop" style="flex:1;min-width:200px"><svg class="i xl"><use href="#i-qr"/></svg><p class="mt-s"><b>Scan the QR sticker</b> with your camera</p></div>
+        <div class="field" style="flex:1;min-width:200px"><label>Or type the claim code</label><input class="input mono" value="FPB-2410-0023 · 7KD2-QX"><span class="hint" style="color:var(--run);font-weight:700">✓ Device found · FP Box v2 · made 2026-10</span></div></div></div>
+      <div class="card hl"><div class="card-h"><h3>4 · Device credential</h3><span class="badge b-warn">Shown once</span></div><div class="card-b stack">
+        <p class="small dim">FP Boxes fetch this themselves on first boot. Only for other devices: copy it into the device now. It cannot be shown again; you can rotate it later.</p>
+        <div class="secret"><span>mqtts://mqtt.fp.example:8883<br>user: dev_nordvik_u23<br>pass: 9fK2-xQ7m-Lp4R-vW8s</span><button class="btn sm" type="button" data-toast="Copied">Copy</button></div>
+        <label class="check"><input type="checkbox">I have stored the credential</label>
+      </div><div class="card-f"><button class="btn primary" type="button" data-go="device">Finish and open device</button></div></div>
+    </div>
+  </div>
+  <div class="states"><h4>Other states</h4><div class="state-grid">
+    <figure class="state"><figcaption>Code not found</figcaption><div class="banner err"><svg class="i"><use href="#i-alert"/></svg><div><b>We do not know this code.</b> Check the sticker; codes are 2 groups, like 7KD2-QX.</div></div></figure>
+    <figure class="state"><figcaption>Already claimed</figcaption><div class="banner warn"><svg class="i"><use href="#i-lock"/></svg><div><b>This device belongs to another company.</b> Ask FP support to release it.</div></div></figure>
+    <figure class="state"><figcaption>Not allowed in this market</figcaption><div class="banner err"><svg class="i"><use href="#i-shield"/></svg><div><b>This model is not approved for Sweden yet.</b> Device compliance gate (S19).</div></div></figure>
+  </div></div>
+</section>
+
+<section class="screen" id="device" data-ask='["Why did U-11 go offline?","How many events did U-11 buffer?"]'>
+  <div class="ph"><div><h1>U-11 · Sander</h1><p>FP Box v1 · FPB-2311-0011 · Hultsfred, Line 5</p></div><div class="ph-a"><span class="badge b-off"><span class="pres off"></span>Offline 22 min</span><button class="btn" type="button" data-toast="LED blinks for 30 s when online">Identify</button><button class="btn" type="button" data-toast="Rotate credential: new password pushed on next connect">Rotate credential</button><button class="btn danger-ghost" type="button">Revoke</button></div></div>
+  <div class="tabs" data-tabs="dv"><button class="on" type="button" data-t="ov">Overview</button><button type="button" data-t="ch">Channels <span class="cnt">4</span></button><button type="button" data-t="msg">Messages</button><button type="button" data-t="cmd">Commands</button><button type="button" data-t="cred">Credentials</button></div>
+  <div data-pane="dv:ov">
+    <div class="g g-side">
+      <div class="stack">
+        <div class="card"><div class="card-h"><h3>Presence · last 24 h</h3><div class="legend"><span style="--c:var(--run-fill)"><i></i>Online</span><span style="--c:var(--offline)"><i></i>Offline</span></div></div><div class="card-b">
+          <div class="tl"><i class="r" style="flex:62"></i><i class="n" style="flex:2"></i><i class="r" style="flex:34"></i><i class="n" style="flex:2"></i></div>
+          <div class="tl-axis"><span>11:00 yesterday</span><span>18:00</span><span>00:00</span><span>06:00</span><span>Now</span></div></div></div>
+        <div class="card"><div class="card-h"><h3>Recent messages</h3><span class="muted">last 50 · mapped to canonical events</span></div><div class="tbl-wrap"><table class="table compact"><thead><tr><th>Device time</th><th>Received</th><th>Channel</th><th>Value</th><th>Event</th></tr></thead><tbody>
+          <tr><td class="num">10:26:04</td><td class="num">10:26:04</td><td>pin 1</td><td class="livev">OFF</td><td><span class="badge b-stop">stopped</span></td></tr>
+          <tr><td class="num">10:21:40</td><td class="num">10:21:41</td><td>pin 1</td><td class="livev">ON</td><td><span class="badge b-run">running</span></td></tr>
+          <tr><td class="num">10:20:58</td><td class="num">10:20:58</td><td>pin 2</td><td class="livev">ON</td><td><span class="badge">counter +1</span></td></tr>
+        </tbody></table></div></div>
+      </div>
+      <div class="stack">
+        <div class="card pad"><span class="sect">Trust</span><span class="trust t1"><svg class="i xs"><use href="#i-shieldok"/></svg>Signed device</span><p class="small dim mt-s">Messages are signed by the box's own key. FP knows they came from this box and were not changed.</p></div>
+        <div class="card pad"><dl class="kv"><dt>Firmware</dt><dd>2.2.0 <span class="badge b-warn">2.4.1 available</span></dd><dt>Network</dt><dd>Wi-Fi · −71 dBm</dd><dt>Buffer</dt><dd>0 waiting</dd><dt>Last seen</dt><dd>10:26:04</dd><dt>Clock drift</dt><dd>+0.3 s</dd></dl></div>
+      </div>
+    </div>
+  </div>
+  <div data-pane="dv:ch" hidden><div class="card pad">See <a href="#" data-go="channels">Channels</a>.</div></div>
+  <div data-pane="dv:msg" hidden><div class="card pad muted">Full message log with payload viewer.</div></div>
+  <div data-pane="dv:cmd" hidden><div class="card pad stack"><b>Commands this profile supports</b><div class="row"><button class="btn" type="button">Restart</button><button class="btn" type="button">Update firmware</button><button class="btn" type="button">Resend buffer</button><button class="btn" type="button" disabled title="Not supported by FP Box v1">Set relay</button></div></div></div>
+  <div data-pane="dv:cred" hidden><div class="card pad">Credential created 12 Mar · last rotated 41 days ago.</div></div>
+  <div class="states"><h4>Other states</h4><div class="state-grid">
+    <figure class="state"><figcaption>Pending first connect</figcaption><div class="banner info"><svg class="i"><use href="#i-clock"/></svg><div><b>Waiting for the device to connect.</b> Power it on and connect it to the network. This page updates by itself.</div></div></figure>
+    <figure class="state"><figcaption>Quarantined</figcaption><div class="banner err"><svg class="i"><use href="#i-shield"/></svg><div><b>Quarantined by FP:</b> sent 4,000 messages a minute. Data from it is held, not used.</div></div></figure>
+  </div></div>
+</section>
+
+<section class="screen" id="channels" data-ask='["Which channels are not connected to a machine?","Which channel changed most today?"]'>
+  <div class="ph"><div><h1>Channels</h1><p>Each input on a device, and the machine it belongs to.</p></div></div>
+  <div class="banner warn mb"><svg class="i"><use href="#i-info"/></svg><div><b>4 channels are not connected to a machine.</b> Their data is kept but does not count anywhere until you connect them.</div></div>
+  <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Device · channel</th><th>Kind</th><th>Machine</th><th>Signal rule</th><th>Live value</th><th>State</th><th>On</th></tr></thead><tbody>
+    <tr><td><b>U-07 · pin 1</b></td><td>Digital</td><td>K-3 · Panel saw</td><td>On = running · 5 s debounce</td><td class="livev">ON · 2 s</td><td><span class="pill s-run"><svg class="i fill"><use href="#i-play"/></svg>Running</span></td><td><label class="switch"><input type="checkbox" checked><span class="tr"></span></label></td></tr>
+    <tr><td><b>U-07 · pin 2</b></td><td>Counter</td><td>K-3 · Panel saw</td><td>Piece counter ×1</td><td class="livev">+58 / h</td><td><span class="badge">counting</span></td><td><label class="switch"><input type="checkbox" checked><span class="tr"></span></label></td></tr>
+    <tr><td><b>SH-03 · phase A</b></td><td>Power (W)</td><td>K-9 · CNC router</td><td><a href="#" data-go="signal-rule">Running above 1.2 kW</a></td><td class="livev">3.84 kW</td><td><span class="pill s-run"><svg class="i fill"><use href="#i-play"/></svg>Running</span></td><td><label class="switch"><input type="checkbox" checked><span class="tr"></span></label></td></tr>
+    <tr class="unconf"><td><b>U-22 · pin 1</b></td><td>Digital</td><td><button class="btn sm primary" type="button" data-toast="Machine picker (machines only)">Connect to machine</button></td><td class="muted">—</td><td class="livev">ON · 4 min</td><td class="muted">—</td><td><label class="switch"><input type="checkbox"><span class="tr"></span></label></td></tr>
+    <tr class="unconf"><td><b>U-22 · pin 2</b></td><td>Digital</td><td><button class="btn sm primary" type="button">Connect to machine</button></td><td class="muted">—</td><td class="livev">OFF</td><td class="muted">—</td><td><label class="switch"><input type="checkbox"><span class="tr"></span></label></td></tr>
+    <tr class="unconf"><td><b>PLC-1 · DB10.Speed</b></td><td>Number (m/min)</td><td><button class="btn sm primary" type="button">Connect to machine</button></td><td class="muted">—</td><td class="livev">42.5</td><td class="muted">—</td><td><label class="switch"><input type="checkbox"><span class="tr"></span></label></td></tr>
+  </tbody></table></div></div>
+</section>
+
+<section class="screen" id="signal-rule" data-ask='["What threshold would you suggest for K-9?","How often would this rule have switched yesterday?"]'>
+  <div class="ph"><div><h1>Signal rule · SH-03 phase A → K-9</h1><p>Turn a power reading into Running and Stopped.</p></div><div class="ph-a"><button class="btn" type="button" data-toast="Teach: run the machine 60 s, then stop it 60 s; FP proposes the threshold">Teach</button><button class="btn primary" type="button" data-toast="Rule saved; applies from now">Save rule</button></div></div>
+  <div class="g g-side">
+    <div class="card"><div class="card-h"><h3>Last hour, with thresholds</h3><div class="legend"><span style="--c:var(--brand)"><i></i>Power</span><span style="--c:var(--run-fill)"><i></i>Running above</span><span style="--c:var(--stop-fill)"><i></i>Stopped below</span></div></div><div class="card-b">
+      <svg class="chart" viewBox="0 0 600 220" role="img" aria-label="Power over the last hour with two thresholds">
+        <g class="gridl"><line x1="40" y1="20" x2="590" y2="20"/><line x1="40" y1="80" x2="590" y2="80"/><line x1="40" y1="140" x2="590" y2="140"/><line x1="40" y1="190" x2="590" y2="190"/></g>
+        <rect x="40" y="190" width="550" height="8" style="fill:var(--surface-3)"/>
+        <rect x="40" y="190" width="160" height="8" style="fill:var(--run-fill)"/><rect x="200" y="190" width="60" height="8" style="fill:var(--stop-fill)"/><rect x="260" y="190" width="210" height="8" style="fill:var(--run-fill)"/><rect x="470" y="190" width="40" height="8" style="fill:var(--stop-fill)"/><rect x="510" y="190" width="80" height="8" style="fill:var(--run-fill)"/>
+        <polyline fill="none" style="stroke:var(--brand)" stroke-width="2" points="40,60 60,52 80,64 100,48 120,58 140,50 160,62 180,55 200,170 220,172 240,168 260,60 280,45 300,58 320,52 340,66 360,49 380,57 400,62 420,51 440,59 460,55 470,168 490,171 510,58 530,50 550,61 570,54 590,57"/>
+        <line x1="40" y1="128" x2="590" y2="128" style="stroke:var(--run-fill)" stroke-width="1.5" stroke-dasharray="5 4"/>
+        <line x1="40" y1="150" x2="590" y2="150" style="stroke:var(--stop-fill)" stroke-width="1.5" stroke-dasharray="5 4"/>
+        <text x="34" y="24" text-anchor="end">4 kW</text><text x="34" y="132" text-anchor="end">1.2</text><text x="34" y="154" text-anchor="end">0.8</text><text x="34" y="194" text-anchor="end">0</text>
+        <text x="40" y="214">09:48</text><text x="590" y="214" text-anchor="end">10:48</text>
+      </svg>
+      <p class="small muted mt-s">The strip under the chart shows the state this rule would produce. 4 stops in the last hour, all longer than the minimum.</p></div></div>
+    <div class="card"><div class="card-h"><h3>Rule</h3></div><div class="card-b stack">
+      <div class="field"><label>Kind</label><select class="select"><option>Threshold with hysteresis</option><option>Digital on/off</option><option>Counter</option><option>Rate of change</option></select></div>
+      <div class="g g2"><div class="field"><label>Running above</label><div class="ig"><input value="1.2"><span class="unit">kW</span></div></div><div class="field"><label>Stopped below</label><div class="ig"><input value="0.8"><span class="unit">kW</span></div></div></div>
+      <div class="g g2"><div class="field"><label>Hold before change</label><div class="ig"><input value="10"><span class="unit">s</span></div></div><div class="field"><label>Idle between</label><select class="select"><option>Keep last state</option><option>Idle</option></select></div></div>
+      <div class="banner info"><svg class="i"><use href="#i-spark"/></svg><div>Suggested from the last 7 days: <b>1.1 kW / 0.7 kW</b>. <button class="link" type="button" data-toast="Suggestion applied">Use suggestion</button></div></div>
+    </div></div>
+  </div>
+</section>
+
+<section class="screen" id="dead-letters" data-ask='["Why were these messages rejected?","Can I replay the U-22 messages?"]'>
+  <div class="ph"><div><h1>Dead letters</h1><p>Messages FP could not use. Nothing here counts until you replay it.</p></div></div>
+  <div class="filters"><button class="fchip on" type="button">All reasons <span class="badge">14</span></button><button class="fchip" type="button">Unknown channel <span class="badge">9</span></button><button class="fchip" type="button">Bad format <span class="badge">3</span></button><button class="fchip" type="button">Clock far off <span class="badge">2</span></button></div>
+  <div class="g g-side">
+    <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Received</th><th>Device</th><th>Reason</th><th>Count</th><th></th></tr></thead><tbody>
+      <tr class="sel"><td>10:31</td><td>U-22</td><td><span class="badge b-warn">Unknown channel</span> pin 5</td><td>9</td><td class="act"><button class="btn sm" type="button" data-toast="Replayed 9 messages">Replay</button><button class="btn sm ghost" type="button">Discard</button></td></tr>
+      <tr><td>09:12</td><td>PLC-1</td><td><span class="badge b-stop">Bad format</span> value "NaN"</td><td>3</td><td class="act"><button class="btn sm" type="button" disabled title="Cannot replay: the value itself is broken">Replay</button><button class="btn sm ghost" type="button">Discard</button></td></tr>
+      <tr><td>06:02</td><td>U-11</td><td><span class="badge b-warn">Clock far off</span> +2 days</td><td>2</td><td class="act"><button class="btn sm" type="button">Replay</button><button class="btn sm ghost" type="button">Discard</button></td></tr>
+    </tbody></table></div></div>
+    <div class="card"><div class="card-h"><h3>Payload</h3><span class="muted">U-22 · 10:31:12</span></div><div class="card-b"><div class="code">{
+  <span class="k">"event_id"</span>: <span class="s">"7f2c1e0a-…"</span>,
+  <span class="k">"unit"</span>: <span class="s">"FPB-2410-0022"</span>,
+  <span class="k">"pin_no"</span>: <span class="n">5</span>,
+  <span class="k">"state"</span>: <span class="s">"ON"</span>,
+  <span class="k">"ts"</span>: <span class="s">"2026-10-22T08:31:12.204Z"</span>
+}</div><p class="small muted mt-s">FP Box v2 has 4 inputs. Pin 5 is unknown: check the wiring or the profile.</p></div></div>
+  </div>
+  <div class="states"><h4>Other states</h4><div class="state-grid"><figure class="state"><figcaption>Empty</figcaption><div class="empty"><span class="ic"><svg class="i lg"><use href="#i-check"/></svg></span><h3>Nothing needs attention</h3><p>Every message in the last 30 days was understood.</p></div></figure></div></div>
+</section>
+
+<section class="screen" id="ingest-health" data-ask='["Which device has the most lag?","Is data arriving late today?"]'>
+  <div class="ph"><div><h1>Ingest health</h1><p>How fast data from your devices reaches FP.</p></div></div>
+  <div class="g g4 keep2 mb">
+    <div class="card kpi"><div class="kpi-l">Inbox waiting</div><div class="kpi-v num">0</div><div class="kpi-f">oldest —</div></div>
+    <div class="card kpi"><div class="kpi-l">Rate</div><div class="kpi-v num">2.4<small>msg/s</small></div></div>
+    <div class="card kpi"><div class="kpi-l">Errors</div><div class="kpi-v num">0.01<small>%</small></div></div>
+    <div class="card kpi"><div class="kpi-l">Quarantined</div><div class="kpi-v num">0</div></div>
+  </div>
+  <div class="g g2">
+    <div class="card"><div class="card-h"><h3>Delay device → FP, today</h3></div><div class="card-b">
+      <svg class="chart" viewBox="0 0 500 160"><g class="gridl"><line x1="30" y1="20" x2="490" y2="20"/><line x1="30" y1="80" x2="490" y2="80"/><line x1="30" y1="140" x2="490" y2="140"/></g>
+      <path d="M30,132 L80,130 L130,128 L180,131 L230,96 L260,129 L310,130 L360,127 L410,131 L460,129 L490,130" fill="none" style="stroke:var(--brand)" stroke-width="2.2"/>
+      <text x="24" y="24" text-anchor="end">10 s</text><text x="24" y="144" text-anchor="end">0</text><text x="230" y="90" text-anchor="middle">U-11 replay</text><text x="30" y="158">00:00</text><text x="490" y="158" text-anchor="end">now</text></svg></div></div>
+    <div class="card"><div class="card-h"><h3>Top devices by lag</h3></div><div class="tbl-wrap"><table class="table compact"><thead><tr><th>Device</th><th>p95 delay</th><th>Buffered today</th></tr></thead><tbody><tr><td>U-11</td><td>3.1 s</td><td>412</td></tr><tr><td>PLC-1</td><td>1.2 s</td><td>0</td></tr><tr><td>U-07</td><td>0.4 s</td><td>0</td></tr></tbody></table></div></div>
+  </div>
+</section>
+
+<section class="screen" id="profiles" data-ask='["Which companies use the Shelly Pro 3EM profile?","What changed in version 3?"]'>
+  <div class="ph"><div><h1>Device profiles</h1><p>How each device type's messages become FP events. FP staff only.</p></div><div class="ph-a"><span class="badge b-warn">Draft v4</span><button class="btn" type="button" data-toast="Diff v3 → v4">Compare v3</button><button class="btn primary" type="button" data-toast="Publish v4: devices switch on next connect. Confirm?">Publish</button></div></div>
+  <div class="g g-side-l">
+    <div class="card"><div class="card-b" style="padding-top:14px"><div class="list">
+      <div class="li"><span class="ic"><svg class="i"><use href="#i-cpu"/></svg></span><div><b>FP Box v2</b><small>v7 · 31 companies</small></div></div>
+      <div class="li" style="background:var(--brand-soft);border-radius:10px;padding:10px 8px"><span class="ic"><svg class="i"><use href="#i-bolt"/></svg></span><div><b>Shelly Pro 3EM</b><small>v3 published · v4 draft</small></div></div>
+      <div class="li"><span class="ic"><svg class="i"><use href="#i-bolt"/></svg></span><div><b>Shelly Plus 1</b><small>v2</small></div></div>
+      <div class="li"><span class="ic"><svg class="i"><use href="#i-server"/></svg></span><div><b>OPC UA generic</b><small>v5</small></div></div></div></div></div>
+    <div class="g g2">
+      <div class="card"><div class="card-h"><h3>Mapping (JSON)</h3></div><div class="card-b"><div class="code">{
+  <span class="k">"match"</span>: <span class="s">"shellies/+/status/em:0"</span>,
+  <span class="k">"channels"</span>: [
+    { <span class="k">"id"</span>: <span class="s">"phase_a"</span>, <span class="k">"kind"</span>: <span class="s">"power_w"</span>,
+      <span class="k">"value"</span>: <span class="s">"$.a_act_power"</span> }
+  ],
+  <span class="k">"ts"</span>: <span class="s">"$.ts * 1000"</span>
+}</div></div></div>
+      <div class="card"><div class="card-h"><h3>Test</h3><span class="badge b-run">Pass</span></div><div class="card-b stack"><div class="field"><label>Sample payload</label><textarea class="textarea mono" style="font-size:12px">{"a_act_power":3840.2,"ts":1792650672}</textarea></div><div class="sect">Canonical events</div><div class="code"><span class="s">power_w</span> phase_a = <span class="n">3840.2</span> at 2026-10-22T08:31:12Z</div></div></div>
+    </div>
+  </div>
+</section>
+
+</main>
+<script src="../assets/fp.js"></script>
+</body>
+</html>

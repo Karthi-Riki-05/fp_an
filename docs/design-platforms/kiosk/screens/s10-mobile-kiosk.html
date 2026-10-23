@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>S10 Phone Kiosk</title>
+<meta name="description" content="FP Analyzer v3 prototype, module S10: phone app splash, unlock, permissions, update required, phone home, Ask on the phone, kiosk pairing and status, outbox, phone notification settings and offline banner.">
+<!-- Written for: the FP owner, client reviewers and developers building S10. Prototype only; all names and numbers are fictional. -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Poppins:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="../assets/fp.css">
+<style>
+.splash{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:var(--hero);color:var(--hero-text);text-align:center;padding:30px}
+.splash .wm{font-size:30px;font-weight:700;letter-spacing:-.02em}
+.splash .wm span{color:#5FE0F0}
+.splash p{color:var(--hero-text-2);font-size:14px}
+.spin{width:28px;height:28px;border-radius:50%;border:3px solid rgba(255,255,255,.25);border-top-color:#fff}
+.pin-dots{display:flex;gap:14px;justify-content:center}
+.pin-dots i{width:14px;height:14px;border-radius:50%;border:2px solid var(--border-strong)}
+.pin-dots i.f{background:var(--brand);border-color:var(--brand)}
+.m-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.m-pad span{height:58px;border-radius:50%;width:58px;justify-self:center;display:grid;place-items:center;font-size:24px;font-weight:700;background:var(--surface);border:1px solid var(--border)}
+.perm-ic{width:64px;height:64px;border-radius:20px;background:var(--brand-soft);color:var(--brand-strong);display:grid;place-items:center;margin:20px auto 6px}
+.perm-ic .i{width:30px;height:30px}
+.m-h{font-family:var(--font-head);font-size:22px;font-weight:700;text-align:center}
+.m-p{color:var(--text-2);text-align:center;font-size:14px;line-height:1.5}
+.m-shift{border-radius:18px;background:var(--hero);color:var(--hero-text);padding:16px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center}
+.m-shift .big{font-family:var(--font-head);font-size:38px;font-weight:700;line-height:1}
+.m-shift small{display:block;font-size:12px;color:var(--hero-text-2)}
+.m-need{border:1.5px solid var(--reason-dot);background:var(--reason-soft);border-radius:16px;padding:12px;display:flex;gap:10px;align-items:center}
+.m-need .ic{width:36px;height:36px;border-radius:10px;background:var(--reason-dot);color:#2A1A00;display:grid;place-items:center;flex:none}
+.m-need b{font-size:14.5px;display:block}.m-need small{font-size:12px;color:var(--text-2)}
+.m-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--border);font-size:14px}
+.m-row:first-child{border-top:0}
+.m-row .d{width:10px;height:10px;border-radius:50%;background:var(--c);flex:none}
+.m-row b{flex:1}
+.bub{border-radius:16px;padding:10px 12px;font-size:13.5px;line-height:1.45;max-width:88%}
+.bub.me{align-self:flex-end;background:var(--brand);color:var(--on-brand);border-bottom-right-radius:4px}
+.bub.ai{align-self:flex-start;background:var(--surface);border:1px solid var(--border);border-bottom-left-radius:4px}
+.m-in{display:flex;gap:8px;align-items:center;border:1px solid var(--border);background:var(--surface);border-radius:24px;padding:6px 6px 6px 14px;color:var(--text-3);font-size:14px}
+.m-in .send{margin-left:auto;width:34px;height:34px;border-radius:50%;background:var(--brand);color:var(--on-brand);display:grid;place-items:center}
+.off-bar{background:var(--reason-soft);color:var(--reason);font-weight:800;font-size:12.5px;padding:8px 14px;display:flex;gap:8px;align-items:center;flex:none}
+.ob{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--border);font-size:13.5px}
+.ob:first-child{border-top:0}
+.ob small{display:block;color:var(--text-3);font-size:12px}
+.qr{width:9em;height:9em;border-radius:1em;background:repeating-conic-gradient(var(--text) 0 25%,transparent 0 50%) 0 0/1.4em 1.4em;border:.6em solid var(--surface);outline:1px solid var(--border)}
+.ks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1em}
+.ks .k-card b{font-size:1.5em;display:block;margin-top:.2em}
+.ks .k-card small{color:var(--text-3)}
+.m-body.scroll{overflow-y:auto;scrollbar-width:thin}.m-body.scroll>*{flex:none}
+.m-seg{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex:none}
+.m-seg button{flex:none;height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:13px;font-weight:700;color:var(--text-2);cursor:pointer}
+.m-seg button.on{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.m-seg button i{font-style:normal;font-size:11px;min-width:18px;height:18px;border-radius:9px;display:inline-grid;place-items:center;background:var(--surface-3);color:var(--text-2)}
+.m-seg button.on i{background:rgba(255,255,255,.25);color:inherit}
+.al{border-left:4px solid var(--c);display:flex;flex-direction:column;gap:8px}
+.al .ah{display:flex;gap:8px;align-items:flex-start}
+.al .ah b{display:block;font-size:14.5px}.al .ah small{display:block;font-size:12px;color:var(--text-3)}
+.al .ah .t{margin-left:auto;font-weight:800;font-size:13px;color:var(--c);white-space:nowrap}
+.al .acts{display:flex;gap:8px}.al .acts .btn{flex:1}
+.al.done{opacity:.72;border-left-color:var(--border-strong)}
+.m-grp{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);margin:4px 0 -4px}
+.m-row .rs{font-size:12.5px;text-align:right;line-height:1.3}.m-row .rs small{display:block;color:var(--text-3);font-size:11.5px}
+.m-row .d.hat{background:repeating-linear-gradient(135deg,var(--offline) 0 2px,transparent 2px 4px);border:1px solid var(--offline)}
+.mi{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--border);font-size:14.5px;font-weight:700;color:var(--text);cursor:pointer}
+.mi:first-child{border-top:0}.mi .ic{width:34px;height:34px;border-radius:10px;background:var(--brand-soft);color:var(--brand-strong);display:grid;place-items:center;flex:none}
+.mi .x{margin-left:auto;display:flex;gap:6px;align-items:center;color:var(--text-3);font-weight:600;font-size:12.5px}
+.m-me{display:flex;gap:12px;align-items:center}.m-me b{display:block;font-size:16px}.m-me small{color:var(--text-3);font-size:12.5px}
+.scan-v{position:relative;flex:1;min-height:250px;border-radius:20px;background:radial-gradient(circle at 50% 45%,#2b3b42,#0b1418);display:grid;place-items:center;overflow:hidden}
+.scan-v .fr{width:58%;aspect-ratio:1;border-radius:18px;position:relative;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
+.scan-v .fr:before,.scan-v .fr:after{content:"";position:absolute;inset:0;border-radius:18px;border:3px solid #5FE0F0;clip-path:polygon(0 0,30% 0,30% 6%,6% 6%,6% 30%,0 30%,0 70%,6% 70%,6% 94%,30% 94%,30% 100%,70% 100%,70% 94%,94% 94%,94% 70%,100% 70%,100% 30%,94% 30%,94% 6%,70% 6%,70% 0,100% 0,100% 100%,0 100%)}
+.scan-v .ln{position:absolute;left:8%;right:8%;top:50%;height:2px;background:#5FE0F0;box-shadow:0 0 12px #5FE0F0;animation:scanln 2.2s ease-in-out infinite alternate}
+@keyframes scanln{from{top:12%}to{top:88%}}
+@media (prefers-reduced-motion:reduce){.scan-v .ln{animation:none}}
+.scan-v p{position:absolute;bottom:14px;left:0;right:0;text-align:center;color:#fff;font-size:13px;font-weight:700}
+.cf{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cf>div{border:1px solid var(--border);border-radius:12px;padding:10px;font-size:12.5px;background:var(--surface-2)}
+.cf>div b{display:block;font-size:13.5px;margin:2px 0}.cf>div small{color:var(--text-3)}
+.cf .mine{border-color:var(--brand);background:var(--brand-soft)}
+.tlog{display:flex;flex-direction:column;gap:0}
+.tlog div{display:grid;grid-template-columns:44px 14px minmax(0,1fr);gap:8px;font-size:13px;padding:6px 0;position:relative}
+.tlog span{color:var(--text-3);font-weight:700}
+.tlog i{width:10px;height:10px;border-radius:50%;background:var(--c,var(--brand));margin-top:4px}
+.wg-h{display:flex;align-items:center;gap:6px}.wg-h b{flex:1}.wg-h small{color:var(--text-3);font-size:11.5px}
+.mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.mgrid div{border-radius:10px;padding:8px 6px;background:var(--surface-2);border-top:4px solid var(--c);font-size:12px;cursor:pointer}
+.mgrid b{display:block;font-size:13px}.mgrid small{color:var(--text-3)}
+</style>
+</head>
+<body data-module="S10">
+<main id="screens">
+
+
+
+
+
+
+
+<section class="screen" id="k-pair" data-ask='["How do I pair a new line terminal?"]'>
+  <div class="devices"><div><div class="tablet"><div class="tb-scr">
+    <div class="k-top"><svg style="width:2.6em;height:2.6em"><use href="#mark"/></svg><div><b>Set up this terminal</b><small>FP Analyzer · kiosk mode</small></div><span class="k-conn" style="margin-left:auto"><svg class="i xs"><use href="#i-wifi"/></svg>Wi-Fi: Nordvik-Prod</span></div>
+    <div class="k-body" style="flex-direction:row;align-items:center;justify-content:center;gap:3em">
+      <div class="qr" role="button" title="Scanned" data-go="k-status" data-toast="Paired with Line 2"></div>
+      <div style="max-width:28em"><div class="k-h" style="font-size:1.8em">Scan with your phone</div><p class="dim" style="font-size:1.05em;margin-top:.5em;line-height:1.5">Open FP Analyzer on your phone → More → <b>Pair a terminal</b>, and scan this code. Then choose the line.</p><p class="dim" style="font-size:.95em;margin-top:1em">No phone? <b role="button" data-to="s01-identity-access#t-pair">Type a code instead</b></p></div>
+    </div></div></div><p class="dev-cap"><b>Kiosk pairing</b> · scan from an admin's phone, or type the code (S01)</p></div></div>
+</section>
+
+<section class="screen" id="k-status" data-ask='["Which terminals are offline?"]'>
+  <div class="devices"><div><div class="tablet"><div class="tb-scr">
+    <div class="k-top"><div><b>Terminal status · T-02</b><small>Line 2 · Hultsfred · for maintenance staff</small></div><span class="clk num">10:55</span></div>
+    <div class="k-body">
+      <div class="ks"><div class="k-card"><small>Connection</small><b style="color:var(--run)">Online</b><small>Wi-Fi strong · 18 ms</small></div><div class="k-card"><small>Waiting to send</small><b>0</b><small>last sent 10:52</small></div><div class="k-card"><small>App version</small><b>3.4.2</b><small>up to date</small></div></div>
+      <div class="ks"><div class="k-card"><small>Battery</small><b>100 %</b><small>on power</small></div><div class="k-card"><small>Paired</small><b>12 Sep</b><small>by Lena H.</small></div><div class="k-card"><small>Machines</small><b>K-3, K-5, K-7</b><small>Line 2</small></div></div>
+      <div class="k-dock" style="grid-template-columns:repeat(3,1fr)"><button class="k-btn" type="button">Test sound</button><button class="k-btn" type="button">Restart app</button><button class="k-btn dark" type="button">Close</button></div>
+    </div></div></div><p class="dev-cap"><b>Kiosk status</b> · open with a long press on the clock</p></div></div>
+</section>
+
+
+
+<section class="screen" id="offline" data-ask='["What works when the terminal is offline?"]'>
+  <div class="devices">
+    <div><div class="tablet"><div class="tb-scr">
+      <div class="off-bar" style="font-size:1em;padding:.7em 1.4em"><svg class="i sm"><use href="#i-wifioff"/></svg>Offline · registrations are saved on this terminal (2 waiting)</div>
+      <div class="k-top"><div><b>K-5 · Edge bander</b><small>Line 2 · T-02</small></div><span class="clk num">11:02</span><span class="k-conn off"><svg class="i xs"><use href="#i-wifioff"/></svg>Offline</span></div>
+      <div class="k-body"><div class="k-open"><span class="ic"><svg class="i"><use href="#i-stop"/></svg></span><div><b>Stopped · why?</b><small>The FP Box keeps the machine signal; this terminal keeps your answer</small></div></div><div class="k-card" style="flex:1"><div class="k-h">This shift <small class="muted" style="font-size:.7em">· until 10:58</small></div><div class="tl lg" style="margin-top:1em"><i class="r" style="flex:50"></i><i class="s" style="flex:6"></i><i class="r" style="flex:30"></i><i class="o" style="flex:14"></i></div><p class="dim" style="margin-top:1em">Striped part: no live data yet. It fills in when the terminal is back online.</p></div><div class="k-dock"><button class="k-btn" type="button" data-to="s08-registration#one-tap">Reason</button><button class="k-btn" type="button" data-to="s08-registration#scrap">Scrap</button><button class="k-btn" type="button" data-to="s18-operator#order">Order</button><button class="k-btn" type="button" data-ask-open>Help</button><button class="k-btn andon" type="button" style="opacity:.55" data-toast="Not sent. No connection. Call Maintenance by phone: 0495-123 40">Andon</button></div><div class="banner err" style="font-size:.95em;margin-top:.2em"><svg class="i"><use href="#i-phone"/></svg><div><b>Andon needs a connection.</b> Call Maintenance by phone: <b>0495-123 40</b></div></div></div>
+    </div></div><p class="dev-cap"><b>Terminal offline</b> · stops, scrap and checklists are queued; andon is not</p></div>
+  </div>
+</section>
+
+
+
+
+
+
+
+
+
+</main>
+<script src="../assets/fp.js"></script>
+</body>
+</html>

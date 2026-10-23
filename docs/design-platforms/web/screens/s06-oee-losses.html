@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>S06 OEE Losses</title>
+<meta name="description" content="FP Analyzer v3 prototype, module S06: OEE tiles, loss waterfall, six big losses, Pareto, data quality, reliability, cost of losses, targets, OEE settings, baselines and window history.">
+<!-- Written for: the FP owner, client reviewers and developers building S06. Prototype only; all names and numbers are fictional. -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Poppins:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="../assets/fp.css">
+<style>
+.oee-hero{display:grid;grid-template-columns:auto minmax(0,1fr);gap:22px;align-items:center;padding:20px 22px;border-radius:var(--radius);background:var(--hero);color:var(--hero-text)}
+.oee-hero .big{font-family:var(--font-head);font-size:56px;font-weight:700;line-height:1;letter-spacing:-.03em}
+.oee-hero small{color:var(--hero-text-2);font-size:13px}
+.oee-hero .eq{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:15px;font-weight:700}
+.oee-hero .eq span{background:rgba(255,255,255,.1);border-radius:10px;padding:6px 12px}
+@media (max-width:760px){.oee-hero{grid-template-columns:minmax(0,1fr)}.oee-hero .big{font-size:44px}}
+.apq{display:flex;flex-direction:column;gap:8px}
+.apq p{font-size:12.5px;color:var(--text-2);line-height:1.45}
+.target-line{position:relative}
+.wf text{font-size:11px;fill:var(--text-2)}
+.wf .v{font-weight:800;fill:var(--text)}
+.wf rect{rx:4}
+.wf rect:hover,.pa rect:hover{opacity:.8}
+.pa text{font-size:11px;fill:var(--text-2)}
+.pa .v{font-weight:800;fill:var(--text)}
+.mini text{font-size:10.5px;fill:var(--text-3)}
+.loss-c{display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--c);margin-right:6px;vertical-align:-1px}
+.tgt{display:grid;grid-template-columns:minmax(0,1fr) 120px 120px 120px;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--border);font-size:13.5px}
+.tgt:first-child{border-top:0}
+.tgt .ig{height:34px}
+@media (max-width:760px){.tgt{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)}.tgt .hide-s{display:none}.tgt .ig input{min-width:0;width:100%}}
+</style>
+</head>
+<body data-module="S06">
+<main id="screens">
+
+<section class="screen" id="kpi" data-ask='["Why is Line 2 below target this week?","Which machine pulls OEE down most?"]'>
+  <div class="ph"><div><h1>OEE &amp; losses</h1><p>How well your machines use the time they are planned to run. 100 % means no stops, full speed and no scrap.</p></div>
+    <div class="ph-a"><div class="seg"><button type="button">Today</button><button class="on" type="button">This week</button><button type="button">Month</button></div><button class="fchip" type="button">Line 2 · Edging</button></div></div>
+  <div class="oee-hero mb">
+    <div><small>OEE · Line 2 · week 43</small><div class="big num">71<span style="font-size:24px">%</span></div><small>Target 75 % · last week 68 %</small><small style="display:block;margin-top:4px;opacity:.85">Counted on planned production time · TEEP 46 % on all calendar time</small></div>
+    <div class="eq"><span>Availability 84 %</span>×<span>Performance 89 %</span>×<span>Quality 95 %</span>=<span style="background:rgba(255,255,255,.22)">71 %</span></div>
+  </div>
+  <div class="g g3 mb">
+    <div class="card kpi"><div class="kpi-l">Availability <span class="badge b-warn">below target</span></div><div class="kpi-v num">84<small>%</small></div><div class="bar lg warn"><i style="width:84%"></i></div><div class="apq"><p><b>Did it run when it should?</b> Of 70 h planned, the line ran 58 h 48 m. Stops took 11 h 12 m.</p></div></div>
+    <div class="card kpi"><div class="kpi-l">Performance <span class="badge b-run">on target</span></div><div class="kpi-v num">89<small>%</small></div><div class="bar lg run"><i style="width:89%"></i></div><div class="apq"><p><b>Did it run at full speed?</b> It made 56 400 pieces. At ideal speed it could have made 63 500.</p></div></div>
+    <div class="card kpi"><div class="kpi-l">Quality <span class="badge b-run">on target</span></div><div class="kpi-v num">95<small>%</small></div><div class="bar lg run"><i style="width:95%"></i></div><div class="apq"><p><b>Were the parts good?</b> 53 580 good, 2 820 scrapped or reworked.</p></div></div>
+  </div>
+  <div class="card"><div class="card-h"><h3>Per machine</h3><a class="small" href="#waterfall" data-go="waterfall">Where did the time go? →</a></div><div class="tbl-wrap"><table class="table"><thead><tr><th>Machine</th><th>OEE</th><th>Availability</th><th>Performance</th><th>Quality</th><th>Trust</th></tr></thead><tbody>
+    <tr><td><b>K-3</b> Panel saw</td><td class="num b">78 %</td><td class="num">90 %</td><td class="num">91 %</td><td class="num">95 %</td><td><span class="badge b-run">complete</span></td></tr>
+    <tr class="warn"><td><b>K-5</b> Edge bander</td><td class="num b">66 %</td><td class="num">79 %</td><td class="num">88 %</td><td class="num">95 %</td><td><span class="badge b-run">complete</span></td></tr>
+    <tr><td><b>K-7</b> Drill line</td><td class="num b">—</td><td class="num">86 %</td><td class="muted">no rate set</td><td class="num">97 %</td><td><span class="badge b-warn">partial</span></td></tr>
+  </tbody></table></div></div>
+  <div class="states"><h4>Other states</h4><div class="state-grid">
+    <figure class="state"><figcaption>Numbers still changing</figcaption><div class="banner info"><svg class="i"><use href="#i-clock"/></svg><div><b>Provisional.</b> The shift is still running and 2 stops have no reason yet. Final at 22:00.</div></div></figure>
+    <figure class="state"><figcaption>Not enough data</figcaption><div class="banner warn"><svg class="i"><use href="#i-alert"/></svg><div><b>K-7 has no ideal rate.</b> Performance and OEE cannot be calculated. <a href="s15-products-orders.html#rates">Set a rate</a></div></div></figure>
+  </div></div>
+  <div class="card pad mt"><div class="row between"><b>OEE and TEEP: what is the difference?</b><span class="badge b-brand">standard definition</span></div>
+    <div class="g g3 mt-s"><div><div class="small muted">Calendar time (all 168 h)</div><b class="num">TEEP 46 %</b><p class="small muted">How much of the whole week made good parts.</p></div><div><div class="small muted">Planned production time (70 h)</div><b class="num">OEE 71 %</b><p class="small muted">Breaks, planned stops and unplanned shifts are left out.</p></div><div><div class="small muted">Not counted in OEE</div><b class="num">98 h</b><p class="small muted">Nights and weekends with no shift, 5 h breaks, 2 h planned cleaning.</p></div></div></div>
+</section>
+
+<section class="screen" id="waterfall" data-ask='["What is the biggest loss on Line 2 this week?"]'>
+  <div class="ph"><div><h1>Where did the time go?</h1><p>Line 2 · week 43. Start with all planned time, take away each loss, and what is left is good production.</p></div><div class="ph-a"><button class="btn" type="button" data-toast="Table view"><svg class="i sm"><use href="#i-list"/></svg>Show as table</button></div></div>
+  <div class="card"><div class="card-b" style="padding-top:18px">
+    <svg class="chart wf" viewBox="0 0 860 330" role="img" aria-label="Waterfall from planned time 70 hours to good production 49.7 hours">
+      <line class="gridl" x1="40" x2="850" y1="280" y2="280"/><line class="gridl" x1="40" x2="850" y1="180" y2="180" stroke-dasharray="3 4"/><line class="gridl" x1="40" x2="850" y1="80" y2="80" stroke-dasharray="3 4"/>
+      <text x="34" y="284" text-anchor="end">0 h</text><text x="34" y="184" text-anchor="end">35 h</text><text x="34" y="84" text-anchor="end">70 h</text>
+      <rect x="60" y="80" width="80" height="200" fill="var(--brand)"><title>Planned time 70 h</title></rect><text class="v" x="100" y="72" text-anchor="middle">70 h</text><text x="100" y="300" text-anchor="middle">Planned</text>
+      <rect x="160" y="80" width="80" height="16" fill="var(--stop-fill)"><title>Breakdowns 5.6 h</title></rect><text class="v" x="200" y="112" text-anchor="middle">−5.6 h</text><text x="200" y="300" text-anchor="middle">Breakdowns</text>
+      <rect x="260" y="96" width="80" height="16" fill="var(--setup)"><title>Changeovers 5.6 h</title></rect><text class="v" x="300" y="128" text-anchor="middle">−5.6 h</text><text x="300" y="300" text-anchor="middle">Changeovers</text>
+      <rect x="360" y="112" width="80" height="200" fill="none"/><rect x="360" y="112" width="80" height="168" fill="var(--run-fill)" opacity=".35"><title>Ran 58.8 h</title></rect><text class="v" x="400" y="104" text-anchor="middle">58.8 h</text><text x="400" y="300" text-anchor="middle">Ran</text>
+      <rect x="460" y="112" width="80" height="9" fill="var(--reason-strong)"><title>Micro-stops 3.1 h</title></rect><text class="v" x="500" y="137" text-anchor="middle">−3.1 h</text><text x="500" y="300" text-anchor="middle">Micro-stops</text>
+      <rect x="560" y="121" width="80" height="10" fill="#C98A2B"><title>Slow running 3.4 h</title></rect><text class="v" x="600" y="147" text-anchor="middle">−3.4 h</text><text x="600" y="300" text-anchor="middle">Slow running</text>
+      <rect x="660" y="131" width="80" height="7" fill="var(--andon)"><title>Scrap 2.6 h</title></rect><text class="v" x="700" y="154" text-anchor="middle">−2.6 h</text><text x="700" y="300" text-anchor="middle">Scrap</text>
+      <rect x="760" y="138" width="80" height="142" fill="var(--run-fill)"><title>Good production 49.7 h</title></rect><text class="v" x="800" y="130" text-anchor="middle">49.7 h</text><text x="800" y="300" text-anchor="middle">Good</text>
+      <text x="200" y="320" text-anchor="middle" style="fill:var(--text-3)">availability</text><text x="300" y="320" text-anchor="middle" style="fill:var(--text-3)">availability</text><text x="500" y="320" text-anchor="middle" style="fill:var(--text-3)">performance</text><text x="600" y="320" text-anchor="middle" style="fill:var(--text-3)">performance</text><text x="700" y="320" text-anchor="middle" style="fill:var(--text-3)">quality</text>
+    </svg>
+  </div></div>
+  <div class="ai-card mt"><div class="q"><svg class="i sm"><use href="#i-spark"/></svg>Ask FP</div><p>Breakdowns and changeovers are the same size this week (5.6 h each). Changeovers on K-5 took <b>18 min on average</b> against a standard of 12 min.</p><a class="btn sm" href="s15-products-orders.html#co-report">Open changeover report</a></div>
+</section>
+
+<section class="screen" id="six" data-ask='["What are our six big losses this month?"]'>
+  <div class="ph"><div><h1>Six big losses</h1><p>The classic way to group lost time. Hultsfred · October 2026 · 1 420 planned hours.</p></div></div>
+  <div class="g g-side">
+    <div class="card pad"><div class="hbars">
+      <div class="hb"><span><span class="loss-c" style="--c:var(--stop-fill)"></span>Breakdowns</span><div class="t"><i style="width:62%;background:var(--stop-fill)"></i></div><b class="num">96 h</b></div>
+      <div class="hb"><span><span class="loss-c" style="--c:var(--setup)"></span>Setup &amp; changeover</span><div class="t"><i style="width:48%;background:var(--setup)"></i></div><b class="num">74 h</b></div>
+      <div class="hb"><span><span class="loss-c" style="--c:var(--reason-strong)"></span>Micro-stops</span><div class="t"><i style="width:30%;background:var(--reason-strong)"></i></div><b class="num">46 h</b></div>
+      <div class="hb"><span><span class="loss-c" style="--c:#C98A2B"></span>Slow running</span><div class="t"><i style="width:34%;background:#C98A2B"></i></div><b class="num">52 h</b></div>
+      <div class="hb"><span><span class="loss-c" style="--c:var(--andon)"></span>Scrap in production</span><div class="t"><i style="width:22%;background:var(--andon)"></i></div><b class="num">34 h</b></div>
+      <div class="hb"><span><span class="loss-c" style="--c:#8A6BD8"></span>Start-up losses</span><div class="t"><i style="width:9%;background:#8A6BD8"></i></div><b class="num">14 h</b></div>
+    </div></div>
+    <div class="card pad"><b>What each loss means</b><dl class="kv mt"><dt>Breakdowns</dt><dd>Stopped because something broke</dd><dt>Setup</dt><dd>Stopped to change product or tool</dd><dt>Micro-stops</dt><dd>Short stops under 2 min</dd><dt>Slow running</dt><dd>Ran slower than the ideal rate</dd><dt>Scrap</dt><dd>Bad parts during normal running</dd><dt>Start-up</dt><dd>Bad parts right after a start</dd></dl></div>
+  </div>
+  <div class="card pad mt"><div class="row between"><b>Other availability losses</b><span class="num">3 h 40 m · 5 % of planned time</span></div><p class="small muted mt-s">Material, organisational, external and unregistered stops. Not one of the six, but they still lower Availability.</p></div>
+</section>
+
+<section class="screen" id="pareto" data-ask='["Which three stop reasons cost the most time?"]'>
+  <div class="ph"><div><h1>Top stop reasons</h1><p>Sorted biggest first. Fix the left bars and you fix most of the lost time.</p></div><div class="ph-a"><div class="seg"><button class="on" type="button">Time</button><button type="button">Count</button><button type="button">Cost</button></div></div></div>
+  <div class="card"><div class="card-b" style="padding-top:18px">
+    <svg class="chart pa" viewBox="0 0 860 300" role="img" aria-label="Stop reasons sorted by lost time">
+      <line class="gridl" x1="40" x2="850" y1="250" y2="250"/><line class="gridl" x1="40" x2="850" y1="150" y2="150" stroke-dasharray="3 4"/><line class="gridl" x1="40" x2="850" y1="50" y2="50" stroke-dasharray="3 4"/>
+      <text x="34" y="254" text-anchor="end">0</text><text x="34" y="154" text-anchor="end">10 h</text><text x="34" y="54" text-anchor="end">20 h</text>
+      <g fill="var(--brand)">
+      <rect x="60" y="62" width="70" height="188"><title>Material wait 18.8 h · 26 %</title></rect><rect x="150" y="104" width="70" height="146"><title>Jam in feeder 14.6 h · 46 %</title></rect><rect x="240" y="138" width="70" height="112"><title>Band change 11.2 h · 62 %</title></rect><rect x="330" y="170" width="70" height="80"/><rect x="420" y="190" width="70" height="60"/><rect x="510" y="204" width="70" height="46"/><rect x="600" y="214" width="70" height="36"/><rect x="690" y="224" width="70" height="26"/></g>
+      <rect x="780" y="210" width="70" height="40" fill="var(--offline)"/>
+      <g class="v"><text x="95" y="54" text-anchor="middle">18.8 h</text><text x="185" y="96" text-anchor="middle">14.6 h</text><text x="275" y="130" text-anchor="middle">11.2 h</text></g>
+      <text x="95" y="268" text-anchor="middle">Material wait</text><text x="185" y="268" text-anchor="middle">Jam in feeder</text><text x="275" y="268" text-anchor="middle">Band change</text><text x="365" y="268" text-anchor="middle">No operator</text><text x="455" y="268" text-anchor="middle">Glue fault</text><text x="545" y="268" text-anchor="middle">Cleaning</text><text x="635" y="268" text-anchor="middle">Sensor</text><text x="725" y="268" text-anchor="middle">Quality check</text><text x="815" y="268" text-anchor="middle">Other (9)</text>
+      <text x="95" y="288" text-anchor="middle" style="fill:var(--text-3)">26 %</text><text x="185" y="288" text-anchor="middle" style="fill:var(--text-3)">46 %</text><text x="275" y="288" text-anchor="middle" style="fill:var(--text-3)">62 %</text><text x="365" y="288" text-anchor="middle" style="fill:var(--text-3)">73 %</text>
+    </svg>
+    <p class="small muted">The small grey number under each bar is the running total: the first three reasons are <b>62 %</b> of all stop time.</p>
+  </div></div>
+</section>
+
+<section class="screen" id="dq" data-ask='["How sure are these OEE numbers?"]'>
+  <div class="ph"><div><h1>How much can you trust this number?</h1><p>Shown next to every OEE value. Click the trust badge on any OEE tile to open this.</p></div></div>
+  <div class="g g-side">
+    <div class="card"><div class="card-h"><h3>OEE Line 2 · week 43 · 71 %</h3><span class="badge b-warn">Mostly complete</span></div><div class="card-b stack">
+      <div class="li"><span class="ic" style="background:var(--run-soft);color:var(--run)"><svg class="i"><use href="#i-check"/></svg></span><div><b>Signals cover 98 % of planned time</b><small>Missing: 1 h 24 m on K-5 (Mon)</small></div><span></span></div>
+      <div class="li"><span class="ic" style="background:var(--reason-soft);color:var(--reason)"><svg class="i"><use href="#i-alert"/></svg></span><div><b>2 stops have no reason</b><small>11 min. They count as "Unknown".</small></div><a class="btn sm" href="s08-registration.html#worklist">Register</a></div>
+      <div class="li"><span class="ic" style="background:var(--reason-soft);color:var(--reason)"><svg class="i"><use href="#i-alert"/></svg></span><div><b>K-7 has no ideal rate</b><small>Left out of performance</small></div><a class="btn sm" href="s15-products-orders.html#rates">Set rate</a></div>
+      <div class="li"><span class="ic" style="background:var(--run-soft);color:var(--run)"><svg class="i"><use href="#i-check"/></svg></span><div><b>Scrap registered every shift</b><small>10 of 10 shifts</small></div><span></span></div>
+    </div></div>
+    <div class="card pad"><b>Trust levels</b><div class="stack mt"><div class="row"><span class="badge b-run">Complete</span><span class="small">everything is in</span></div><div class="row"><span class="badge b-warn">Mostly complete</span><span class="small">small gaps, number is close</span></div><div class="row"><span class="badge b-stop">Incomplete</span><span class="small">do not use for decisions</span></div></div></div>
+  </div>
+</section>
+
+<section class="screen" id="reliability" data-ask='["What is our MTTR trend?","Which machine breaks down most often?"]'>
+  <div class="ph"><div><h1>Reliability</h1><p>How often machines break, and how fast they are back. Breakdowns only, not changeovers.</p></div></div>
+  <div class="g g2 mb">
+    <div class="card kpi"><div class="kpi-l">Time between breakdowns (MTBF)</div><div class="kpi-v num">31<small>h</small></div><div class="kpi-f">Higher is better · was 26 h last month</div>
+      <svg class="chart mini" viewBox="0 0 300 70" role="img" aria-label="MTBF rising over six months"><polyline fill="none" stroke="var(--brand)" stroke-width="2" points="5,52 60,48 115,50 170,40 225,34 290,22"/><circle cx="290" cy="22" r="4" fill="var(--brand)"/><text x="5" y="68">May</text><text x="270" y="68">Oct</text></svg></div>
+    <div class="card kpi"><div class="kpi-l">Time to repair (MTTR)</div><div class="kpi-v num">42<small>min</small></div><div class="kpi-f">Lower is better · was 48 min last month</div>
+      <svg class="chart mini" viewBox="0 0 300 70" role="img" aria-label="MTTR falling over six months"><polyline fill="none" stroke="var(--brand)" stroke-width="2" points="5,18 60,22 115,20 170,30 225,34 290,40"/><circle cx="290" cy="40" r="4" fill="var(--brand)"/><text x="5" y="68">May</text><text x="270" y="68">Oct</text></svg></div>
+  </div>
+  <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Machine</th><th>Breakdowns</th><th>MTBF</th><th>MTTR</th><th>Longest</th></tr></thead><tbody>
+    <tr class="warn"><td><b>K-5</b> Edge bander</td><td>14</td><td class="num">19 h</td><td class="num">51 min</td><td>Glue unit, 3 h 10 m</td></tr>
+    <tr><td><b>K-3</b> Panel saw</td><td>6</td><td class="num">44 h</td><td class="num">28 min</td><td>Blade, 1 h 05 m</td></tr>
+    <tr><td><b>K-9</b> CNC router</td><td>4</td><td class="num">66 h</td><td class="num">39 min</td><td>Spindle, 1 h 40 m</td></tr>
+  </tbody></table></div></div>
+</section>
+
+<section class="screen" id="cost" data-ask='["How much did changeovers cost last month?"]'>
+  <div class="ph"><div><h1>What the losses cost</h1><p>Lost hours × your hourly rate per line. Set the rate in OEE settings.</p></div></div>
+  <div class="g g3 mb">
+    <div class="card kpi"><div class="kpi-l">Lost this month</div><div class="kpi-v num">412 000<small>SEK</small></div><div class="kpi-f">316 h × 1 300 SEK/h</div></div>
+    <div class="card kpi"><div class="kpi-l">Biggest cost</div><div class="kpi-v" style="font-size:22px">Breakdowns</div><div class="kpi-f">125 000 SEK</div></div>
+    <div class="card kpi"><div class="kpi-l">If OEE rises 5 points</div><div class="kpi-v num" style="color:var(--run)">+94 000<small>SEK/month</small></div><div class="kpi-f">more good output</div></div>
+  </div>
+  <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Loss</th><th>Hours</th><th>Cost</th><th>Change vs last month</th></tr></thead><tbody>
+    <tr><td><span class="loss-c" style="--c:var(--stop-fill)"></span>Breakdowns</td><td class="num">96</td><td class="num b">125 000</td><td><span class="delta" style="background:var(--run-soft);color:var(--run)">−8 %</span></td></tr>
+    <tr><td><span class="loss-c" style="--c:var(--setup)"></span>Setup &amp; changeover</td><td class="num">74</td><td class="num b">96 000</td><td><span class="delta" style="background:var(--stop-soft);color:var(--stop)">+12 %</span></td></tr>
+    <tr><td><span class="loss-c" style="--c:#C98A2B"></span>Slow running</td><td class="num">52</td><td class="num b">68 000</td><td><span class="delta">±0 %</span></td></tr>
+  </tbody></table></div></div>
+</section>
+
+<section class="screen" id="targets" data-ask='["Which lines met their target last month?"]'>
+  <div class="ph"><div><h1>Targets</h1><p>The goal for each line. Tiles and reports turn green or yellow against these.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="Targets saved">Save</button></div></div>
+  <div class="card pad">
+    <div class="tgt small muted b"><span>Line</span><span>OEE target</span><span>Availability</span><span class="hide-s">Last month</span></div>
+    <div class="tgt"><b>Line 2 · Edging</b><div class="ig"><input value="75"><span class="unit">%</span></div><div class="ig"><input value="88"><span class="unit">%</span></div><span class="hide-s"><span class="badge b-warn">69 %</span></span></div>
+    <div class="tgt"><b>Line 3 · Packing</b><div class="ig"><input value="80"><span class="unit">%</span></div><div class="ig"><input value="90"><span class="unit">%</span></div><span class="hide-s"><span class="badge b-run">82 %</span></span></div>
+    <div class="tgt"><b>Line 5 · Press</b><div class="ig"><input value="70"><span class="unit">%</span></div><div class="ig"><input value="85"><span class="unit">%</span></div><span class="hide-s"><span class="badge b-run">73 %</span></span></div>
+  </div>
+</section>
+
+<section class="screen" id="oee-settings" data-ask='["What counts as planned time in our OEE?"]'>
+  <div class="ph"><div><h1>OEE settings</h1><p>How FP calculates OEE for your company. Changes apply from the date you choose.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="Saved; applies from 1 November">Save</button></div></div>
+  <div class="g g2">
+    <div class="card"><div class="card-h"><h3>What counts as planned time</h3></div><div class="card-b stack">
+      <label class="row"><span class="switch on"></span>Breaks are <b>not</b> planned time</label>
+      <label class="row"><span class="switch on"></span>Planned stops are <b>not</b> planned time</label>
+      <label class="row"><span class="switch"></span>Changeovers are <b>not</b> planned time</label>
+      <p class="small muted">Most plants count changeovers as a loss, so they show up and can be improved.</p></div></div>
+    <div class="card"><div class="card-h"><h3>Money</h3></div><div class="card-b stack">
+      <div class="field"><label>Hourly rate, default</label><div class="ig"><input value="1300"><span class="unit">SEK/h</span></div></div>
+      <div class="field"><label>Rework counts as</label><div class="seg"><button class="on" type="button">Scrap</button><button type="button">Good</button></div></div>
+      <div class="field"><label>Apply from</label><div class="seg"><button type="button">Now</button><button class="on" type="button">1 November</button></div></div></div></div>
+  </div>
+  <div class="banner info mt"><svg class="i"><use href="#i-eye"/></svg><div><b>Preview impact on last 4 weeks:</b> with micro-stops from 120 s to 60 s, Line 2 OEE would be 70 % instead of 71 %. <button class="btn sm" type="button" data-toast="Preview updated">Preview</button></div></div>
+</section>
+
+<section class="screen" id="baselines" data-ask='["How much has OEE improved since the baseline?"]'>
+  <div class="ph"><div><h1>Baselines</h1><p>Save "how we were" before an improvement, so you can show the change later.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="Baseline saved"><svg class="i sm"><use href="#i-plus"/></svg>Save baseline</button></div></div>
+  <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Baseline</th><th>Where</th><th>Period</th><th>OEE then</th><th>OEE now</th><th>Change</th></tr></thead><tbody>
+    <tr><td><b>Before SMED project</b></td><td>K-5</td><td>Aug 2026</td><td class="num">61 %</td><td class="num">66 %</td><td><span class="delta" style="background:var(--run-soft);color:var(--run)">+5 pts</span></td></tr>
+    <tr><td><b>Start of year</b></td><td>Hultsfred</td><td>Jan 2026</td><td class="num">64 %</td><td class="num">71 %</td><td><span class="delta" style="background:var(--run-soft);color:var(--run)">+7 pts</span></td></tr>
+  </tbody></table></div></div>
+</section>
+
+<section class="screen" id="window-history" data-ask='["Why did last week’s OEE change after I saw it?"]'>
+  <div class="ph"><div><h1>Why did this number change?</h1><p>OEE Line 2 · Monday 19 October · morning shift. Every recalculation is listed.</p></div></div>
+  <div class="card"><div class="card-b"><div class="vsteps">
+    <div class="vstep done"><span class="dt">4</span><div><b>74 % · final</b><small>Tue 20 Oct 08:10 · Elin S. registered the last 2 stops</small></div><span class="badge b-run">Final</span></div>
+    <div class="vstep done"><span class="dt">3</span><div><b>72 %</b><small>Mon 19 Oct 15:02 · late signals from FP Box U-07 arrived (buffered 40 min)</small></div><span></span></div>
+    <div class="vstep done"><span class="dt">2</span><div><b>69 %</b><small>Mon 19 Oct 14:00 · shift ended</small></div><span></span></div>
+    <div class="vstep done"><span class="dt">1</span><div><b>70 % · provisional</b><small>Mon 19 Oct 10:00 · live during the shift</small></div><span></span></div>
+  </div></div></div>
+  <div class="card pad mt"><b>Why it changed</b><div class="list mt-s"><div class="li"><span class="ic"><svg class="i"><use href="#i-history"/></svg></span><div><b>Version 3 · 66 %</b><small>stop registration changed by Elin 09:14</small></div><span></span></div><div class="li"><span class="ic"><svg class="i"><use href="#i-history"/></svg></span><div><b>Version 2 · 64 %</b><small>buffered events arrived from U-07 at 07:02</small></div><span></span></div></div></div>
+</section>
+
+</main>
+<script src="../assets/fp.js"></script>
+</body>
+</html>

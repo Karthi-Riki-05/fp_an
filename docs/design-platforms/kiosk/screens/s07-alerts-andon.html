@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>S07 Alerts Andon</title>
+<meta name="description" content="FP Analyzer v3 prototype, module S07: notification centre, phone alert, machine screen alert strip, board banner, alert rules, groups and escalation, andon types, sounds, my notifications, delivery log.">
+<!-- Written for: the FP owner, client reviewers and developers building S07. Prototype only; all names and numbers are fictional. -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Poppins:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="../assets/fp.css">
+<style>
+.nt{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:start;padding:14px 16px;border-bottom:1px solid var(--border)}
+.nt:last-child{border-bottom:0}
+.nt.unread{background:color-mix(in srgb,var(--brand-soft) 45%,transparent)}
+.nt .ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex:none}
+.nt .ic.stop{background:var(--stop-soft);color:var(--stop)}.nt .ic.andon{background:var(--andon-soft);color:var(--andon)}.nt .ic.warn{background:var(--reason-soft);color:var(--reason)}.nt .ic.info{background:var(--brand-soft);color:var(--brand-strong)}
+.nt b{display:block}.nt small{color:var(--text-3);font-size:12.5px}
+.nt .acts{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.lock-scr{flex:1;background:linear-gradient(170deg,#0B3B48,#021317);color:#fff;padding:20px 14px;display:flex;flex-direction:column;gap:12px}
+.lock-scr .clk{text-align:center;font-family:var(--font-head);font-size:64px;font-weight:600;line-height:1;margin:22px 0 4px}
+.lock-scr .dt{text-align:center;font-size:15px;opacity:.8;margin-bottom:12px}
+.strip{display:flex;align-items:center;gap:1em;padding:.9em 1.4em;font-weight:800;font-size:1.2em;color:#fff}
+.strip.andon{background:#A11D6C}.strip.stop{background:#B91C1C}
+.strip .sp{flex:1}
+.strip .k-btn{height:2.8em;font-size:.85em;padding:0 1.2em;background:#fff;color:#26333A;border:0}
+.tv-top{display:flex;align-items:center;justify-content:space-between;padding:1.2em 1.8em;font-weight:800;font-size:1.3em}
+.tv-ban{margin:0 1.8em;border-radius:.8em;padding:1.1em 1.4em;background:#A11D6C;color:#fff;display:flex;align-items:center;gap:1em;font-size:1.5em;font-weight:800}
+.tv-ban small{display:block;font-size:.6em;font-weight:700;opacity:.85}
+.tv-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.9em;padding:1.2em 1.8em;flex:1}
+.tv-t{border-radius:.8em;background:#0D2028;padding:1em;border-left:.45em solid var(--c);display:flex;flex-direction:column;gap:.3em}
+.tv-t b{font-size:1.6em}.tv-t span{font-size:1em;opacity:.75}.tv-t .v{font-size:2.2em;font-weight:800;font-family:var(--font-head)}
+.esc{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:start}
+.esc .lvl{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:800;background:var(--brand-soft);color:var(--brand-strong)}
+.esc + .esc{margin-top:6px}
+.esc-line{margin-left:16px;border-left:2px dashed var(--border-strong);height:16px}
+.andon-c{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;color:#fff;background:var(--c)}
+.chanrow{display:grid;grid-template-columns:minmax(0,1fr) repeat(4,64px);align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--border);font-size:13.5px}
+.chanrow:first-child{border-top:0}
+.chanrow .h{font-size:11.5px;font-weight:800;color:var(--text-3);text-align:center;text-transform:uppercase}
+.chanrow .switch{justify-self:center}
+@media (max-width:520px){.chanrow{grid-template-columns:minmax(0,1fr) repeat(4,44px)}}
+</style>
+</head>
+<body data-module="S07">
+<main id="screens">
+
+
+
+<section class="screen" id="strip" data-ask='["How fast does maintenance answer andon calls?"]'>
+  <div class="devices"><div><div class="tablet"><div class="tb-scr">
+    <div class="strip andon"><svg class="i" style="width:1.4em;height:1.4em"><use href="#i-hand"/></svg><span>Andon · Maintenance needed · waiting 3:10</span><span class="sp"></span><span style="font-size:.85em;opacity:.9">Jonas L. is coming, 3 min</span><button class="k-btn" type="button">Cancel call</button></div>
+    <div class="k-top"><div><b>K-7 · Drill line</b><small>Line 2 · Terminal T-02 · Sami K.</small></div><span class="clk num">10:52</span><span class="k-conn"><svg class="i xs"><use href="#i-wifi"/></svg>Online</span></div>
+    <div class="k-body">
+      <div class="k-card"><div class="k-h">This shift</div><div class="tl lg" style="margin-top:1em"><i class="r" style="flex:55"></i><i class="s" style="flex:5"></i><i class="r" style="flex:36"></i><i class="a" style="flex:4"></i><i class="f" style="flex:30"></i></div></div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1em;flex:1"><div class="k-card"><small class="muted">Made</small><div class="k-h num" style="font-size:2.2em">1 240</div><small class="muted">pieces · plan 1 400</small></div><div class="k-card"><small class="muted">Stops</small><div class="k-h num" style="font-size:2.2em">3</div><small class="muted">all have a reason</small></div><div class="k-card"><small class="muted">Order</small><div class="k-h" style="font-size:1.5em">H-120 · 62 %</div><small class="muted">done 13:40</small></div></div>
+      <div class="k-dock"><button class="k-btn" type="button">Stop reason</button><button class="k-btn" type="button">Scrap</button><button class="k-btn" type="button">Order</button><button class="k-btn" type="button">Checklist</button><button class="k-btn andon" type="button" data-to="s18-operator#andon">Andon</button></div>
+    </div></div></div><p class="dev-cap"><b>Machine screen</b> · the alert strip stays on top until the call is handled</p></div>
+    <div style="width:min(520px,100%)"><div class="card pad"><b>How the strip changes</b><div class="stack mt"><div class="strip andon" style="font-size:13px;border-radius:10px">Waiting · nobody yet</div><div class="strip andon" style="font-size:13px;border-radius:10px;opacity:.85">Jonas L. is coming, 3 min</div><div class="strip stop" style="font-size:13px;border-radius:10px">Waiting over 10 min · sent to Lena H.</div><div class="banner ok" style="margin:0"><svg class="i"><use href="#i-check"/></svg><div>Handled in 6 min · strip goes away</div></div></div></div></div>
+  </div>
+</section>
+
+<section class="screen" id="banner" data-ask='["Which board displays are offline?"]'>
+  <div class="devices"><div><div class="tv"><div class="tv-scr">
+    <div class="tv-top"><span>Line 2 · Edging</span><span class="num">10:52</span></div>
+    <div class="tv-ban"><svg class="i" style="width:1.6em;height:1.6em"><use href="#i-hand"/></svg><div>Andon on K-7 · Maintenance needed<small>Waiting 3 min · Nils D. is on the way</small></div></div>
+    <div class="tv-grid">
+      <div class="tv-t" style="--c:#22C55E"><b>K-3</b><span>Running</span><span class="v num">2:14</span></div>
+      <div class="tv-t" style="--c:#EF4444"><b>K-5</b><span>Stopped · needs reason</span><span class="v num" style="color:#F87171">6:12</span></div>
+      <div class="tv-t" style="--c:#F06BB4"><b>K-7</b><span>Andon</span><span class="v num" style="color:#F06BB4">3:10</span></div>
+      <div class="tv-t" style="--c:#01B9D0"><b>Line OEE</b><span>this shift · target 75 %</span><span class="v num">66 %</span></div>
+    </div></div></div><p class="dev-cap"><b>Board on the wall</b> · andon and long stops show as a banner over the board</p><div class="tv-ctl" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:10px"><span class="small muted" style="font-weight:800;text-transform:uppercase;letter-spacing:.06em">Prototype</span><a class="btn sm" href="#" data-to="s17-dashboards-reports#tv" data-toast="Andon closed · Nils D. fixed K-7">Andon is closed</a></div></div></div>
+</section>
+
+
+
+
+
+
+
+</main>
+<script src="../assets/fp.js"></script>
+</body>
+</html>

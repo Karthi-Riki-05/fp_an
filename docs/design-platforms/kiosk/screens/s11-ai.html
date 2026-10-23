@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>S11 AI Services</title>
+<meta name="description" content="FP Analyzer v3 prototype, module S11: reason suggestion chips, Ask full page, summary card, inline translation, reason mapping review, issue groups, anomalies, scanning paper forms and AI settings.">
+<!-- Written for: the FP owner, client reviewers and developers building S11. Prototype only; all names and numbers are fictional. -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Poppins:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="../assets/fp.css">
+<style>
+.ai-note{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--text-3)}
+.chat{display:flex;flex-direction:column;gap:14px;max-width:820px}
+.msg{display:grid;grid-template-columns:36px minmax(0,1fr);gap:12px}
+.msg .who{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;font-weight:800;font-size:12px}
+.msg .who.ai{background:linear-gradient(135deg,#00768D,#01B9D0);color:#fff}
+.msg .who.me{background:var(--surface-3);color:var(--text-2)}
+.msg .body{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;font-size:14px;line-height:1.55}
+.msg.u .body{background:var(--brand-soft);border-color:transparent}
+.ans-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px;font-size:12px;color:var(--text-3)}
+.ask-bar{display:flex;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--border-strong);border-radius:16px;padding:8px 8px 8px 16px;max-width:820px;box-shadow:var(--shadow-1)}
+.ask-bar input{flex:1;border:0;background:none;font:inherit;color:var(--text);outline:none;min-width:0}
+.hist{display:flex;flex-direction:column;gap:4px}
+.hist a{padding:8px 10px;border-radius:8px;color:var(--text-2);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist a.on{background:var(--brand-soft);color:var(--brand-strong);font-weight:700}
+.tr{border-left:3px solid var(--brand);padding:6px 0 6px 12px}
+.tr small{display:block;font-size:11.5px;color:var(--text-3);margin-top:4px}
+.scan-pap{background:#FBF8F1;color:#333;border-radius:8px;padding:16px;font-family:"Comic Sans MS","Segoe Print",cursive;font-size:13px;line-height:1.9;box-shadow:var(--shadow-2);transform:rotate(-1deg)}
+.scan-pap .hl{background:rgba(1,185,208,.25);border-radius:3px;padding:0 2px}
+.conf{font-size:11px;font-weight:800;border-radius:5px;padding:1px 6px}
+.conf.h{background:var(--run-soft);color:var(--run)}.conf.m{background:var(--reason-soft);color:var(--reason)}.conf.l{background:var(--stop-soft);color:var(--stop)}
+.spark{display:flex;align-items:flex-end;gap:2px;height:36px}
+.spark i{flex:1;background:var(--brand);border-radius:2px 2px 0 0;opacity:.55}
+.spark i.x{background:var(--stop-fill);opacity:1}
+.k-card>.k-btn{height:auto}
+.bud{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;align-items:center;font-size:13.5px}
+</style>
+</head>
+<body data-module="S11">
+<main id="screens">
+
+<section class="screen" id="chips" data-ask='["How are reason suggestions made?"]'>
+  <div class="devices"><div><div class="tablet"><div class="tb-scr">
+    <div class="k-top"><div><b>K-5 · Edge bander</b><small>Line 2 · Terminal T-02 · Sami K.</small></div><span class="clk num">10:48</span></div>
+    <div class="k-body">
+      <div class="k-open"><span class="ic"><svg class="i"><use href="#i-stop"/></svg></span><div><b>Stopped 6:12 · why?</b><small>Suggestions are based on what happened on K-5 before</small></div></div>
+      <div class="k-card"><div class="row" style="gap:.6em"><span class="badge b-ai" style="font-size:.9em;height:2em">✦ Probably</span><button class="k-btn" type="button" data-to="s18-operator#home" data-toast="Stop reason saved. Thanks!" style="height:3.2em;padding:0 1.4em;border-color:var(--brand);box-shadow:0 0 0 .2em var(--brand-soft)">Jam in feeder</button><button class="k-btn" type="button" data-to="s18-operator#home" data-toast="Stop reason saved. Thanks!" style="height:3.2em;padding:0 1.4em">Band change</button><button class="k-btn" type="button" data-to="s18-operator#home" data-toast="Stop reason saved. Thanks!" style="height:3.2em;padding:0 1.4em">Material wait</button><span class="sp"></span><span class="dim" style="font-size:.85em">or choose below</span></div></div>
+      <div class="k-card" style="flex:1;display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:1fr;gap:.8em"><button class="k-btn" type="button" data-to="s18-operator#home" data-toast="Stop reason saved. Thanks!">Machine</button><button class="k-btn" type="button" data-to="s18-operator#home" data-toast="Stop reason saved. Thanks!">Setup</button><button class="k-btn" type="button" data-to="s18-operator#home" data-toast="Stop reason saved. Thanks!">Material</button><button class="k-btn" type="button" data-to="s18-operator#home" data-toast="Stop reason saved. Thanks!">People</button><button class="k-btn" type="button" data-to="s18-operator#home" data-toast="Stop reason saved. Thanks!">Quality</button><button class="k-btn" type="button" data-to="s18-operator#home" data-toast="Stop reason saved. Thanks!">Cleaning</button><button class="k-btn" type="button" data-to="s18-operator#home" data-toast="Stop reason saved. Thanks!">Planned</button><button class="k-btn" type="button" data-to="s18-operator#home" data-toast="Stop reason saved. Thanks!">Other…</button></div>
+    </div></div></div><p class="dev-cap"><b>Suggestion chips</b> · up to 3, marked ✦; the operator always chooses</p></div></div>
+  <div class="states"><span class="badge b-ai">✦ Suggested: tap selects the reason; the operator still taps Save</span><span class="badge b-off">No suggestions: no chips and no message</span></div>
+</section>
+
+
+
+
+
+
+
+
+
+</main>
+<script src="../assets/fp.js"></script>
+</body>
+</html>

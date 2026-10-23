@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>S20 Plans Billing</title>
+<meta name="description" content="FP Analyzer v3 prototype, module S20: plan and usage, statements, billing details, upgrade prompts, soft-limit consent, platform plans, subscriptions and statement runs, and partner billing.">
+<!-- Written for: the FP owner, client reviewers and developers building S20. Prototype only; all names, prices and numbers are fictional placeholders. -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Poppins:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="../assets/fp.css">
+<style>
+.use{display:flex;flex-direction:column;gap:6px}
+.use .row b{font-size:14px}
+.plans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:900px){.plans{grid-template-columns:minmax(0,1fr)}}
+.plan{display:flex;flex-direction:column;gap:10px;padding:20px}
+.plan.cur{outline:2px solid var(--brand);outline-offset:-2px}
+.plan .pr{font-family:var(--font-head);font-size:26px;font-weight:700}
+.plan .pr small{font-size:13px;color:var(--text-3);font-weight:600}
+.plan ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:13.5px}
+.plan li{display:flex;gap:8px;align-items:flex-start}
+.plan li .i{color:var(--run);flex:none;margin-top:2px}
+.plan li.no{color:var(--text-3)}
+.plan li.no .i{color:var(--text-3)}
+.gate{position:relative;min-height:300px;border-radius:var(--radius);overflow:hidden}
+.gate .blur{filter:blur(3px);opacity:.55;pointer-events:none}
+.gate .over-msg{position:absolute;inset:0;display:grid;place-items:center;padding:16px}
+.pt-top{display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid var(--border);background:var(--surface);flex-wrap:wrap}
+.pt-top .wm{font-family:var(--font-head);font-size:18px}
+.pt-body{padding:22px;max-width:1100px;margin:0 auto}
+@media (max-width:620px){.pt-body{padding:14px}}
+</style>
+</head>
+<body data-module="S20">
+<main id="screens">
+
+<section class="screen" id="plan" data-ask='["How many billable machines do we have?","What will next month cost?"]'>
+  <div class="ph"><div><h1>Plan and usage</h1><p>What you pay for and how much of it you use. You pay per connected machine.</p></div><div class="ph-a"><button class="btn" type="button" data-go="upgrade">Compare plans</button><button class="btn primary" type="button" data-toast="Request sent to FP; you get an answer within 1 working day">Request change</button></div></div>
+  <div class="banner neutral mb"><svg class="i"><use href="#i-info"/></svg><div>Plan names and prices on these screens are placeholders. <span class="badge b-warn">Proposed</span></div></div>
+  <div class="g g-side">
+    <div class="card"><div class="card-h"><h3>Plus · monthly</h3><span class="badge b-run">Active</span></div><div class="card-b stack">
+      <div class="use"><div class="row between"><b>Billable machines</b><span class="num">14 of 16</span></div><div class="bar run"><i style="width:87%"></i></div><small class="muted">A machine counts when it sent a signal this month.</small></div>
+      <div class="use"><div class="row between"><b>Terminals</b><span class="num" style="color:var(--reason)">4 of 3 · 1 extra</span></div><div class="bar warn"><i style="width:100%"></i></div></div>
+      <div class="use"><div class="row between"><b>People</b><span class="num">31 · no limit</span></div></div>
+      <div class="use"><div class="row between"><b>Ask FP questions</b><span class="num">1 840 of 3 000</span></div><div class="bar run"><i style="width:61%"></i></div></div>
+      <div class="use"><div class="row between"><b>Storage (photos, voice)</b><span class="num">2.1 of 10 GB</span></div><div class="bar run"><i style="width:21%"></i></div></div>
+    </div></div>
+    <div class="stack">
+      <div class="card kpi"><div class="kpi-l">Next bill · 1 November</div><div class="kpi-v num">7 000<small> SEK</small></div><div class="kpi-f">14 machines × 500 SEK, excl. VAT</div></div>
+      <div class="ai-card"><div class="q"><svg class="i sm"><use href="#i-spark"/></svg>Good to know</div><p>2 machines are connected but unused this month (K-11, P-4). They are not billed.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="statements" data-ask='["Why was September higher than August?"]'>
+  <div class="ph"><div><h1>Statements</h1><p>Your monthly bills. Each line shows which machines were counted.</p></div></div>
+  <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Month</th><th>Machines</th><th>Amount</th><th>Status</th><th></th></tr></thead><tbody>
+    <tr><td><b>October 2026</b><div class="t2">so far</div></td><td class="num">14</td><td class="num">7 000 SEK</td><td><span class="badge b-off">Open</span></td><td class="act"></td></tr>
+    <tr><td><b>September 2026</b></td><td class="num">14</td><td class="num">7 000 SEK</td><td><span class="badge b-run">Paid</span></td><td class="act"><button class="btn sm ghost" type="button"><svg class="i sm"><use href="#i-download"/></svg>PDF</button></td></tr>
+    <tr><td><b>August 2026</b></td><td class="num">12</td><td class="num">6 000 SEK</td><td><span class="badge b-run">Paid</span></td><td class="act"><button class="btn sm ghost" type="button"><svg class="i sm"><use href="#i-download"/></svg>PDF</button></td></tr>
+    <tr><td><b>July 2026</b></td><td class="num">12</td><td class="num">3 000 SEK</td><td><span class="badge b-run">Paid</span></td><td class="act"><button class="btn sm ghost" type="button"><svg class="i sm"><use href="#i-download"/></svg>PDF</button></td></tr>
+  </tbody></table></div></div>
+  <p class="tiny muted mt">July: half price during the summer stop (agreed with FP).</p>
+</section>
+
+<section class="screen" id="billing" data-ask='["Can we pay by invoice instead of card?"]'>
+  <div class="ph"><div><h1>Billing details</h1><p>Who gets the bill and how you pay.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="Saved">Save</button></div></div>
+  <div class="g g2">
+    <div class="card"><div class="card-h"><h3>Company</h3></div><div class="card-b stack">
+      <div class="field"><label>Company name</label><input class="input" value="Nordvik Trä AB"></div>
+      <div class="field"><label>Org. number</label><input class="input" value="556000-0000"></div>
+      <div class="field"><label>VAT number</label><input class="input" value="SE556000000001"></div>
+      <div class="field"><label>Address</label><input class="input" value="Industrivägen 4, 577 00 Hultsfred"></div>
+    </div></div>
+    <div class="card"><div class="card-h"><h3>Payment</h3></div><div class="card-b stack">
+      <div class="radio-card on"><span class="rd"></span><div><b>Invoice, 30 days</b><small class="muted">PDF sent by email</small></div></div>
+      <div class="radio-card"><span class="rd"></span><div><b>Card</b><small class="muted">charged on the 1st</small></div></div>
+      <div class="field"><label>Send bills to</label><input class="input" value="ekonomi@nordvik.example"></div>
+      <div class="field"><label>Your reference</label><input class="input" value="Lena Holm · PO 4471"></div>
+    </div></div>
+  </div>
+</section>
+
+<section class="screen" id="upgrade" data-ask='["Which features are in Plus?","What do we get with Pro?"]'>
+  <div class="ph"><div><h1>Plans</h1><p>Pick what fits. You can change plan at any time; the new price starts next month.</p></div></div>
+  <div class="plans mb">
+    <div class="card plan"><b style="font-size:17px">Start</b><div class="pr num">300 SEK<small> / machine / month</small></div><ul><li><svg class="i sm"><use href="#i-check"/></svg>Live floor and stops</li><li><svg class="i sm"><use href="#i-check"/></svg>OEE and loss reports</li><li class="no"><svg class="i sm"><use href="#i-x"/></svg>Orders and products</li><li class="no"><svg class="i sm"><use href="#i-x"/></svg>Ask FP</li></ul><button class="btn" type="button">Switch to Start</button></div>
+    <div class="card plan cur"><div class="row between"><b style="font-size:17px">Plus</b><span class="badge b-brand">Your plan</span></div><div class="pr num">500 SEK<small> / machine / month</small></div><ul><li><svg class="i sm"><use href="#i-check"/></svg>Everything in Start</li><li><svg class="i sm"><use href="#i-check"/></svg>Orders, products and changeovers</li><li><svg class="i sm"><use href="#i-check"/></svg>Ask FP · 3 000 questions</li><li class="no"><svg class="i sm"><use href="#i-x"/></svg>Maintenance plans</li></ul><button class="btn" type="button" disabled>Current plan</button></div>
+    <div class="card plan"><b style="font-size:17px">Pro</b><div class="pr num">750 SEK<small> / machine / month</small></div><ul><li><svg class="i sm"><use href="#i-check"/></svg>Everything in Plus</li><li><svg class="i sm"><use href="#i-check"/></svg>Maintenance and spare parts</li><li><svg class="i sm"><use href="#i-check"/></svg>API and integrations</li><li><svg class="i sm"><use href="#i-check"/></svg>Ask FP · no limit</li></ul><button class="btn primary" type="button" data-go="consent">Upgrade to Pro</button></div>
+  </div>
+  <div class="sect">When a feature is not in your plan</div>
+  <div class="gate card"><div class="blur card-b"><div class="g g3"><div class="card kpi"><div class="kpi-l">Due PM</div><div class="kpi-v">4</div></div><div class="card kpi"><div class="kpi-l">MTTR</div><div class="kpi-v">38 m</div></div><div class="card kpi"><div class="kpi-l">MTBF</div><div class="kpi-v">61 h</div></div></div></div>
+    <div class="over-msg"><div class="card pad" style="max-width:380px;text-align:center"><svg class="i lg" style="color:var(--brand)"><use href="#i-lock"/></svg><h3 class="mt-s">Included in Pro</h3><p class="small"><b>Maintenance plans</b></p><p class="small muted mt-s">Plan service work and track spare parts. Try it free for 30 days.</p><div class="row mt" style="justify-content:center"><button class="btn primary" type="button" data-go="consent">Try Pro free</button><button class="btn ghost" type="button" data-toast="Lena Holm (admin) got your request">Ask your admin</button><button class="btn ghost" type="button" data-toast="Request sent to FP">Request</button></div></div></div></div>
+</section>
+
+<section class="screen" id="consent" data-ask='["What happens if we go over 16 machines?"]'>
+  <div class="ph"><div><h1>Plant & machines</h1></div></div>
+  <div class="stage-dim" style="min-height:540px"><div class="under"><div class="card pad"><b>K-12 · CNC router</b><p class="small muted">Waiting to be connected</p></div></div>
+    <div class="over"><div class="dlg"><div class="dlg-h"><h2>Add a 17th machine?</h2></div><div class="dlg-b stack">
+      <p>Your plan has room for <b>16 machines</b>. Adding K-12 makes it 17.</p>
+      <dl class="kv"><dt>Extra cost</dt><dd>+500 SEK / month</dd><dt>From</dt><dd>today, on the November bill</dd><dt>Plan</dt><dd>stays Plus</dd></dl>
+      <div class="banner info"><svg class="i"><use href="#i-info"/></svg><div>Nothing stops. The machine starts collecting data right away.</div></div>
+      <label class="row" style="gap:8px"><input type="checkbox" checked> I agree to the extra cost for Nordvik Trä AB</label>
+    </div><div class="dlg-f"><button class="btn" type="button">Not now</button><button class="btn primary" type="button" data-toast="K-12 added · plan now 17 machines">Confirm</button></div></div></div>
+  </div>
+  <div class="states"><span class="badge b-off">Only admins see this; others see "Ask your admin"</span></div>
+</section>
+
+<section class="screen" id="p-plans" data-ask='["Which companies are on Start?"]'>
+  <div class="ph"><div><h1>Plans</h1><p>FP staff view. What each plan includes and costs.</p></div><div class="ph-a"><button class="btn primary" type="button"><svg class="i sm"><use href="#i-plus"/></svg>New plan</button></div></div>
+  <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Plan</th><th>Price / machine</th><th>Included</th><th>Ask FP</th><th>Companies</th><th></th></tr></thead><tbody>
+    <tr><td><b>Start</b></td><td class="num">300 SEK</td><td>Live floor, stops, OEE</td><td>—</td><td class="num">1</td><td class="act"><button class="btn sm ghost" type="button">Edit</button></td></tr>
+    <tr><td><b>Plus</b></td><td class="num">500 SEK</td><td>+ orders, products, changeovers</td><td>3 000 / month</td><td class="num">3</td><td class="act"><button class="btn sm ghost" type="button">Edit</button></td></tr>
+    <tr><td><b>Pro</b></td><td class="num">750 SEK</td><td>+ maintenance, API</td><td>no limit</td><td class="num">1</td><td class="act"><button class="btn sm ghost" type="button">Edit</button></td></tr>
+  </tbody></table></div></div>
+  <p class="tiny muted mt">Changing a price applies to new statements only. <span class="badge b-warn">Proposed</span></p>
+</section>
+
+<section class="screen" id="p-subs" data-ask='["Which trials end this month?"]'>
+  <div class="ph"><div><h1>Subscriptions</h1><p>FP staff view. Every company, its plan and machine count.</p></div></div>
+  <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Company</th><th>Plan</th><th>Machines</th><th>Monthly</th><th>Status</th></tr></thead><tbody>
+    <tr><td><b>Nordvik Trä AB</b></td><td>Plus</td><td class="num">14 / 16</td><td class="num">7 000 SEK</td><td><span class="badge b-run">Active</span></td></tr>
+    <tr><td><b>Björkdal Möbler</b></td><td>Pro</td><td class="num">22 / 25</td><td class="num">16 500 SEK</td><td><span class="badge b-run">Active</span></td></tr>
+    <tr class="warn"><td><b>Solgran Kök</b></td><td>Plus · trial</td><td class="num">6 / 10</td><td class="num">0 SEK</td><td><span class="badge b-warn">Trial ends 31 Oct</span></td></tr>
+    <tr><td><b>Västkust Plast</b></td><td>Plus</td><td class="num">9 / 10</td><td class="num">4 500 SEK</td><td><span class="badge b-run">Active</span></td></tr>
+    <tr class="bad"><td><b>Lindqvist Golv</b></td><td>Start</td><td class="num">4 / 5</td><td class="num">1 200 SEK</td><td><span class="badge b-stop">Unpaid 45 days</span></td></tr>
+  </tbody></table></div></div>
+</section>
+
+<section class="screen" id="p-run" data-ask='["Is the November statement run ready?"]'>
+  <div class="ph"><div><h1>Statement run · October</h1><p>FP staff view. Counts machines for every company and creates the bills.</p></div><div class="ph-a"><button class="btn" type="button" data-toast="Dry run done · no changes">Dry run</button><button class="btn primary" type="button" data-toast="Bills created">Create bills</button></div></div>
+  <div class="steps mb"><span class="step done"><i>✓</i>Count machines</span><span class="step done"><i>✓</i>Check</span><span class="step cur"><i>3</i>Create bills</span><span class="step"><i>4</i>Send</span></div>
+  <div class="g g4 keep2 mb">
+    <div class="card kpi"><div class="kpi-l">Companies</div><div class="kpi-v num">5</div></div>
+    <div class="card kpi"><div class="kpi-l">Billable machines</div><div class="kpi-v num">55</div></div>
+    <div class="card kpi"><div class="kpi-l">Total</div><div class="kpi-v num">29 200<small> SEK</small></div></div>
+    <div class="card kpi"><div class="kpi-l">Need a look</div><div class="kpi-v num" style="color:var(--reason)">1</div></div>
+  </div>
+  <div class="banner warn"><svg class="i"><use href="#i-alert"/></svg><div><b>Västkust Plast</b> had a machine offline for 20 days. It still counts, because it sent signals this month. Check before sending.</div></div>
+  <div class="card mt"><div class="tbl-wrap"><table class="table"><thead><tr><th>Company</th><th>Plan</th><th>Machines</th><th>Bill</th><th>Check</th></tr></thead><tbody>
+    <tr><td><b>Nordvik Trä AB</b></td><td>Plus</td><td class="num">14</td><td class="num">7 000 SEK</td><td><span class="badge b-run">OK</span></td></tr>
+    <tr><td><b>Björkdal Möbler</b></td><td>Pro</td><td class="num">22</td><td class="num">16 500 SEK</td><td><span class="badge b-run">OK</span></td></tr>
+    <tr><td><b>Solgran Kök</b></td><td>Plus · trial</td><td class="num">6</td><td class="num">0 SEK</td><td><span class="badge b-off">Trial, no bill</span></td></tr>
+    <tr class="warn"><td><b>Västkust Plast</b></td><td>Plus</td><td class="num">9</td><td class="num">4 500 SEK</td><td><span class="badge b-warn">Look</span></td></tr>
+    <tr><td><b>Lindqvist Golv</b></td><td>Start</td><td class="num">4</td><td class="num">1 200 SEK</td><td><span class="badge b-run">OK</span></td></tr>
+  </tbody></table></div></div>
+</section>
+
+<section class="screen" id="partner-billing" data-ask='["How much commission did we earn in September?"]'>
+  <div class="pt-top"><svg width="28" height="28"><use href="#mark"/></svg><span class="wm"><b>fp</b><span style="color:var(--logo-an)">analyzer</span> <span class="small muted">partners</span></span><nav style="display:flex;gap:18px;margin-left:28px;font-weight:700;font-size:13.5px"><a href="#" style="color:var(--brand-strong)">Billing</a><a href="s12-integrations.html#dev-portal" style="color:var(--text-2)">Developer portal</a></nav><span class="sp"></span><span class="small">Automation Syd AB</span><span class="av sm c3">JE</span></div>
+  <div class="pt-body">
+    <div class="ph"><div><h1>Billing</h1><p>Customers you installed, and what you earn from them each month.</p></div></div>
+    <div class="g g3 keep2 mb">
+      <div class="card kpi"><div class="kpi-l">Your customers</div><div class="kpi-v num">2</div></div>
+      <div class="card kpi"><div class="kpi-l">Machines</div><div class="kpi-v num">20</div></div>
+      <div class="card kpi"><div class="kpi-l">Commission · September</div><div class="kpi-v num">1 150<small> SEK</small></div><div class="kpi-f">10 % of their bills</div></div>
+    </div>
+    <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Customer</th><th>Plan</th><th>Machines</th><th>Their bill</th><th>You earn</th></tr></thead><tbody>
+      <tr><td><b>Solgran Kök</b></td><td>Plus · trial</td><td class="num">6</td><td class="num">0 SEK</td><td class="num">0 SEK</td></tr>
+      <tr><td><b>Björkdal Möbler</b></td><td>Pro</td><td class="num">14 of 22</td><td class="num">11 500 SEK</td><td class="num">1 150 SEK</td></tr>
+    </tbody></table></div></div>
+    <p class="tiny muted mt">Commission is paid by FP on the 15th of the next month. <span class="badge b-warn">Proposed</span></p>
+  </div>
+</section>
+
+</main>
+<script src="../assets/fp.js"></script>
+</body>
+</html>

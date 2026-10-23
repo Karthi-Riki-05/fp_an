@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>S12 Integrations</title>
+<meta name="description" content="FP Analyzer v3 prototype, module S12: integrations home, create API key, partner grant request, webhooks, connections, request log, developer portal and the platform partners list.">
+<!-- Written for: the FP owner, client reviewers and developers building S12. Prototype only; all names and numbers are fictional. -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Poppins:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="../assets/fp.css">
+<style>
+.int-c{display:flex;flex-direction:column;gap:10px;padding:18px}
+.int-c .lg-ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:var(--surface-2);color:var(--text-2);font-weight:800}
+.scope{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--border);font-size:13.5px}
+.scope:first-child{border-top:0}
+.scope small{display:block;color:var(--text-3);font-size:12px}
+.dp-top{display:flex;align-items:center;gap:14px;padding:14px 24px;border-bottom:1px solid var(--border);background:var(--surface)}
+.dp-top .wm{font-size:18px}
+.dp-top nav{display:flex;gap:18px;margin-left:24px;font-weight:700;font-size:14px}
+.dp-top nav a{color:var(--text-2)}.dp-top nav a.on{color:var(--brand-strong)}
+.dp{display:grid;grid-template-columns:220px minmax(0,1fr);gap:28px;max-width:1180px;margin:0 auto;padding:26px 24px 60px}
+.dp aside a{display:block;padding:6px 10px;border-radius:8px;color:var(--text-2);font-size:13.5px}
+.dp aside a.on{background:var(--brand-soft);color:var(--brand-strong);font-weight:700}
+.dp aside b{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);margin:14px 10px 6px}
+.dp h1{font-size:28px}
+.dp p.lead{color:var(--text-2);font-size:15px;margin:8px 0 18px;line-height:1.55}
+.ep{display:inline-flex;gap:8px;align-items:center;font-family:var(--mono);font-size:13px;background:var(--surface-2);border-radius:8px;padding:6px 10px}
+.ep b{color:var(--run);font-family:var(--font)}
+@media (max-width:900px){.dp{grid-template-columns:minmax(0,1fr)}.dp aside{display:none}.dp-top nav{display:none}}
+</style>
+</head>
+<body data-module="S12">
+<main id="screens">
+
+<section class="screen" id="int-home" data-ask='["Which API keys expire this month?","Why is the ERP import failing?"]'>
+  <div class="ph"><div><h1>Integrations</h1><p>Connect FP to your other systems: ERP, maintenance, BI tools. Everything that reads or writes your data from outside is listed here.</p></div><div class="ph-a"><button class="btn primary" type="button" data-go="create-key"><svg class="i sm"><use href="#i-key"/></svg>Create API key</button></div></div>
+  <div class="g g3 mb">
+    <div class="card int-c"><div class="row between"><span class="lg-ic">ERP</span><span class="badge b-stop">Failing</span></div><b>Orders from ERP</b><p class="small muted">Imports orders every 15 min · last OK 08:30 · 3 failures since</p><button class="btn sm" type="button" data-go="connections">Open</button></div>
+    <div class="card int-c"><div class="row between"><span class="lg-ic">BI</span><span class="badge b-run">Working</span></div><b>Power BI export</b><p class="small muted">Reads OEE and stops nightly · read only</p><button class="btn sm" type="button" data-go="connections">Open</button></div>
+    <div class="card int-c"><div class="row between"><span class="lg-ic"><svg class="i"><use href="#i-plug"/></svg></span><span class="badge b-brand">Partner</span></div><b>Nordic Maint (partner)</b><p class="small muted">Maintenance system · reads stops, writes requests</p><button class="btn sm" type="button" data-go="grant">Open</button></div>
+  </div>
+  <div class="card"><div class="card-h"><h3>API keys</h3></div><div class="tbl-wrap"><table class="table"><thead><tr><th>Name</th><th>Can</th><th>Created by</th><th>Last used</th><th>Expires</th><th></th></tr></thead><tbody>
+    <tr><td><b>ERP order import</b><span class="t2">fpk_live_…7Q2</span></td><td>Write orders</td><td>Lena H.</td><td>08:30</td><td>15 Jan 2027</td><td class="act"><button class="btn sm ghost" type="button">Manage</button></td></tr>
+    <tr class="warn"><td><b>Power BI</b><span class="t2">fpk_live_…M9x</span></td><td>Read OEE, stops</td><td>Jonas L.</td><td>02:00</td><td><span class="badge b-warn">in 9 days</span></td><td class="act"><button class="btn sm" type="button">Renew</button></td></tr>
+  </tbody></table></div></div>
+</section>
+
+<section class="screen" id="create-key" data-ask='["What should a read-only key for BI include?"]'>
+  <div class="ph"><div><h1>Create API key</h1><p>Give the key only what it needs. You can change or cancel it any time.</p></div></div>
+  <div class="g g-side">
+    <div class="card"><div class="card-b stack" style="padding-top:18px">
+      <div class="field"><label>Name</label><input class="input" value="Power BI · Hultsfred"></div>
+      <div class="field"><label>What can it do?</label><div class="card flat pad" style="padding:6px 14px">
+        <div class="scope"><div><b>Read OEE and losses</b><small>numbers per machine, line, shift</small></div><span class="badge">read</span><span class="switch on"></span></div>
+        <div class="scope"><div><b>Read stops and reasons</b><small>no names of people</small></div><span class="badge">read</span><span class="switch on"></span></div>
+        <div class="scope"><div><b>Write orders</b><small>create and update production orders</small></div><span class="badge b-warn">write</span><span class="switch"></span></div>
+        <div class="scope"><div><b>Write registrations</b></div><span class="badge b-warn">write</span><span class="switch"></span></div></div></div>
+      <div class="g g2"><div class="field"><label>Only for</label><select class="input"><option>Hultsfred</option><option>Whole company</option></select></div><div class="field"><label>Expires</label><select class="input"><option>In 1 year</option><option>In 90 days</option></select></div></div>
+    </div><div class="card-f"><button class="btn" type="button" data-go="int-home">Cancel</button><button class="btn primary" type="button" data-toast="Key created">Create key</button></div></div>
+    <div class="card pad"><b>After creating</b><p class="small muted mt-s">The key is shown <b>once</b>. Copy it into the other system right away.</p><div class="secret mt"><span>fpk_live_8xK2…pR7Q</span><button class="btn sm" type="button" data-toast="Copied">Copy</button></div></div>
+  </div>
+</section>
+
+<section class="screen" id="grant" data-ask='["What can Nordic Maint see in our data?"]'>
+  <div class="ph"><div><h1>Nordic Maint wants access</h1><p>A partner system asks to connect to your company. Check what they want before you allow it.</p></div></div>
+  <div class="card" style="max-width:760px"><div class="card-b stack" style="padding-top:18px">
+    <div class="row"><span class="co-ic" style="width:48px;height:48px;border-radius:12px;display:grid;place-items:center;background:#5B6BC9;color:#fff;font-weight:800">NM</span><div><b>Nordic Maint AB</b><div class="small muted">Approved FP partner since 2025 · maintenance planning</div></div></div>
+    <div class="card flat pad" style="padding:6px 14px">
+      <div class="scope"><div><b>Read stops and reasons</b><small>to plan maintenance from breakdowns</small></div><span class="badge">read</span><span></span></div>
+      <div class="scope"><div><b>Read machines and lines</b></div><span class="badge">read</span><span></span></div>
+      <div class="scope"><div><b>Create maintenance requests</b><small>they appear on your maintenance board</small></div><span class="badge b-warn">write</span><span></span></div></div>
+    <div class="banner info"><svg class="i"><use href="#i-shield"/></svg><div>Nordic Maint never sees people's names or registrations by person. You can remove access any time.</div></div>
+    <div class="field"><label>Allow for</label><div class="seg"><button class="on" type="button">Hultsfred</button><button type="button">Whole company</button></div></div>
+  </div><div class="card-f"><button class="btn" type="button" data-toast="Request declined">Decline</button><button class="btn primary" type="button" data-toast="Access allowed">Allow access</button></div></div>
+</section>
+
+<section class="screen" id="webhooks" data-ask='["Which webhooks failed today?"]'>
+  <div class="ph"><div><h1>Webhooks</h1><p>FP sends a message to your system when something happens, for example a long stop.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="New webhook"><svg class="i sm"><use href="#i-plus"/></svg>Add webhook</button></div></div>
+  <div class="g g-side">
+    <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Sends to</th><th>When</th><th>Last 24 h</th><th>On</th></tr></thead><tbody>
+      <tr><td><b>https://mes.nordvik.example/fp</b></td><td>Stop longer than 10 min</td><td><span class="badge b-run">42 OK</span></td><td><span class="switch on"></span></td></tr>
+      <tr class="bad"><td><b>https://teams.example/hook/…</b></td><td>Andon called</td><td><span class="badge b-stop">6 failed</span></td><td><span class="switch on"></span></td></tr></tbody></table></div></div>
+    <div class="card pad"><b>Last failure</b><p class="small muted mt-s">10:48 · Andon K-7 · their server answered <b>401 Unauthorized</b>. FP retries 5 times over 1 hour.</p><div class="code mt">{ "event": "andon.called",
+  "machine": "K-7",
+  "at": "2026-10-22T10:48:05+02:00" }</div><button class="btn sm mt" type="button" data-toast="Test sent">Send test</button></div>
+  </div>
+  <div class="row mt" style="gap:8px"><button class="btn" type="button" data-toast="Test event sent">Send test</button><button class="btn" type="button" data-toast="Failed deliveries sent again">Replay</button></div>
+</section>
+
+<section class="screen" id="connections" data-ask='["Why is the ERP import failing?"]'>
+  <div class="ph"><div><h1>Orders from ERP</h1><p>Imports production orders from your ERP every 15 minutes.</p></div><div class="ph-a"><button class="btn" type="button" data-toast="Running now"><svg class="i sm"><use href="#i-refresh"/></svg>Run now</button></div></div>
+  <div class="banner err mb"><svg class="i"><use href="#i-alert"/></svg><div><b>3 imports failed since 08:45.</b> 2 orders have a product FP does not know (H-140, H-141). Add them in Products, then run again.</div></div>
+  <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Run</th><th>Result</th><th>Orders</th><th>Problems</th></tr></thead><tbody>
+    <tr class="bad"><td class="num">10:45</td><td><span class="badge b-stop">Failed</span></td><td>12 read · 10 saved</td><td>Unknown product H-140, H-141</td></tr>
+    <tr class="bad"><td class="num">10:30</td><td><span class="badge b-stop">Failed</span></td><td>12 read · 10 saved</td><td>same</td></tr>
+    <tr><td class="num">08:30</td><td><span class="badge b-run">OK</span></td><td>11 saved</td><td>—</td></tr></tbody></table></div></div>
+  <div class="row mt" style="gap:8px"><button class="btn" type="button" data-toast="Connection OK · 20 rows read">Test</button><button class="btn primary" type="button" data-toast="Import started">Run now</button></div>
+</section>
+
+<section class="screen" id="req-log" data-ask='["Which key makes the most requests?"]'>
+  <div class="ph"><div><h1>Request log and usage</h1><p>Every call from outside systems in the last 30 days.</p></div></div>
+  <div class="g g3 mb"><div class="card kpi"><div class="kpi-l">Requests today</div><div class="kpi-v num">3 412</div></div><div class="card kpi"><div class="kpi-l">Errors</div><div class="kpi-v num">0.8<small>%</small></div></div><div class="card kpi"><div class="kpi-l">Limit used</div><div class="kpi-v num">34<small>%</small></div><div class="kpi-f">of 10 000 a day</div></div></div>
+  <div class="card"><div class="tbl-wrap"><table class="table compact"><thead><tr><th>Time</th><th>Key</th><th>Request</th><th>Result</th><th>Time taken</th></tr></thead><tbody>
+    <tr><td class="num">10:45:02</td><td>ERP order import</td><td class="mono small">POST /v1/orders</td><td><span class="badge b-warn">422 product unknown</span></td><td>84 ms</td></tr>
+    <tr><td class="num">10:44:10</td><td>Nordic Maint</td><td class="mono small">GET /v1/stops?since=…</td><td><span class="badge b-run">200</span></td><td>41 ms</td></tr>
+    <tr><td class="num">02:00:00</td><td>Power BI</td><td class="mono small">GET /v1/oee/daily</td><td><span class="badge b-run">200</span></td><td>220 ms</td></tr></tbody></table></div></div>
+</section>
+
+<section class="screen" id="dev-portal" data-ask='["How do I read stops through the API?"]'>
+  <div class="dp-top"><svg width="30" height="30"><use href="#mark"/></svg><span class="wm"><b>fp</b><span style="color:var(--logo-an)">analyzer</span> <span class="small muted">developers</span></span><nav><a class="on" href="#">Docs</a><a href="#">API reference</a><a href="#">Changelog</a><a href="#">Status</a><a href="s20-plans-billing.html#partner-billing">Billing</a></nav><span class="sp"></span><button class="btn sm" type="button" data-to="s20-plans-billing#partner-billing" data-toast="Signed in as Johan Ek · Automation Syd AB">Sign in</button></div>
+  <div class="dp">
+    <aside><b>Start</b><a class="on" href="#">Quick start</a><a href="#">Keys and scopes</a><a href="#">Limits</a><b>Data</b><a href="#">Machines</a><a href="#">Stops</a><a href="#">OEE</a><a href="#">Orders</a><b>Events</b><a href="#">Webhooks</a></aside>
+    <div>
+      <h1>Quick start</h1><p class="lead">Read your stops in 3 steps. You need an API key from FP → Integrations.</p>
+      <div class="stack">
+        <div><b>1. Call the API with your key</b><div class="code mt-s">curl https://api.fp.example/v1/stops?since=2026-10-22 \
+  -H <span class="s">"Authorization: Bearer fpk_live_…"</span></div></div>
+        <div><b>2. You get a list of stops</b><div class="code mt-s">{ <span class="k">"data"</span>: [ { <span class="k">"machine"</span>: <span class="s">"K-5"</span>, <span class="k">"start"</span>: <span class="s">"2026-10-22T06:12:30+02:00"</span>,
+    <span class="k">"minutes"</span>: <span class="n">41.7</span>, <span class="k">"reason"</span>: <span class="s">"Material wait"</span> } ] }</div></div>
+        <div><b>3. Ask for more with the cursor</b><p class="small muted mt-s">Lists return 100 at a time. Use <span class="mono">next</span> to get the next page.</p></div>
+        <div class="row"><span class="ep"><b>GET</b>/v1/machines</span><span class="ep"><b>GET</b>/v1/stops</span><span class="ep"><b>GET</b>/v1/oee/daily</span><span class="ep"><b style="color:var(--reason)">POST</b>/v1/orders</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="p-partners" data-ask='["Which partners have the most customers?"]'>
+  <div class="ph"><div><h1>Partners</h1><p>Companies that build on FP or sell FP. Each partner has its own portal.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="New partner"><svg class="i sm"><use href="#i-plus"/></svg>Add partner</button></div></div>
+  <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Partner</th><th>Type</th><th>Customers</th><th>API calls / day</th><th>Status</th></tr></thead><tbody>
+    <tr><td><b>Nordic Maint AB</b></td><td>Integration</td><td>9</td><td>12 400</td><td><span class="badge b-run">Active</span></td></tr>
+    <tr><td><b>Lean Partner Väst</b></td><td>Reseller</td><td>6</td><td>—</td><td><span class="badge b-run">Active</span></td></tr>
+    <tr><td><b>DataBro BI</b></td><td>Integration</td><td>2</td><td>800</td><td><span class="badge b-warn">Review due</span></td></tr></tbody></table></div></div>
+</section>
+
+</main>
+<script src="../assets/fp.js"></script>
+</body>
+</html>

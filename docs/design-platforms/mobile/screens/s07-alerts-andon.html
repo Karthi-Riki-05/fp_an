@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>S07 Alerts Andon</title>
+<meta name="description" content="FP Analyzer v3 prototype, module S07: notification centre, phone alert, machine screen alert strip, board banner, alert rules, groups and escalation, andon types, sounds, my notifications, delivery log.">
+<!-- Written for: the FP owner, client reviewers and developers building S07. Prototype only; all names and numbers are fictional. -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Poppins:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="../assets/fp.css">
+<style>
+.nt{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:start;padding:14px 16px;border-bottom:1px solid var(--border)}
+.nt:last-child{border-bottom:0}
+.nt.unread{background:color-mix(in srgb,var(--brand-soft) 45%,transparent)}
+.nt .ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex:none}
+.nt .ic.stop{background:var(--stop-soft);color:var(--stop)}.nt .ic.andon{background:var(--andon-soft);color:var(--andon)}.nt .ic.warn{background:var(--reason-soft);color:var(--reason)}.nt .ic.info{background:var(--brand-soft);color:var(--brand-strong)}
+.nt b{display:block}.nt small{color:var(--text-3);font-size:12.5px}
+.nt .acts{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.lock-scr{flex:1;background:linear-gradient(170deg,#0B3B48,#021317);color:#fff;padding:20px 14px;display:flex;flex-direction:column;gap:12px}
+.lock-scr .clk{text-align:center;font-family:var(--font-head);font-size:64px;font-weight:600;line-height:1;margin:22px 0 4px}
+.lock-scr .dt{text-align:center;font-size:15px;opacity:.8;margin-bottom:12px}
+.strip{display:flex;align-items:center;gap:1em;padding:.9em 1.4em;font-weight:800;font-size:1.2em;color:#fff}
+.strip.andon{background:#A11D6C}.strip.stop{background:#B91C1C}
+.strip .sp{flex:1}
+.strip .k-btn{height:2.8em;font-size:.85em;padding:0 1.2em;background:#fff;color:#26333A;border:0}
+.tv-top{display:flex;align-items:center;justify-content:space-between;padding:1.2em 1.8em;font-weight:800;font-size:1.3em}
+.tv-ban{margin:0 1.8em;border-radius:.8em;padding:1.1em 1.4em;background:#A11D6C;color:#fff;display:flex;align-items:center;gap:1em;font-size:1.5em;font-weight:800}
+.tv-ban small{display:block;font-size:.6em;font-weight:700;opacity:.85}
+.tv-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.9em;padding:1.2em 1.8em;flex:1}
+.tv-t{border-radius:.8em;background:#0D2028;padding:1em;border-left:.45em solid var(--c);display:flex;flex-direction:column;gap:.3em}
+.tv-t b{font-size:1.6em}.tv-t span{font-size:1em;opacity:.75}.tv-t .v{font-size:2.2em;font-weight:800;font-family:var(--font-head)}
+.esc{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:start}
+.esc .lvl{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:800;background:var(--brand-soft);color:var(--brand-strong)}
+.esc + .esc{margin-top:6px}
+.esc-line{margin-left:16px;border-left:2px dashed var(--border-strong);height:16px}
+.andon-c{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;color:#fff;background:var(--c)}
+.chanrow{display:grid;grid-template-columns:minmax(0,1fr) repeat(4,64px);align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--border);font-size:13.5px}
+.chanrow:first-child{border-top:0}
+.chanrow .h{font-size:11.5px;font-weight:800;color:var(--text-3);text-align:center;text-transform:uppercase}
+.chanrow .switch{justify-self:center}
+@media (max-width:520px){.chanrow{grid-template-columns:minmax(0,1fr) repeat(4,44px)}}
+</style>
+</head>
+<body data-module="S07">
+<main id="screens">
+
+
+<section class="screen" id="phone" data-ask='["Who gets the K-5 stop alert?"]'>
+  <div class="devices">
+    <div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span><div class="ph-sb num" style="color:#fff;background:#0B3B48"><span>10:51</span><span>5G</span></div>
+      <div class="lock-scr"><div class="clk num">10:51</div><div class="dt">Thursday 22 October</div>
+        <div class="notif"><span class="ap"><svg width="22" height="22"><use href="#mark"/></svg></span><div><div class="row between"><b>FP Analyzer · Andon</b><small>now</small></div><p><b>K-7 Drill line needs maintenance.</b> Called by Sami K. on Line 2. Nobody has taken it yet.</p><div class="notif-acts"><span>🔒 Acknowledge</span><span>Open</span></div></div></div>
+        <div class="notif"><span class="ap"><svg width="22" height="22"><use href="#mark"/></svg></span><div><div class="row between"><b>FP Analyzer</b><small>9 min ago</small></div><p>K-5 Edge bander stopped. No reason yet.</p></div></div>
+      </div></div></div><p class="dev-cap"><b>Phone alert</b> · on the lock screen, machine name read aloud; Acknowledge asks Face ID or PIN first</p></div>
+    <div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span><div class="ph-sb num"><span>10:52</span><span>5G</span></div>
+      <div class="m-top"><span class="back"><svg class="i sm"><use href="#i-chevl"/></svg></span><h2>Andon · K-7</h2></div>
+      <div class="m-body">
+        <div class="m-card" style="border:2px solid var(--andon)"><span class="pill s-andon"><svg class="i"><use href="#i-hand"/></svg>Maintenance needed</span><h3 style="margin-top:10px;font-size:19px">K-7 Drill line</h3><p class="small muted">Line 2 · called 10:48 by Sami K.</p><p style="margin-top:10px">"Drill head makes a grinding noise"</p></div>
+        <div class="m-card"><dl class="kv"><dt>Waiting</dt><dd class="num" style="color:var(--andon)"><span data-run="190">3:10</span></dd><dt>Next step</dt><dd>Goes to Nils B. at 5 min</dd></dl></div>
+        <div class="sp"></div>
+        <button class="btn primary m-big" type="button" data-to="@home" data-toast="Acknowledged · Sami sees: Jonas L. is on the way">Acknowledge · I'm on it</button><button class="btn m-big" type="button" data-to="@home" data-toast="Passed on to the next person">I can't come</button>
+      </div></div></div><p class="dev-cap"><b>After tapping the alert</b> · take it or pass it on</p></div>
+  </div>
+</section>
+
+
+
+
+
+
+
+
+
+</main>
+<script src="../assets/fp.js"></script>
+</body>
+</html>

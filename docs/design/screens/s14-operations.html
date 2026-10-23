@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>S14 Operations</title>
+<meta name="description" content="FP Analyzer v3 prototype, module S14: ops overview, deployments, backups, restore wizard, maintenance windows, capacity, secrets, SLO report and the company data protection card.">
+<!-- Written for: the FP owner, client reviewers and developers building S14. Prototype only; all names and numbers are fictional. -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Poppins:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="../assets/fp.css">
+<style>
+.svc{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(220px,100%),1fr));gap:10px}
+.svc .card{padding:14px;display:flex;gap:10px;align-items:center}
+.svc .d{width:12px;height:12px;border-radius:50%;background:var(--c);flex:none;box-shadow:0 0 0 4px color-mix(in srgb,var(--c) 20%,transparent)}
+.svc b{display:block;font-size:14px}.svc small{color:var(--text-3);font-size:12px}
+.bk-grid{display:grid;grid-template-columns:repeat(14,minmax(0,1fr));gap:3px}
+.bk-grid i{height:22px;border-radius:4px;background:var(--run-fill)}
+.bk-grid i.w{background:var(--reason-strong)}.bk-grid i.e{background:var(--stop-fill)}
+.cap-row{display:grid;grid-template-columns:minmax(0,160px) minmax(0,1fr) 90px;gap:12px;align-items:center;font-size:13.5px;padding:8px 0}
+.budget{display:flex;height:16px;border-radius:8px;overflow:hidden;background:var(--surface-3)}
+.budget i{background:var(--run-fill)}.budget i.used{background:var(--reason-strong)}
+.shield{width:56px;height:56px;border-radius:16px;background:var(--run-soft);color:var(--run);display:grid;place-items:center;flex:none}
+.shield .i{width:28px;height:28px}
+</style>
+</head>
+<body data-module="S14">
+<main id="screens">
+
+<section class="screen" id="ops" data-ask='["Did last night’s backups all succeed?","Is anything degraded right now?"]'>
+  <div class="ph"><div><h1>Ops overview</h1><p>Is everything running? One glance for the FP on-call person.</p></div><span class="badge b-run" style="height:30px;font-size:13px">All systems working</span></div>
+  <div class="svc mb">
+    <div class="card" style="--c:var(--run-fill)"><span class="d"></span><div><b>Web app and API</b><small>p95 180 ms · 0.02 % errors</small></div></div>
+    <div class="card" style="--c:var(--run-fill)"><span class="d"></span><div><b>Device messages</b><small>2 140 / min · delay 0.4 s</small></div></div>
+    <div class="card" style="--c:var(--run-fill)"><span class="d"></span><div><b>Database</b><small>primary + replica in sync</small></div></div>
+    <div class="card" style="--c:var(--reason-strong)"><span class="d"></span><div><b>Phone notifications</b><small>Apple slow · 4 s delay</small></div></div>
+    <div class="card" style="--c:var(--run-fill)"><span class="d"></span><div><b>Background jobs</b><small>queue 12 · oldest 3 s</small></div></div>
+    <div class="card" style="--c:var(--run-fill)"><span class="d"></span><div><b>Backups</b><small>last 02:00 · OK</small></div></div>
+  </div>
+  <div class="g g2">
+    <div class="card"><div class="card-h"><h3>Recent events</h3></div><div class="card-b"><div class="list">
+      <div class="li"><span class="ic" style="background:var(--reason-soft);color:var(--reason)"><svg class="i"><use href="#i-bell"/></svg></span><div><b>Apple push slow</b><small>since 09:40 · their status page confirms</small></div><span class="badge b-warn">watching</span></div>
+      <div class="li"><span class="ic"><svg class="i"><use href="#i-rocket"/></svg></span><div><b>Release 3.4.2 deployed</b><small>yesterday 21:10 · Johan E.</small></div><span></span></div></div></div></div>
+    <div class="card"><div class="card-h"><h3>On call</h3></div><div class="card-b"><div class="li"><span class="av">JE</span><div><b>Johan Ek</b><small>until Mon 08:00 · phone + SMS</small></div><span></span></div></div></div>
+  </div>
+</section>
+
+<section class="screen" id="deploys" data-ask='["What changed in the last release?"]'>
+  <div class="ph"><div><h1>Deployments</h1><p>Every release to production. A release goes to 5 % of companies first, then everyone.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="Release 3.4.3 starts with 5 % of companies">Start release 3.4.3</button></div></div>
+  <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Release</th><th>When</th><th>By</th><th>Reached</th><th>Errors after</th><th></th></tr></thead><tbody>
+    <tr><td><b>3.4.2</b><span class="t2">shift handover, fixes</span></td><td>21 Oct 21:10</td><td>Johan E.</td><td><span class="badge b-run">100 %</span></td><td>no change</td><td class="act"><button class="btn sm ghost" type="button" data-toast="Asks for confirmation">Roll back</button></td></tr>
+    <tr><td><b>3.4.1</b></td><td>14 Oct</td><td>Johan E.</td><td><span class="badge b-run">100 %</span></td><td>no change</td><td></td></tr>
+    <tr class="warn"><td><b>3.4.0</b></td><td>7 Oct</td><td>Johan E.</td><td><span class="badge b-warn">stopped at 5 %</span></td><td>+0.4 % · fixed in 3.4.1</td><td></td></tr></tbody></table></div></div>
+</section>
+
+<section class="screen" id="backups" data-ask='["Did last night’s backups all succeed?"]'>
+  <div class="ph"><div><h1>Backups</h1><p>Every night, plus continuous copies. Kept 35 days. A restore is tested every month.</p></div><div class="ph-a"><button class="btn" type="button" data-go="restore">Restore…</button></div></div>
+  <div class="g g3 mb"><div class="card kpi"><div class="kpi-l">Last full backup</div><div class="kpi-v" style="font-size:22px">02:00 today</div><div class="kpi-f">OK · 412 GB</div></div><div class="card kpi"><div class="kpi-l">Can restore to</div><div class="kpi-v" style="font-size:22px">any minute</div><div class="kpi-f">in the last 35 days</div></div><div class="card kpi"><div class="kpi-l">Last restore test</div><div class="kpi-v" style="font-size:22px">1 Oct</div><div class="kpi-f">OK · took 38 min</div></div></div>
+  <div class="card pad"><b>Last 14 nights</b><div class="bk-grid mt"><i></i><i></i><i></i><i></i><i></i><i class="w" title="Slow, finished 03:40"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="legend mt"><span style="--c:var(--run-fill)"><i></i>OK</span><span style="--c:var(--reason-strong)"><i></i>OK but slow</span><span style="--c:var(--stop-fill)"><i></i>Failed</span></div></div>
+</section>
+
+<section class="screen" id="restore" data-ask='["How long does restoring one company take?"]'>
+  <div class="ph"><div><h1>Restore</h1><p>Bring back data from a point in time. Always into a copy first, so you can check before replacing anything.</p></div></div>
+  <div class="steps"><span class="step done"><i>✓</i>What</span><span class="step cur"><i>2</i>When</span><span class="step"><i>3</i>Check copy</span><span class="step"><i>4</i>Replace</span></div>
+  <div class="card" style="max-width:760px"><div class="card-b stack" style="padding-top:18px">
+    <div class="field"><label>Company</label><input class="input" value="Västkust Plast" disabled></div>
+    <div class="field"><label>Restore to</label><div class="g g2"><input class="input" value="Wed 21 Oct 2026"><input class="input" value="16:40"></div><span class="hint">Just before the wrong import at 16:42 (from the request log)</span></div>
+    <div class="banner warn"><svg class="i"><use href="#i-alert"/></svg><div>Registrations made after 16:40 will be shown so you can keep them. Nothing is replaced until step 4.</div></div>
+    <div class="field"><label>Reason (saved in the audit log)</label><input class="input" value="Ticket 4502 · ERP import overwrote 2 000 orders"></div>
+  </div><div class="card-f"><button class="btn" type="button">Back</button><button class="btn primary" type="button" data-toast="Making a copy · about 20 min">Make copy</button></div></div>
+</section>
+
+<section class="screen" id="maint" data-ask='["When is the next maintenance window?"]'>
+  <div class="ph"><div><h1>Maintenance windows</h1><p>Planned times when FP may pause. Companies see an announcement 3 days before.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="New window"><svg class="i sm"><use href="#i-plus"/></svg>Plan window</button></div></div>
+  <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>When</th><th>What</th><th>Affects</th><th>Announced</th></tr></thead><tbody>
+    <tr><td><b>Sun 25 Oct 02:00–03:00</b></td><td>Database upgrade</td><td>Web and phone may pause; device data is kept on the boxes</td><td><span class="badge b-run">Yes · 22 Oct</span></td></tr>
+    <tr><td><b>Sun 22 Nov 02:00–02:30</b></td><td>Broker certificates</td><td>Devices reconnect once</td><td><span class="badge">Planned</span></td></tr></tbody></table></div></div>
+</section>
+
+<section class="screen" id="capacity" data-ask='["When do we need a bigger database?"]'>
+  <div class="ph"><div><h1>Capacity</h1><p>How full things are, and when they will be full at today's growth.</p></div></div>
+  <div class="card pad">
+    <div class="cap-row"><b>Database disk</b><div class="bar lg"><i style="width:58%"></i></div><span class="small">58 % · full in 14 months</span></div>
+    <div class="cap-row"><b>Device messages</b><div class="bar lg"><i style="width:31%"></i></div><span class="small">31 % of max</span></div>
+    <div class="cap-row"><b>Web servers</b><div class="bar lg"><i style="width:42%"></i></div><span class="small">42 % at peak</span></div>
+    <div class="cap-row"><b>File storage</b><div class="bar lg warn"><i style="width:81%"></i></div><span class="small" style="color:var(--reason)">81 % · full in 3 months</span></div>
+  </div>
+</section>
+
+<section class="screen" id="secrets" data-ask='["Which secrets are due for rotation?"]'>
+  <div class="ph"><div><h1>Secrets</h1><p>Passwords, keys and certificates the system uses. Values are never shown here; only age and status.</p></div></div>
+  <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Secret</th><th>Used by</th><th>Last changed</th><th>Change by</th><th></th></tr></thead><tbody>
+    <tr class="warn"><td><b>Broker server certificate</b></td><td>Device messages</td><td>24 Nov 2025</td><td><span class="badge b-warn">in 33 days</span></td><td class="act"><button class="btn sm" type="button" data-go="maint">Plan change</button></td></tr>
+    <tr><td><b>Database password</b></td><td>API, jobs</td><td>1 Sep 2026</td><td>1 Dec 2026</td><td class="act"><button class="btn sm ghost" type="button">Rotate</button></td></tr>
+    <tr><td><b>Phone push key</b></td><td>Notifications</td><td>3 Mar 2026</td><td>3 Mar 2027</td><td class="act"><button class="btn sm ghost" type="button">Rotate</button></td></tr></tbody></table></div></div>
+</section>
+
+<section class="screen" id="slo" data-ask='["How much error budget is left this month?"]'>
+  <div class="ph"><div><h1>Service report · October</h1><p>Our promises to customers, and how we are doing. The "budget" is how much downtime we may still have this month.</p></div><div class="ph-a"><button class="btn" type="button"><svg class="i sm"><use href="#i-download"/></svg>PDF</button></div></div>
+  <div class="g g3">
+    <div class="card kpi"><div class="kpi-l">Web app available</div><div class="kpi-v num">99.97<small>%</small></div><div class="kpi-f">promise 99.9 % · budget left 31 min of 43</div><div class="budget"><i class="used" style="width:28%"></i><i style="width:72%"></i></div></div>
+    <div class="card kpi"><div class="kpi-l">Device data on time (&lt; 10 s)</div><div class="kpi-v num">99.99<small>%</small></div><div class="kpi-f">promise 99.5 %</div><div class="budget"><i class="used" style="width:4%"></i><i style="width:96%"></i></div></div>
+    <div class="card kpi"><div class="kpi-l">Alerts delivered &lt; 30 s</div><div class="kpi-v num">99.2<small>%</small></div><div class="kpi-f">promise 99 % · close</div><div class="budget"><i class="used" style="width:80%"></i><i style="width:20%"></i></div></div>
+  </div>
+  <div class="legend mt"><span style="--c:var(--reason-strong)"><i></i>Budget used</span><span style="--c:var(--run-fill)"><i></i>Budget left</span></div>
+  <div class="card mt"><div class="card-h"><h3>What used the budget</h3></div><div class="tbl-wrap"><table class="table"><thead><tr><th>When</th><th>What happened</th><th>Lasted</th><th>Customers told</th></tr></thead><tbody>
+    <tr><td>7 Oct 21:20</td><td>Release 3.4.0 errors for 5 % of companies, rolled back</td><td>9 min</td><td>Yes</td></tr>
+    <tr><td>15 Oct 10:02</td><td>Apple push delays, alerts late</td><td>2 h 10 m</td><td>Status page</td></tr>
+    <tr><td>18 Oct 03:10</td><td>Database failover test</td><td>3 min</td><td>Planned window</td></tr></tbody></table></div></div>
+</section>
+
+<section class="screen" id="protect" data-ask='["Where is our data stored?"]'>
+  <div class="ph"><div><h1>How your data is protected</h1><p>A summary for your IT and security people. Ask FP for the full documents.</p></div><div class="ph-a"><a class="btn" href="s19-audit-privacy.html#docs"><svg class="i sm"><use href="#i-file"/></svg>Documents</a></div></div>
+  <div class="card pad mb"><div class="row nowrap"><span class="shield"><svg class="i"><use href="#i-shieldok"/></svg></span><div><b style="font-size:16px">Stored in Sweden · encrypted · backed up every night</b><p class="small muted mt-s">Your data is kept apart from other companies, in its own section of the database.</p></div></div></div>
+  <div class="g g2">
+    <div class="card pad"><dl class="kv"><dt>Where</dt><dd>Data centres in Stockholm (EU)</dd><dt>Encryption</dt><dd>In transit and at rest</dd><dt>Backups</dt><dd>Nightly + continuous · 35 days</dd><dt>Restore tested</dt><dd>Monthly · last 1 Oct</dd></dl></div>
+    <div class="card pad"><dl class="kv"><dt>Devices</dt><dd>Each FP Box has its own certificate</dd><dt>Sign-in</dt><dd>Two-step check for admins</dd><dt>FP staff access</dt><dd>Only with your approval, logged</dd><dt>Availability</dt><dd>99.97 % this month</dd></dl></div>
+  </div>
+</section>
+
+</main>
+<script src="../assets/fp.js"></script>
+</body>
+</html>

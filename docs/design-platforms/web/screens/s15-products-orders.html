@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>S15 Products Orders</title>
+<meta name="description" content="FP Analyzer v3 prototype, module S15: products, ideal rates, changeover standards, orders, queue, operator run panel, runs timeline, changeover report and imports.">
+<!-- Written for: the FP owner, client reviewers and developers building S15. Prototype only; all names and numbers are fictional. -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Poppins:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="../assets/fp.css">
+<style>
+.ratem{border-collapse:separate;border-spacing:3px;font-size:13px;width:100%;min-width:560px}
+.ratem th{font-size:11.5px;color:var(--text-3);font-weight:800;padding:6px 8px;text-align:left;white-space:nowrap}
+.ratem td{background:var(--surface-2);border-radius:7px;padding:8px 10px;font-weight:750;text-align:center}
+.ratem td.own{background:var(--brand-soft);color:var(--brand-strong)}
+.ratem td.miss{background:var(--reason-soft);color:var(--reason);outline:1px dashed var(--reason-strong)}
+.ratem td.inh{color:var(--text-3);font-weight:600}
+.qr{display:grid;grid-template-columns:auto 60px minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border)}
+.qr:last-child{border-bottom:0}
+.qr .pos{font-weight:800;color:var(--text-3)}
+.qr small{display:block;color:var(--text-3);font-size:12px}
+@media (max-width:620px){.q{grid-template-columns:auto minmax(0,1fr) auto}.qr .pos,.q .eta{display:none}}
+.gantt{display:grid;grid-template-columns:90px minmax(0,1fr);gap:8px 10px;align-items:center;font-size:12.5px;min-width:700px}
+.gantt .lane{position:relative;height:34px;background:var(--surface-2);border-radius:8px}
+.gantt .lane i{position:absolute;top:4px;bottom:4px;border-radius:6px;display:flex;align-items:center;padding:0 8px;color:#fff;font-style:normal;font-weight:800;font-size:11.5px;white-space:nowrap;overflow:hidden;background:var(--c,var(--brand-strong))}
+.gantt .lane i.plan{opacity:.45}
+.gantt .lane i.co{background:var(--setup)}
+.gantt .lane i.late{box-shadow:inset 0 0 0 2px var(--stop-fill)}
+.gantt .ax{display:flex;justify-content:space-between;color:var(--text-3);font-size:11px}
+.now-l{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--text)}
+.rp{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:1em;flex:1;min-height:0}
+.rp .big{font-family:var(--font-head);font-size:3.4em;font-weight:700;line-height:1}
+</style>
+</head>
+<body data-module="S15">
+<main id="screens">
+
+<section class="screen" id="products" data-ask='["Which products have no ideal rate on K-5?"]'>
+  <div class="ph"><div><h1>Products</h1><p>What you make. Each product can have its own speed per machine and its own changeover times.</p></div><div class="ph-a"><button class="btn" type="button" data-go="imports"><svg class="i sm"><use href="#i-upload"/></svg>Import</button><button class="btn primary" type="button" data-toast="New product"><svg class="i sm"><use href="#i-plus"/></svg>New product</button></div></div>
+  <div class="filters"><button class="fchip on" type="button">All <span class="badge">148</span></button><button class="fchip" type="button">Missing rate <span class="badge">6</span></button><button class="fchip" type="button">Group: <b>All</b></button></div>
+  <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Code</th><th>Name</th><th>Group</th><th>Unit</th><th>Rates set</th><th>Last made</th></tr></thead><tbody>
+    <tr><td><b>H-120</b></td><td>Door panel 120 oak</td><td>Doors</td><td>pieces</td><td><span class="badge b-run">3 / 3 machines</span></td><td>now</td></tr>
+    <tr><td><b>H-80</b></td><td>Door panel 80 oak</td><td>Doors</td><td>pieces</td><td><span class="badge b-run">3 / 3</span></td><td>today 08:31</td></tr>
+    <tr class="warn"><td><b>H-140</b></td><td>Door panel 140 ash</td><td>Doors</td><td>pieces</td><td><span class="badge b-warn">0 / 3</span></td><td>never · new from ERP</td></tr>
+    <tr><td><b>S-45</b></td><td>Shelf 45 white</td><td>Shelves</td><td>pieces</td><td><span class="badge b-run">2 / 2</span></td><td>Mon</td></tr></tbody></table></div></div>
+</section>
+
+<section class="screen" id="rates" data-ask='["Which products have no ideal rate on K-5?","Where does the K-5 rate for H-120 come from?"]'>
+  <div class="ph"><div><h1>Ideal rates</h1><p>The best speed each machine can make each product. Performance in OEE is measured against this.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="Saved">Save</button></div></div>
+  <div class="legend mb"><span style="--c:var(--brand-soft)"><i style="outline:1px solid var(--brand)"></i>Set for this product</span><span style="--c:var(--surface-2)"><i></i>From machine default</span><span style="--c:var(--reason-soft)"><i style="outline:1px dashed var(--reason-strong)"></i>Missing</span></div>
+  <div class="card"><div class="card-b tbl-wrap" style="padding-top:14px"><table class="ratem"><thead><tr><th>Product</th><th>K-3 Panel saw</th><th>K-5 Edge bander</th><th>K-7 Drill line</th></tr></thead><tbody>
+    <tr><th>H-120</th><td class="own">6.0 /min</td><td class="own">18 /min</td><td class="own">9 /min</td></tr>
+    <tr><th>H-80</th><td class="own">7.5 /min</td><td class="inh">20 /min</td><td class="own">11 /min</td></tr>
+    <tr><th>H-140</th><td class="miss">set</td><td class="miss">set</td><td class="miss">set</td></tr>
+    <tr><th>S-45</th><td class="inh">6.0 /min</td><td class="own">24 /min</td><td class="inh">—</td></tr></tbody></table></div></div>
+  <div class="ai-card mt"><div class="q"><svg class="i sm"><use href="#i-spark"/></svg>Ask FP</div><p>K-5 made H-80 at <b>22 /min</b> in its best hour last month, faster than the 20 /min default. Consider raising the rate.</p></div>
+  <div class="states"><span class="badge b-stop">Empty cell, red: "No rate: Performance not calculated"</span></div>
+</section>
+
+<section class="screen" id="changeover" data-ask='["Which changeovers take longest on K-5?"]'>
+  <div class="ph"><div><h1>Changeover standards</h1><p>How long it should take to change from one product to another. Longer changeovers show as a loss.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="Saved">Save</button></div></div>
+  <div class="row mb"><span class="small b">Machine</span><select class="input" style="width:220px"><option>K-5 Edge bander</option></select></div>
+  <div class="card"><div class="card-b tbl-wrap" style="padding-top:14px"><table class="ratem"><thead><tr><th>From ↓ to →</th><th>H-80</th><th>H-120</th><th>H-140</th><th>S-45</th></tr></thead><tbody>
+    <tr><th>H-80</th><td class="inh">—</td><td class="own">12 min</td><td class="own">15 min</td><td class="own">25 min</td></tr>
+    <tr><th>H-120</th><td class="own">12 min</td><td class="inh">—</td><td class="own">10 min</td><td class="own">25 min</td></tr>
+    <tr><th>H-140</th><td class="own">15 min</td><td class="own">10 min</td><td class="inh">—</td><td class="miss">set</td></tr>
+    <tr><th>S-45</th><td class="own">30 min</td><td class="own">30 min</td><td class="miss">set</td><td class="inh">—</td></tr></tbody></table></div></div>
+</section>
+
+<section class="screen" id="orders" data-ask='["Which orders will finish late?"]'>
+  <div class="ph"><div><h1>Orders</h1><p>Production orders from your ERP or made here. FP tracks progress from the machine counts.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="New order"><svg class="i sm"><use href="#i-plus"/></svg>New order</button></div></div>
+  <div class="filters"><button class="fchip on" type="button">Open <span class="badge">14</span></button><button class="fchip" type="button">Late <span class="badge">2</span></button><button class="fchip" type="button">Done</button><button class="fchip" type="button">Line 2</button></div>
+  <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Order</th><th>Product</th><th>Line</th><th>Progress</th><th>Expected done</th><th>Due</th></tr></thead><tbody>
+    <tr><td><b>1042-118</b></td><td>H-120 · 2 000 pcs</td><td>Line 2</td><td><div class="row nowrap"><div class="bar" style="width:120px"><i style="width:62%"></i></div><span class="small">1 240</span></div></td><td>today 13:40</td><td>today 14:00</td></tr>
+    <tr class="bad"><td><b>1042-119</b></td><td>H-140 · 800 pcs</td><td>Line 2</td><td><span class="badge">not started</span></td><td><b style="color:var(--stop)">Fri 10:20</b></td><td>Thu 22:00</td></tr>
+    <tr><td><b>1043-004</b></td><td>S-45 · 3 000 pcs</td><td>Line 3</td><td><div class="row nowrap"><div class="bar" style="width:120px"><i style="width:30%"></i></div><span class="small">900</span></div></td><td>Fri 11:00</td><td>Fri 14:00</td></tr></tbody></table></div></div>
+</section>
+
+<section class="screen" id="queue" data-ask='["What runs next on Line 2?"]'>
+  <div class="ph"><div><h1>Queue · Line 2</h1><p>What runs next. Drag to change the order; FP shows the changeover time and when each order will be done.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="Queue saved · terminals updated">Save order</button></div></div>
+  <div class="g g-side">
+    <div class="card">
+      <div class="qr" style="background:var(--run-soft)"><span class="pos">now</span><b>H-120</b><div><b>1042-118</b><small>1 240 / 2 000 · running</small></div><span class="eta small">done 13:40</span><span class="badge b-run">Running</span></div>
+      <div class="qr"><svg class="i drag"><use href="#i-drag"/></svg><b>H-140</b><div><b>1042-119</b><small>800 pcs · changeover 10 min</small></div><span class="eta small">13:50–15:20</span><span class="badge b-stop">late</span></div>
+      <div class="qr"><svg class="i drag"><use href="#i-drag"/></svg><b>H-80</b><div><b>1042-121</b><small>1 200 pcs · changeover 15 min</small></div><span class="eta small">15:35–17:10</span><span class="badge">on time</span></div>
+      <div class="qr"><svg class="i drag"><use href="#i-drag"/></svg><b>S-45</b><div><b>1043-010</b><small>600 pcs · changeover 25 min</small></div><span class="eta small">Fri 06:25</span><span class="badge">on time</span></div>
+    </div>
+    <div class="card pad"><b>Tip</b><p class="small muted mt-s">Running H-140 after H-120 saves 5 min of changeover compared with after H-80.</p><div class="banner warn mt"><svg class="i"><use href="#i-alert"/></svg><div>H-140 has no ideal rate. Its end time is a guess.</div></div></div>
+  </div>
+</section>
+
+
+<section class="screen" id="runs" data-ask='["Which orders ran slower than planned this week?"]'>
+  <div class="ph"><div><h1>Runs timeline</h1><p>Which order ran on which machine, and the changeovers between. Thursday 22 October.</p></div></div>
+  <div class="card"><div class="card-b tbl-wrap" style="padding-top:18px"><div class="gantt">
+    <span></span><div class="ax"><span>06:00</span><span>08:00</span><span>10:00</span><span>12:00</span><span>14:00</span></div>
+    <b>K-3</b><div class="lane"><i style="left:0;width:30%">H-80 · 1042-115</i><i class="co" style="left:30%;width:4%"></i><i style="left:34%;width:27%">H-120 · 1042-118</i><i class="plan" style="left:61%;width:39%">planned</i><span class="now-l" style="left:61%"></span></div>
+    <b>K-5</b><div class="lane"><i style="left:0;width:31%">H-80 · 1042-115</i><i class="co" style="left:31%;width:5%">CO</i><i style="left:36%;width:44%">H-120 · 1042-118</i><i class="late" style="left:82%;width:18%;--c:#7C5CE0">H-140</i><span class="now-l" style="left:61%"></span></div>
+    <b>K-7</b><div class="lane"><i style="left:4%;width:60%">H-80 · 1042-115</i><i class="co" style="left:64%;width:6%"></i><span class="now-l" style="left:61%"></span></div>
+  </div><div class="legend mt"><span style="--c:var(--brand)"><i></i>Order running</span><span style="--c:var(--setup)"><i></i>Changeover</span><span><i style="background:transparent;outline:2px solid var(--stop-fill)"></i>Will be late</span></div></div></div>
+</section>
+
+<section class="screen" id="co-report" data-ask='["How much did changeovers cost last month?"]'>
+  <div class="ph"><div><h1>Changeover report · October</h1><p>How long changeovers took, against the standard. Hultsfred.</p></div><div class="ph-a"><button class="btn" type="button"><svg class="i sm"><use href="#i-download"/></svg>PDF</button></div></div>
+  <div class="g g3 mb"><div class="card kpi"><div class="kpi-l">Changeovers</div><div class="kpi-v num">212</div></div><div class="card kpi"><div class="kpi-l">Over standard</div><div class="kpi-v num" style="color:var(--reason)">38<small>%</small></div></div><div class="card kpi"><div class="kpi-l">Extra time</div><div class="kpi-v num">21<small>h</small></div><div class="kpi-f">≈ 27 000 SEK</div></div></div>
+  <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Machine</th><th>From → to</th><th>Times</th><th>Standard</th><th>Average</th><th>Over</th></tr></thead><tbody>
+    <tr class="warn"><td><b>K-5</b></td><td>H-80 → H-120</td><td>18</td><td>12 min</td><td class="b">18 min</td><td><span class="badge b-warn">+50 %</span></td></tr>
+    <tr class="warn"><td><b>K-9</b></td><td>any</td><td>24</td><td>14 min</td><td class="b">29 min</td><td><span class="badge b-stop">+107 %</span></td></tr>
+    <tr><td><b>K-3</b></td><td>H-120 → H-80</td><td>16</td><td>8 min</td><td>8 min</td><td><span class="badge b-run">on standard</span></td></tr></tbody></table></div></div>
+</section>
+
+<section class="screen" id="imports" data-ask='["Why did the last product import fail?"]'>
+  <div class="ph"><div><h1>Import products, rates or orders</h1><p>From an Excel or CSV file. FP shows what will change before anything is saved.</p></div></div>
+  <div class="g g-side">
+    <div class="stack">
+      <div class="drop"><svg class="i lg"><use href="#i-upload"/></svg><p class="mt-s"><b>Drop a file here</b> or click to choose</p><p class="small muted">.xlsx or .csv · up to 10 000 rows · <a href="#">download the template</a></p></div>
+      <div class="card"><div class="card-h"><h3>products-oct.xlsx · preview</h3></div><div class="tbl-wrap"><table class="table compact"><thead><tr><th>Row</th><th>Code</th><th>What happens</th></tr></thead><tbody>
+        <tr><td>2</td><td>H-140</td><td><span class="badge b-run">new</span></td></tr><tr><td>3</td><td>H-141</td><td><span class="badge b-run">new</span></td></tr><tr><td>4</td><td>H-120</td><td><span class="badge b-brand">name changes</span></td></tr><tr class="bad"><td>5</td><td>—</td><td><span class="badge b-stop">code missing, skipped</span></td></tr></tbody></table></div>
+        <div class="card-f"><button class="btn" type="button">Cancel</button><button class="btn primary" type="button" data-toast="2 new, 1 updated, 1 skipped">Import 3 rows</button></div></div>
+    </div>
+    <div class="card pad"><b>Earlier imports</b><div class="li mt-s"><span class="ic"><svg class="i"><use href="#i-file"/></svg></span><div><b>rates-sep.xlsx</b><small>Lena H. · 30 Sep · 84 rows</small></div><span class="badge b-run">OK</span></div></div>
+  </div>
+</section>
+
+</main>
+<script src="../assets/fp.js"></script>
+</body>
+</html>

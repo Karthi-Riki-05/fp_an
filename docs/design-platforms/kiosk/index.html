@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FP Analyzer v3 Screens</title>
+<meta name="description" content="Start page of the FP Analyzer v3 prototype: pick a device, pick a role, land on that person's home screen.">
+<!-- Written for: the FP owner, client reviewers and the developers who will build v3. Prototype only; all names and numbers are fictional. -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Poppins:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="assets/fp.css">
+<style>
+.wrap{max-width:1240px;margin:0 auto;padding:0 16px}
+@media (min-width:760px){.wrap{padding:0 28px}}
+:root{--ease:cubic-bezier(.2,.8,.2,1)}
+
+/* ---------- launcher ---------- */
+.lx{min-height:calc(100vh - 45px);display:flex;flex-direction:column}
+.lx-brand{display:flex;align-items:center;gap:10px;padding:26px 0 0;font-family:var(--font-head);font-weight:700;font-size:19px;letter-spacing:-.02em}
+.lx-brand svg{width:34px;height:34px}
+.lx-brand .fp{color:var(--logo-fp)}.lx-brand .an{color:var(--logo-an)}
+.lx-step{padding:clamp(28px,6vh,64px) 0 40px;transition:opacity .28s var(--ease),transform .28s var(--ease)}
+.lx-step[hidden]{display:none}
+.lx-step.out{opacity:0;transform:translateY(-10px)}
+.lx-step.pre{opacity:0;transform:translateY(14px)}
+.lx-head{text-align:center;max-width:720px;margin:0 auto 34px}
+.lx-head h1{font-size:clamp(28px,4.4vw,46px);font-weight:800;letter-spacing:-.03em;margin:10px 0 10px;line-height:1.1}
+.lx-head p{font-size:16px;color:var(--text-2);line-height:1.55;margin:0}
+.lx-steps{display:inline-flex;gap:6px;align-items:center;font-size:12.5px;font-weight:700;color:var(--text-3);margin-top:18px}
+.lx-steps i{font-style:normal;width:22px;height:22px;border-radius:50%;display:inline-grid;place-items:center;background:var(--surface-3);color:var(--text-2);font-size:11.5px}
+.lx-steps .on i{background:var(--brand);color:var(--on-brand)}
+.lx-steps .on{color:var(--text)}
+.lx-steps .ln{width:22px;height:2px;border-radius:2px;background:var(--border-strong)}
+
+/* platform tiles */
+.lx-pfs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+@media (max-width:900px){.lx-pfs{grid-template-columns:minmax(0,1fr);max-width:520px;margin:0 auto}}
+.pft{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:28px 22px 24px;border-radius:var(--radius-lg);
+ background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow-1);color:var(--text);cursor:pointer;font:inherit;
+ transition:transform .35s var(--ease),box-shadow .35s var(--ease),border-color .25s;animation:lx-up .55s var(--ease) both;animation-delay:calc(var(--d,0) * 70ms)}
+.pft:hover,.pft:focus-visible{transform:translateY(-6px);box-shadow:var(--shadow-2);border-color:var(--brand)}
+.pft:focus-visible{outline:3px solid var(--brand-soft);outline-offset:2px}
+.pft:active{transform:translateY(-2px) scale(.99)}
+.pft .stage{height:150px;width:100%;display:grid;place-items:center;margin-bottom:12px;border-radius:var(--radius);background:radial-gradient(120% 90% at 50% 100%,var(--brand-soft),transparent 70%)}
+.pft b{font-family:var(--font-head);font-size:22px;font-weight:700;letter-spacing:-.02em}
+.pft .sub{font-size:14px;color:var(--text-2);line-height:1.5;max-width:300px}
+.pft .meta{display:flex;gap:6px;margin-top:10px}
+.pft .meta span{font-size:12px;font-weight:800;padding:4px 10px;border-radius:999px;background:var(--surface-2);color:var(--text-2)}
+.pft .go{margin-top:16px;display:inline-flex;align-items:center;gap:6px;font-weight:800;font-size:14px;color:var(--brand-strong)}
+.pft .go svg{transition:transform .3s var(--ease)}
+.pft:hover .go svg{transform:translateX(4px)}
+
+/* device drawings */
+.dv{position:relative;transition:transform .45s var(--ease)}
+.pft:hover .dv{transform:translateY(-4px) scale(1.04)}
+.dv .dv-s{position:relative;background:var(--surface);border:3px solid var(--nav-bg);overflow:hidden;box-shadow:var(--shadow-2)}
+.dv .dv-r{display:flex;gap:4px;padding:0 7px}
+.dv .dv-b{height:5px;border-radius:3px;background:var(--surface-3)}
+.dv .dv-k{flex:1;height:18px;border-radius:4px;background:var(--surface-2);border:1px solid var(--border)}
+.dv .dv-t{border-radius:3px;transition:height .5s var(--ease)}
+.dv .g{background:var(--run-fill)}.dv .r{background:var(--stop-fill)}.dv .y{background:var(--reason-dot)}.dv .b{background:var(--setup)}
+.dv-web .dv-s{width:190px;height:116px;border-radius:9px;display:grid;grid-template-columns:30px 1fr}
+.dv-web .dv-sd{background:var(--nav-bg);display:flex;flex-direction:column;gap:5px;padding:8px 6px}
+.dv-web .dv-sd span{height:4px;border-radius:2px;background:rgba(255,255,255,.22)}.dv-web .dv-sd span:first-child{background:#5FE0F0}
+.dv-web .dv-m{display:flex;flex-direction:column;gap:7px;padding:9px 0}
+.dv-web .dv-c{display:flex;align-items:flex-end;gap:5px;height:44px;padding:0 9px}
+.dv-web .dv-c .dv-t{flex:1}
+.dv-web .dv-st{width:46px;height:14px;margin:0 auto;background:var(--nav-bg);clip-path:polygon(30% 0,70% 0,100% 100%,0 100%);opacity:.85}
+.dv-mob .dv-s{width:74px;height:136px;border-radius:16px;display:flex;flex-direction:column;gap:6px;padding:14px 0 8px}
+.dv-mob .dv-s:before{content:"";position:absolute;top:5px;left:50%;width:22px;height:4px;margin-left:-11px;border-radius:3px;background:var(--nav-bg)}
+.dv-mob .dv-h{margin:0 7px;height:30px;border-radius:7px;background:var(--hero)}
+.dv-mob .dv-l{display:flex;gap:5px;align-items:center;padding:0 7px}
+.dv-mob .dv-l .dv-t{width:7px;height:7px;border-radius:50%;flex:none}
+.dv-mob .dv-l .dv-b{flex:1}
+.dv-mob .dv-tb{margin-top:auto;display:flex;justify-content:space-around;padding:0 6px}
+.dv-mob .dv-tb span{width:9px;height:9px;border-radius:3px;background:var(--surface-3)}.dv-mob .dv-tb span:first-child{background:var(--brand)}
+.dv-kio .dv-s{width:168px;height:108px;border-radius:12px;border-width:6px;display:flex;flex-direction:column;gap:6px;padding:8px 0}
+.dv-kio .dv-tp{display:flex;justify-content:space-between;align-items:center;padding:0 7px}
+.dv-kio .dv-kb{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:0 7px;flex:1}
+.dv-kio .dv-kb .dv-t{border-radius:5px}
+.dv-kio .dv-st{width:16px;height:16px;margin:0 auto;background:var(--nav-bg);opacity:.85}
+.dv-kio .dv-f{width:64px;height:5px;margin:0 auto;border-radius:3px;background:var(--nav-bg);opacity:.85}
+
+/* roles */
+.lx-back{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px 0 10px;border-radius:999px;border:1px solid var(--border);background:var(--surface);
+ color:var(--text-2);font:inherit;font-weight:700;font-size:13.5px;cursor:pointer;transition:background .2s,color .2s,border-color .2s}
+.lx-back:hover{color:var(--brand-strong);border-color:var(--brand)}
+.lx-back svg{transform:rotate(180deg)}
+.lx-ph{display:flex;align-items:center;gap:18px;margin:22px 0 26px}
+.lx-ph .ico{width:64px;height:64px;border-radius:18px;display:grid;place-items:center;background:var(--hero);color:#fff;flex:none;box-shadow:var(--shadow-2)}
+.lx-ph .ico svg{width:30px;height:30px}
+.lx-ph h1{font-size:clamp(24px,3.4vw,36px);font-weight:800;letter-spacing:-.03em;margin:4px 0 4px;line-height:1.15}
+.lx-ph p{margin:0;color:var(--text-2);font-size:15px;line-height:1.5;max-width:760px}
+.lx-grp{margin:0 0 26px}
+.lx-grp h3{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);margin:0 0 12px}
+.lx-roles{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(280px,100%),1fr));gap:14px}
+.rc{position:relative;display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:var(--radius);background:var(--surface);border:1px solid var(--border);
+ box-shadow:var(--shadow-1);transition:transform .3s var(--ease),box-shadow .3s var(--ease),border-color .2s;animation:lx-up .5s var(--ease) both;animation-delay:calc(var(--d,0) * 45ms)}
+.rc:hover,.rc:focus-within{transform:translateY(-4px);box-shadow:var(--shadow-2);border-color:var(--brand)}
+.rc .rh{display:flex;gap:12px;align-items:center}
+.rc .rh b{display:block;font-size:16px;font-family:var(--font-head);font-weight:700;letter-spacing:-.01em}
+.rc .rh small{color:var(--text-3);font-size:13px}
+.rc .rc-a{position:static;color:inherit;text-decoration:none}
+.rc .rc-a:after{content:"";position:absolute;inset:0;border-radius:inherit}
+.rc .rc-a:focus-visible{outline:none}
+.rc:focus-within{outline:3px solid var(--brand-soft);outline-offset:2px}
+.rc p{margin:0;font-size:14px;color:var(--text-2);line-height:1.5}
+.rc .ft{display:flex;align-items:center;gap:8px;margin-top:auto;padding-top:12px;border-top:1px solid var(--border);font-size:12.5px;color:var(--text-3)}
+.rc .ft .open{margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-weight:800;font-size:13.5px;color:var(--brand-strong)}
+.rc .ft .open svg{transition:transform .3s var(--ease)}
+.rc:hover .ft .open svg{transform:translateX(4px)}
+.rc .jw{position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:6px}
+.rc .jw a{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;color:var(--text-2);background:var(--surface-2);padding:4px 10px;border-radius:999px;transition:background .2s,color .2s}
+.rc .jw a:hover{background:var(--brand-soft);color:var(--brand-strong)}
+@keyframes lx-up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+
+/* more */
+.lx-more{margin:10px 0 60px;border-top:1px solid var(--border);padding-top:22px}
+.lx-more>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:800;font-size:14px;color:var(--text-2);padding:10px;border-radius:999px;max-width:100%;text-align:center;margin:0 auto;transition:color .2s,background .2s}
+.lx-more>summary::-webkit-details-marker{display:none}
+.lx-more>summary:hover{color:var(--brand-strong);background:var(--brand-soft)}
+.lx-more>summary svg{transform:rotate(90deg);transition:transform .3s var(--ease)}
+.lx-more[open]>summary svg{transform:rotate(-90deg)}
+.lx-more .inner{padding-top:22px;animation:lx-up .45s var(--ease) both}
+.lx-more .sect{margin-top:22px}
+.lx-more p.muted{margin:-4px 0 14px}
+.samples{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(260px,100%),1fr));gap:12px}
+.sample{display:flex;gap:12px;align-items:center;padding:14px 16px;color:var(--text)}
+.sample .ic{width:42px;height:42px;border-radius:12px;background:var(--brand-soft);color:var(--brand-strong);display:grid;place-items:center;flex:none}
+.sample b{display:block}.sample small{color:var(--text-3)}
+#catalog{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(330px,100%),1fr));gap:14px;align-items:start}
+.mod{padding:16px}
+.mod-h{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.mod-h b{display:block;font-size:15px}.mod-h small{color:var(--text-3);font-size:12.5px}
+.mid{width:44px;height:44px;border-radius:12px;background:var(--nav-bg);color:#5FE0F0;display:grid;place-items:center;font-weight:800;font-size:13px;flex:none}
+.mod ol{margin:0;padding:0 0 0 22px;display:flex;flex-direction:column;gap:5px;font-size:13.5px}
+.mod li a{color:var(--text);font-weight:600}
+.mod li a:hover{color:var(--brand-strong)}
+.mod li .badge{margin-left:6px;height:18px;font-size:10.5px}
+.ai-strip{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;align-items:center;padding:18px 20px;border-radius:var(--radius);background:var(--hero);color:var(--hero-text)}
+.ai-strip .orb{width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,#00768D,#01B9D0);display:grid;place-items:center}
+.ai-strip p{color:var(--hero-text-2);font-size:14px;margin-top:4px}
+@media (prefers-reduced-motion:reduce){.lx-step,.pft,.rc,.dv,.lx-more .inner{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body data-page="index">
+<main class="wrap lx">
+  <div class="lx-brand"><svg aria-hidden="true"><use href="#mark"/></svg><span><span class="fp">fp</span> <span class="an">analyzer</span></span></div>
+
+  <section class="lx-step" id="step-pf">
+    <div class="lx-head">
+      <div class="eyebrow">FP Analyzer v3 · design prototype</div>
+      <h1>Where do you use FP Analyzer?</h1>
+      <p>Pick a device. Then pick who you are, and you land on that person's home screen, with their own menu, just like the real product.</p>
+      <div class="lx-steps"><span class="on"><i>1</i> Device</span><span class="ln"></span><span><i>2</i> Role</span><span class="ln"></span><span><i>3</i> Home screen</span></div>
+    </div>
+    <div class="lx-pfs" id="pfs"></div>
+  </section>
+
+  <section class="lx-step" id="step-roles" hidden>
+    <button class="lx-back" type="button" id="lx-back"><svg class="i sm"><use href="#i-chev"/></svg>Website, mobile app or kiosk</button>
+    <div class="lx-ph"><span class="ico" id="lx-ico"></span><div><div class="eyebrow" id="lx-eb">Step 2 of 3 · pick a role</div><h1 id="lx-t"></h1><p id="lx-p"></p></div></div>
+    <div id="lx-roles"></div>
+  </section>
+
+  <details class="lx-more" id="more">
+    <summary>More ways in: guided journeys, packs and every screen<svg class="i sm"><use href="#i-chev"/></svg></summary>
+    <div class="inner">
+      <div class="ai-strip">
+        <span class="orb"><svg class="i lg" style="color:#fff"><use href="#i-spark"/></svg></span>
+        <div><b style="font-size:16px">Ask FP is on every page</b><p>The ✦ button (or Ctrl J) opens your plant assistant beside any screen. It knows which page you are on, suggests questions, answers only from FP data with checked numbers, and never answers questions about individual people.</p></div>
+      </div>
+
+      <div class="sect">Walk through a journey</div>
+      <p class="muted">Pick a person. You get the real flow, one screen after another, with a Next button at the bottom-left of every screen.</p>
+      <div class="journeys" id="journeys"></div>
+
+      <div id="packs-wrap"><div class="sect">Send per platform</div>
+      <p class="muted">The same design split into three stand-alone packs. Each folder works on its own and can be zipped and sent to the team building that app.</p>
+      <div class="journeys" id="packs"></div></div>
+
+      <div id="samples-wrap"><div class="sect">First samples</div>
+      <div class="samples">
+        <a class="card sample" href="web-dashboard.html"><span class="ic"><svg class="i"><use href="#i-monitor"/></svg></span><span><b>Web: sign-in and dashboard</b><small>Production manager</small></span></a>
+        <a class="card sample" href="mobile-app.html"><span class="ic"><svg class="i"><use href="#i-phone"/></svg></span><span><b>Phone app: sign-in and home</b><small>Shift lead</small></span></a>
+        <a class="card sample" href="kiosk-terminal.html"><span class="ic"><svg class="i"><use href="#i-tablet"/></svg></span><span><b>Line terminal: badge and home</b><small>Operator</small></span></a>
+        <a class="card sample" href="theme-options.html"><span class="ic"><svg class="i"><use href="#i-layers"/></svg></span><span><b>Theme options</b><small>The five directions compared</small></span></a>
+      </div></div>
+
+      <div class="sect">All modules · <span data-total>0</span> screens in <span data-modcount>0</span> modules</div>
+      <div id="catalog"></div>
+    </div>
+  </details>
+</main>
+<script src="assets/fp.js"></script>
+</body>
+</html>

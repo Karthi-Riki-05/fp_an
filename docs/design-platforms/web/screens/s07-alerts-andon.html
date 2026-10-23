@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>S07 Alerts Andon</title>
+<meta name="description" content="FP Analyzer v3 prototype, module S07: notification centre, phone alert, machine screen alert strip, board banner, alert rules, groups and escalation, andon types, sounds, my notifications, delivery log.">
+<!-- Written for: the FP owner, client reviewers and developers building S07. Prototype only; all names and numbers are fictional. -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Poppins:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="../assets/fp.css">
+<style>
+.nt{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:start;padding:14px 16px;border-bottom:1px solid var(--border)}
+.nt:last-child{border-bottom:0}
+.nt.unread{background:color-mix(in srgb,var(--brand-soft) 45%,transparent)}
+.nt .ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex:none}
+.nt .ic.stop{background:var(--stop-soft);color:var(--stop)}.nt .ic.andon{background:var(--andon-soft);color:var(--andon)}.nt .ic.warn{background:var(--reason-soft);color:var(--reason)}.nt .ic.info{background:var(--brand-soft);color:var(--brand-strong)}
+.nt b{display:block}.nt small{color:var(--text-3);font-size:12.5px}
+.nt .acts{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.lock-scr{flex:1;background:linear-gradient(170deg,#0B3B48,#021317);color:#fff;padding:20px 14px;display:flex;flex-direction:column;gap:12px}
+.lock-scr .clk{text-align:center;font-family:var(--font-head);font-size:64px;font-weight:600;line-height:1;margin:22px 0 4px}
+.lock-scr .dt{text-align:center;font-size:15px;opacity:.8;margin-bottom:12px}
+.strip{display:flex;align-items:center;gap:1em;padding:.9em 1.4em;font-weight:800;font-size:1.2em;color:#fff}
+.strip.andon{background:#A11D6C}.strip.stop{background:#B91C1C}
+.strip .sp{flex:1}
+.strip .k-btn{height:2.8em;font-size:.85em;padding:0 1.2em;background:#fff;color:#26333A;border:0}
+.tv-top{display:flex;align-items:center;justify-content:space-between;padding:1.2em 1.8em;font-weight:800;font-size:1.3em}
+.tv-ban{margin:0 1.8em;border-radius:.8em;padding:1.1em 1.4em;background:#A11D6C;color:#fff;display:flex;align-items:center;gap:1em;font-size:1.5em;font-weight:800}
+.tv-ban small{display:block;font-size:.6em;font-weight:700;opacity:.85}
+.tv-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.9em;padding:1.2em 1.8em;flex:1}
+.tv-t{border-radius:.8em;background:#0D2028;padding:1em;border-left:.45em solid var(--c);display:flex;flex-direction:column;gap:.3em}
+.tv-t b{font-size:1.6em}.tv-t span{font-size:1em;opacity:.75}.tv-t .v{font-size:2.2em;font-weight:800;font-family:var(--font-head)}
+.esc{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:start}
+.esc .lvl{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:800;background:var(--brand-soft);color:var(--brand-strong)}
+.esc + .esc{margin-top:6px}
+.esc-line{margin-left:16px;border-left:2px dashed var(--border-strong);height:16px}
+.andon-c{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;color:#fff;background:var(--c)}
+.chanrow{display:grid;grid-template-columns:minmax(0,1fr) repeat(4,64px);align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--border);font-size:13.5px}
+.chanrow:first-child{border-top:0}
+.chanrow .h{font-size:11.5px;font-weight:800;color:var(--text-3);text-align:center;text-transform:uppercase}
+.chanrow .switch{justify-self:center}
+@media (max-width:520px){.chanrow{grid-template-columns:minmax(0,1fr) repeat(4,44px)}}
+</style>
+</head>
+<body data-module="S07">
+<main id="screens">
+
+<section class="screen" id="centre" data-ask='["Which alerts were not acknowledged today?","Who is handling the K-7 andon?"]'>
+  <div class="ph"><div><h1>Notifications</h1><p>Everything FP has told you about. Unread at the top. Tap one to go to the machine.</p></div><div class="ph-a"><button class="btn" type="button" data-toast="All marked as read">Mark all read</button><button class="btn ghost" type="button" data-go="my"><svg class="i sm"><use href="#i-gear"/></svg>My settings</button></div></div>
+  <div class="filters"><button class="fchip on" type="button">All</button><button class="fchip" type="button">Unread <span class="badge">3</span></button><button class="fchip" type="button">Andon</button><button class="fchip" type="button">Stops</button><button class="fchip" type="button">Maintenance</button></div>
+  <div class="card">
+    <div class="nt unread"><span class="ic andon"><svg class="i"><use href="#i-hand"/></svg></span><div><b>Andon on K-7 · Maintenance needed</b><small>Line 2 · 3 min ago · called by Sami K. · nobody has taken it yet</small><div class="acts"><button class="btn sm primary" type="button" data-toast="You took the call; Sami sees your name">I'm on it</button><a class="btn sm" href="s03-machine-state.html#timeline">Open machine</a></div></div><span class="cntb">1</span></div>
+    <div class="nt unread"><span class="ic stop"><svg class="i"><use href="#i-stop"/></svg></span><div><b>K-5 has been stopped for 6 minutes</b><small>Line 2 · 10:42 · no reason yet</small><div class="acts"><a class="btn sm" href="s08-registration.html#register">Register reason</a></div></div><span></span></div>
+    <div class="nt unread"><span class="ic warn"><svg class="i"><use href="#i-alert"/></svg></span><div><b>Line 2 is below target this shift</b><small>OEE 66 % · target 75 % · 10:30</small></div><span></span></div>
+    <div class="nt"><span class="ic info"><svg class="i"><use href="#i-wrench"/></svg></span><div><b>Nils B. closed the request "Glue unit leaking"</b><small>K-5 · 09:12</small></div><span></span></div>
+    <div class="nt"><span class="ic andon"><svg class="i"><use href="#i-hand"/></svg></span><div><b>Andon on K-3 · Material needed — handled by Jonas L. in 4 min</b><small>Line 2 · 08:20</small></div><span class="badge b-run">Done</span></div>
+  </div>
+  <div class="states"><h4>Other states</h4><div class="state-grid"><figure class="state"><figcaption>Nothing new</figcaption><div class="empty"><span class="ic"><svg class="i lg"><use href="#i-bell"/></svg></span><h3>You are up to date</h3><p>New alerts for your lines show up here.</p></div></figure></div></div>
+</section>
+
+
+
+
+<section class="screen" id="rules" data-ask='["Who gets the K-5 stop alert?","Which rules fire most often?"]'>
+  <div class="ph"><div><h1>Alert rules</h1><p>When should FP tell someone? Each rule says what happens, where, and who hears about it.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="New rule"><svg class="i sm"><use href="#i-plus"/></svg>New rule</button></div></div>
+  <div class="g g-side">
+    <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>When</th><th>Where</th><th>Who</th><th>Last 7 days</th><th>On</th></tr></thead><tbody>
+      <tr class="sel"><td><b>Stopped longer than 5 min</b></td><td>Line 2, Line 3</td><td>Shift leads</td><td>41 times</td><td><span class="switch on"></span></td></tr>
+      <tr><td><b>Andon called</b></td><td>All machines</td><td>By andon type</td><td>18 times</td><td><span class="switch on"></span></td></tr>
+      <tr><td><b>OEE below target for 1 hour</b></td><td>Hultsfred</td><td>Lena H.</td><td>6 times</td><td><span class="switch on"></span></td></tr>
+      <tr><td><b>FP Box offline 10 min</b></td><td>All</td><td>Maintenance</td><td>2 times</td><td><span class="switch on"></span></td></tr>
+      <tr><td><b>Stop without reason at shift end</b></td><td>All</td><td>Shift leads</td><td>9 times</td><td><span class="switch"></span></td></tr>
+    </tbody></table></div></div>
+    <div class="card"><div class="card-h"><h3>Stopped longer than 5 min</h3></div><div class="card-b stack">
+      <div class="field"><label>When</label><div class="row nowrap"><select class="input"><option>Machine is stopped</option></select><div class="ig" style="width:120px;flex:none"><input value="5"><span class="unit">min</span></div></div></div>
+      <div class="field"><label>Only during</label><select class="input"><option>Planned shift time</option></select></div>
+      <div class="field"><label>Tell</label><div class="row"><span class="chip on">Shift leads</span><span class="chip">+ person or group</span></div></div>
+      <div class="field"><label>How</label><div class="row"><span class="chip on">Phone</span><span class="chip on">In FP</span><span class="chip">Email</span><span class="chip">Board</span></div></div>
+      <div class="field"><label>Quiet for</label><div class="ig"><input value="30"><span class="unit">min</span></div><span class="hint">Do not repeat for the same machine within this time</span></div>
+    </div><div class="card-f"><button class="btn" type="button" data-toast="Test alert sent to you">Send me a test</button><button class="btn primary" type="button" data-toast="Rule saved">Save</button></div></div>
+  </div>
+</section>
+
+<section class="screen" id="groups" data-ask='["What happens if nobody answers an andon call?"]'>
+  <div class="ph"><div><h1>Groups and escalation</h1><p>Who is called first, and who next if nobody answers.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="New group"><svg class="i sm"><use href="#i-plus"/></svg>New group</button></div></div>
+  <div class="g g-side-l">
+    <div class="card"><div class="card-b" style="padding-top:12px"><div class="list">
+      <div class="li"><span class="ic"><svg class="i"><use href="#i-wrench"/></svg></span><div><b>Maintenance · day</b><small>3 people</small></div><span class="badge b-brand">open</span></div>
+      <div class="li"><span class="ic"><svg class="i"><use href="#i-users"/></svg></span><div><b>Shift leads</b><small>4 people</small></div><span></span></div>
+      <div class="li"><span class="ic"><svg class="i"><use href="#i-box"/></svg></span><div><b>Warehouse</b><small>2 people</small></div><span></span></div></div></div></div>
+    <div class="card"><div class="card-h"><h3>Maintenance · day</h3><span class="muted">Mon–Fri 06–22</span></div><div class="card-b">
+      <div class="esc"><span class="lvl">1</span><div><b>Right away</b><div class="row mt-s"><span class="chip"><span class="av sm">JL</span>Jonas L.</span><span class="chip"><span class="av sm c2">PN</span>Pekka N.</span></div><small class="muted">Everyone in step 1 gets it. The first to tap "I'm on it" takes it.</small></div></div>
+      <div class="esc-line"></div>
+      <div class="esc"><span class="lvl">2</span><div><b>If nobody takes it in 5 min</b><div class="row mt-s"><span class="chip"><span class="av sm c3">ND</span>Nils B. (maintenance lead)</span></div></div></div>
+      <div class="esc-line"></div>
+      <div class="esc"><span class="lvl" style="background:var(--stop-soft);color:var(--stop)">3</span><div><b>If still open after 10 min</b><div class="row mt-s"><span class="chip"><span class="av sm">LH</span>Lena H.</span><span class="chip">Board banner turns red</span></div></div></div>
+      <button class="btn sm mt" type="button"><svg class="i sm"><use href="#i-plus"/></svg>Add step</button>
+    </div></div>
+  </div>
+</section>
+
+<section class="screen" id="andon-types" data-ask='["Which andon type is called most?"]'>
+  <div class="ph"><div><h1>Andon types</h1><p>The buttons operators press to call for help. Each type goes to its own group.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="New andon type"><svg class="i sm"><use href="#i-plus"/></svg>New type</button></div></div>
+  <div class="g g3">
+    <div class="card pad"><div class="row"><span class="andon-c" style="--c:var(--andon)"><svg class="i"><use href="#i-wrench"/></svg></span><div><b>Maintenance</b><div class="small muted">to Maintenance · day</div></div></div><p class="small mt">Last 30 days: <b>24 calls</b> · answered in 4 min on average</p></div>
+    <div class="card pad"><div class="row"><span class="andon-c" style="--c:#C98A2B"><svg class="i"><use href="#i-box"/></svg></span><div><b>Material</b><div class="small muted">to Warehouse</div></div></div><p class="small mt">Last 30 days: <b>31 calls</b> · answered in 6 min on average</p></div>
+    <div class="card pad"><div class="row"><span class="andon-c" style="--c:#5B6BC9"><svg class="i"><use href="#i-check"/></svg></span><div><b>Quality</b><div class="small muted">to Shift leads</div></div></div><p class="small mt">Last 30 days: <b>7 calls</b> · answered in 3 min on average</p></div>
+  </div>
+</section>
+
+<section class="screen" id="sounds" data-ask='["Which lines have a sound on the board?"]'>
+  <div class="ph"><div><h1>Sounds and texts</h1><p>What the terminal and board say and play, per line or machine. The text is shown in the operator's own language.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="Saved">Save</button></div></div>
+  <div class="g g2">
+    <div class="card"><div class="card-h"><h3>Line 2 · Edging</h3></div><div class="card-b stack">
+      <div class="field"><label>Sound on the terminal</label><div class="row nowrap"><select class="input"><option>Short chime</option><option>Siren</option><option>None</option></select><button class="btn icon" type="button" aria-label="Play" data-toast="Playing sound"><svg class="i"><use href="#i-vol"/></svg></button></div></div>
+      <div class="field"><label>Sound on the board</label><div class="row nowrap"><select class="input"><option>None</option></select><button class="btn icon" type="button" aria-label="Play"><svg class="i"><use href="#i-vol"/></svg></button></div></div>
+      <div class="field"><label>Text when andon is called</label><input class="input" value="Help is on the way, stay at the machine"></div>
+      <div class="field"><label>Volume</label><div class="seg"><button type="button">Low</button><button class="on" type="button">Medium</button><button type="button">Loud</button></div></div>
+    </div></div>
+    <div class="card pad"><b>Where settings come from</b><p class="small muted mt-s">A machine uses its line's settings unless you change them on the machine.</p><dl class="kv mt"><dt>K-3</dt><dd class="muted">from Line 2</dd><dt>K-5</dt><dd class="muted">from Line 2</dd><dt>K-7</dt><dd><span class="badge b-brand">own: Siren</span></dd></dl></div>
+  </div>
+  <div class="card mt"><div class="card-h"><h3>Spoken name</h3><span class="small muted">phones and terminals read this aloud</span></div><div class="card-b"><div class="row" style="gap:10px;flex-wrap:wrap"><input class="input" style="max-width:320px" value="K-7 Drill line, maintenance needed"><button class="btn" type="button" data-toast="Plays: “K-7 Drill line, maintenance needed”"><svg class="i sm"><use href="#i-vol"/></svg>Listen</button></div><p class="small muted mt-s">Use {machine}, {line} and {call}. Swedish is read in Swedish, English in English.</p></div></div>
+
+</section>
+
+<section class="screen" id="my" data-ask='["Which alerts do I get on my phone?"]'>
+  <div class="ph"><div><h1>My notifications</h1><p>Choose how you want to hear about things. Your admin decides which alerts exist; you decide how they reach you.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="Saved">Save</button></div></div>
+  <div class="g g-side">
+    <div class="card pad">
+      <div class="chanrow"><span></span><span class="h">Phone</span><span class="h">In FP</span><span class="h">Email</span><span class="h">Daily</span></div>
+      <div class="chanrow"><b>Andon calls to my group</b><span class="switch on"></span><span class="switch on"></span><span class="switch"></span><span class="switch"></span></div>
+      <div class="chanrow"><b>Long stops on my lines</b><span class="switch on"></span><span class="switch on"></span><span class="switch"></span><span class="switch"></span></div>
+      <div class="chanrow"><b>Below target</b><span class="switch"></span><span class="switch on"></span><span class="switch"></span><span class="switch on"></span></div>
+      <div class="chanrow"><b>Maintenance updates</b><span class="switch"></span><span class="switch on"></span><span class="switch on"></span><span class="switch"></span></div>
+    </div>
+    <div class="stack">
+      <div class="card pad"><b>Quiet hours</b><p class="small muted mt-s">No phone alerts in this time, except andon if you are on call.</p><div class="g g2 mt"><div class="field"><label>From</label><input class="input" value="22:00"></div><div class="field"><label>To</label><input class="input" value="06:00"></div></div></div>
+      <div class="card pad"><b>My phones</b><div class="li mt-s"><span class="ic"><svg class="i"><use href="#i-phone"/></svg></span><div><b>iPhone 15</b><small>last test OK · 20 Oct</small></div><button class="btn sm" type="button" data-toast="Test alert sent">Test</button></div></div>
+    </div>
+  </div>
+  <div class="g g2 mt">
+    <div class="card"><div class="card-h"><h3>Muted</h3></div><div class="card-b list"><div class="li"><span class="ic"><svg class="i"><use href="#i-vol"/></svg></span><div><b>Below target · Line 3</b><small>until 26 Oct 06:00</small></div><button class="btn sm ghost" type="button" data-toast="Unmuted">Unmute</button></div><div class="li"><span class="ic"><svg class="i"><use href="#i-vol"/></svg></span><div><b>All alerts</b><small>until tomorrow 06:00 · on holiday</small></div><button class="btn sm ghost" type="button" data-toast="Unmuted">Unmute</button></div></div></div>
+    <div class="card"><div class="card-h"><h3>My phones</h3></div><div class="card-b list"><div class="li"><span class="ic"><svg class="i"><use href="#i-phone"/></svg></span><div><b>iPhone 15</b><small>last seen 2 min ago · voice on</small></div><button class="btn sm" type="button" data-toast="Test alert sent to iPhone 15">Send test</button></div><div class="li"><span class="ic"><svg class="i"><use href="#i-phone"/></svg></span><div><b>Galaxy A54</b><small>last seen 3 days ago</small></div><button class="btn sm" type="button" data-toast="Test alert sent to Galaxy A54">Send test</button></div></div></div>
+  </div>
+
+</section>
+
+<section class="screen" id="log" data-ask='["Which phones fail the alert test?","Did the K-7 andon reach everyone?"]'>
+  <div class="ph"><div><h1>Delivery log</h1><p>Did it fire? Did each alert reach the people it should? Use this when someone says "I never got it".</p></div></div>
+  <div class="g g4 keep2 mb">
+    <div class="card kpi"><div class="kpi-l">Sent today</div><div class="kpi-v num">142</div></div>
+    <div class="card kpi"><div class="kpi-l">Delivered</div><div class="kpi-v num">98.6<small>%</small></div></div>
+    <div class="card kpi"><div class="kpi-l">Failed</div><div class="kpi-v num" style="color:var(--stop)">2</div></div>
+    <div class="card kpi"><div class="kpi-l">Phone service</div><div class="kpi-v" style="font-size:20px;color:var(--run)">Working</div></div>
+  </div>
+  <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Time</th><th>Alert</th><th>To</th><th>How</th><th>Result</th></tr></thead><tbody>
+    <tr><td class="num">10:48:05</td><td>Andon K-7</td><td>Jonas L.</td><td>Phone</td><td><span class="badge b-run">Delivered · tapped 10:48:40</span></td></tr>
+    <tr><td class="num">10:48:05</td><td>Andon K-7</td><td>Pekka N.</td><td>Phone</td><td><span class="badge b-run">Delivered</span></td></tr>
+    <tr class="bad"><td class="num">10:48:05</td><td>Andon K-7</td><td>Maja E.</td><td>Phone</td><td><span class="badge b-stop">Failed · phone not registered</span></td></tr>
+    <tr><td class="num">10:47:10</td><td>K-5 stopped 5 min</td><td>Elin S.</td><td>In FP</td><td><span class="badge b-run">Delivered · read</span></td></tr>
+  </tbody></table></div></div>
+</section>
+
+</main>
+<script src="../assets/fp.js"></script>
+</body>
+</html>

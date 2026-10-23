@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>S19 Audit Privacy</title>
+<meta name="description" content="FP Analyzer v3 prototype, module S19: audit log, entity history, data retention, privacy requests, compliance documents, and platform compliance and security.">
+<!-- Written for: the FP owner, client reviewers and developers building S19. Prototype only; all names and numbers are fictional. -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Poppins:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="../assets/fp.css">
+<style>
+.diff{display:grid;margin:6px 0;max-width:420px;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;font-size:13px}
+.diff div{padding:8px 10px;border-radius:8px}
+.diff .o{background:var(--stop-soft);text-decoration:line-through;color:var(--text-2)}
+.diff .n{background:var(--run-soft);font-weight:700}
+.ret{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border)}
+.ret:last-child{border-bottom:0}
+.ret small{display:block;color:var(--text-3)}
+@media (max-width:620px){.ret{grid-template-columns:minmax(0,1fr)}}
+.doc{display:flex;gap:12px;align-items:center}
+.doc .ic{width:40px;height:48px;border-radius:6px;background:var(--surface-2);border:1px solid var(--border);display:grid;place-items:center;color:var(--brand);flex:none}
+.ctl{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.ctl:last-child{border-bottom:0}
+.ctl b{flex:1;font-size:14px}
+</style>
+</head>
+<body data-module="S19">
+<main id="screens">
+
+<section class="screen" id="audit" data-ask='["Who changed the K-5 ideal rate?","What did Sami change last week?"]'>
+  <div class="ph"><div><h1>Audit log</h1><p>Every change anyone makes is written here. It can't be edited or deleted.</p></div><div class="ph-a"><button class="btn" type="button"><svg class="i sm"><use href="#i-download"/></svg>Export</button></div></div>
+  <div class="filters mb"><input class="input" style="max-width:280px" placeholder="Search: person, machine, setting…"><button class="fchip" type="button">Last 7 days</button><button class="fchip" type="button">All people</button><button class="fchip" type="button">All areas</button></div>
+  <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>When</th><th>Who</th><th>What</th><th>Where</th><th></th></tr></thead><tbody>
+    <tr><td class="num">22 Oct 09:14</td><td>Sami Koski</td><td>Changed ideal rate <b>1 200 → 1 400 /h</b></td><td>K-5 · Line 2</td><td class="act"><button class="btn sm ghost" type="button" data-go="history">History</button></td></tr>
+    <tr><td class="num">22 Oct 08:02</td><td>Lena Holm</td><td>Added person <b>Pekka Niemi</b> as Operator</td><td>People</td><td class="act"></td></tr>
+    <tr><td class="num">21 Oct 16:40</td><td>Elin Sand</td><td>Changed a stop reason <b>Other → Glue unit</b></td><td>K-5 stop 14:20</td><td class="act"></td></tr>
+    <tr class="warn"><td class="num">21 Oct 11:05</td><td>Mira Sandell <span class="badge b-ai">FP support</span></td><td>Viewed as Lena Holm (support session, 18 min)</td><td>Whole company</td><td class="act"></td></tr>
+    <tr><td class="num">20 Oct 07:30</td><td>Nils Dahl</td><td>Exported <b>stops September</b> (8 420 rows)</td><td>Exports</td><td class="act"></td></tr>
+  </tbody></table></div></div>
+  <p class="tiny muted mt">Support sessions by FP staff are highlighted and need your permission first.</p>
+</section>
+
+<section class="screen" id="history" data-ask='["What did the ideal rate of K-5 look like a month ago?"]'>
+  <div class="ph"><div><span class="eyebrow">History</span><h1>K-5 · Edge bander</h1><p>All changes to this machine, newest first.</p></div></div>
+  <div class="g g-side">
+    <div class="card"><div class="card-b"><div class="vsteps">
+      <div class="vstep cur"><span class="dt"><svg class="i xs"><use href="#i-edit"/></svg></span><div><b>Ideal rate changed</b><small>22 Oct 09:14 · Sami Koski</small><div class="diff mt-s"><div class="o">1 200 pieces / h</div><div class="n">1 400 pieces / h</div></div><small>Reason given: "New feeder motor installed."</small></div><span></span></div>
+      <div class="vstep done"><span class="dt"><svg class="i xs"><use href="#i-edit"/></svg></span><div><b>Moved to Line 2</b><small>3 Oct 13:20 · Lena Holm</small><div class="diff mt-s"><div class="o">Line 3</div><div class="n">Line 2</div></div></div><span></span></div>
+      <div class="vstep done"><span class="dt"><svg class="i xs"><use href="#i-plug"/></svg></span><div><b>Connected to FP Box U-07, input 2</b><small>12 Sep 10:00 · Lena Holm</small></div><span></span></div>
+      <div class="vstep done"><span class="dt"><svg class="i xs"><use href="#i-plus"/></svg></span><div><b>Machine created</b><small>12 Sep 09:58 · Lena Holm</small></div><span></span></div>
+    </div></div></div>
+    <div class="ai-card"><div class="q"><svg class="i sm"><use href="#i-spark"/></svg>What it means</div><p>OEE for K-5 from 22 Oct uses the new rate of 1 400 / h. Older days still use 1 200 / h, so the numbers stay fair.</p></div>
+  </div>
+</section>
+
+<section class="screen" id="retention" data-ask='["When is the next data purge?"]'>
+  <div class="ph"><div><h1>How long we keep data</h1><p>Old data is removed automatically. You choose how long, within what the law allows.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="Saved">Save</button></div></div>
+  <div class="banner info mb"><svg class="i"><use href="#i-info"/></svg><div>Next clean-up: <b>1 November 03:00</b>. Nothing in this list will be removed earlier than the time you set.</div></div>
+  <div class="card">
+    <div class="ret"><div><b>Machine signals (ON / OFF)</b><small>raw data from the FP Boxes</small></div><select class="input"><option>3 years</option></select><span class="small muted">≈ 41 M rows</span></div>
+    <div class="ret"><div><b>Stops and reasons</b><small>needed for OEE history</small></div><select class="input"><option>Forever</option></select><span class="small muted">186 k rows</span></div>
+    <div class="ret"><div><b>Voice notes and photos</b><small>can contain voices and faces</small></div><select class="input"><option>90 days</option></select><span class="small muted">2.1 GB</span></div>
+    <div class="ret"><div><b>Ask FP chats</b><small>questions people asked the assistant</small></div><select class="input"><option>30 days</option></select><span class="small muted">4 300 chats</span></div>
+    <div class="ret"><div><b>Audit log</b><small>fixed by FP, can't be shortened</small></div><select class="input" disabled><option>7 years</option></select><span class="small muted">locked</span></div>
+  </div>
+</section>
+
+<section class="screen" id="dsr" data-ask='["Which privacy requests are due this week?"]'>
+  <div class="ph"><div><h1>Privacy requests</h1><p>When someone asks to see or delete their personal data. The law gives you 30 days to answer.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="New request"><svg class="i sm"><use href="#i-plus"/></svg>New request</button></div></div>
+  <div class="g g3 keep2 mb">
+    <div class="card kpi"><div class="kpi-l">Open</div><div class="kpi-v num">2</div></div>
+    <div class="card kpi"><div class="kpi-l">Due in 7 days</div><div class="kpi-v num" style="color:var(--reason)">1</div></div>
+    <div class="card kpi"><div class="kpi-l">Done this year</div><div class="kpi-v num">5</div></div>
+  </div>
+  <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Person</th><th>Asks for</th><th>Received</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody>
+    <tr class="warn"><td><b>Johan Ek</b><div class="t2">former operator</div></td><td>Delete my data</td><td>28 Sep</td><td>28 Oct</td><td><span class="badge b-warn">6 days left</span></td><td class="act"><button class="btn sm" type="button" data-toast="Shows what will be deleted and what is kept anonymous">Review</button></td></tr>
+    <tr><td><b>Maja Ek</b><div class="t2">operator</div></td><td>Copy of my data</td><td>15 Oct</td><td>14 Nov</td><td><span class="badge b-setup">File ready</span></td><td class="act"><button class="btn sm ghost" type="button">Send</button></td></tr>
+    <tr><td><b>Pekka Niemi</b></td><td>Copy of my data</td><td>2 Aug</td><td>1 Sep</td><td><span class="badge b-run">Done</span></td><td class="act"></td></tr>
+  </tbody></table></div></div>
+  <div class="banner info mt"><svg class="i"><use href="#i-users"/></svg><div>Your company handles these requests. Who can: <b>Admin, HR</b> · change in <a href="s01-identity-access.html#roles">Roles</a>. FP helps if you ask.</div></div>
+  <p class="tiny muted mt">Deleting a person keeps their stops for OEE but replaces the name with "Former operator".</p>
+  <div class="card pad mt"><b>Check before sending · Johan Ek</b><p class="small muted mt-s">A handover note mentions another person: "…Johan and <b>Maja</b> changed the band…"</p><div class="row mt-s" style="gap:8px"><button class="btn sm" type="button" data-toast="Hidden in the copy">Redact</button><button class="btn sm ghost" type="button" data-toast="Kept">Keep</button></div></div>
+</section>
+
+<section class="screen" id="docs" data-ask='["Where is our data processing agreement?"]'>
+  <div class="ph"><div><h1>Compliance documents</h1><p>Agreements and reports to share with your auditors or IT.</p></div></div>
+  <div class="g g2">
+    <div class="card pad doc"><span class="ic"><svg class="i"><use href="#i-file"/></svg></span><div style="flex:1"><b>Data processing agreement</b><div class="small muted">signed by Lena Holm · 12 Sep 2026</div></div><button class="btn sm" type="button"><svg class="i sm"><use href="#i-download"/></svg>PDF</button></div>
+    <div class="card pad doc"><span class="ic"><svg class="i"><use href="#i-list"/></svg></span><div style="flex:1"><b>Sub-processors list</b><div class="small muted">who handles your data · updated 1 Oct</div></div><button class="btn sm" type="button"><svg class="i sm"><use href="#i-download"/></svg>PDF</button></div>
+    <div class="card pad doc"><span class="ic"><svg class="i"><use href="#i-shieldok"/></svg></span><div style="flex:1"><b>Security overview</b><div class="small muted">how FP protects your data</div></div><button class="btn sm" type="button"><svg class="i sm"><use href="#i-download"/></svg>PDF</button></div>
+    <div class="card pad doc"><span class="ic"><svg class="i"><use href="#i-globe"/></svg></span><div style="flex:1"><b>Where your data is stored</b><div class="small muted">EU (Sweden) · backups in EU (Finland)</div></div><button class="btn sm" type="button">View</button></div>
+  </div>
+  <div class="card pad mt"><div class="row between"><div><b>New sub-processor from 1 Dec</b><p class="small muted">Email delivery provider (EU). You can object within 30 days.</p></div><button class="btn sm" type="button" data-toast="Objection sent to FP">Object</button></div></div>
+</section>
+
+<section class="screen" id="p-compliance" data-ask='["Which companies have not signed the new DPA?"]'>
+  <div class="ph"><div><h1>Compliance across companies</h1><p>FP staff view. Agreements, privacy requests and clean-ups for every customer.</p></div></div>
+  <div class="g g4 keep2 mb">
+    <div class="card kpi"><div class="kpi-l">Companies</div><div class="kpi-v num">5</div></div>
+    <div class="card kpi"><div class="kpi-l">DPA not signed</div><div class="kpi-v num" style="color:var(--reason)">1</div></div>
+    <div class="card kpi"><div class="kpi-l">Open privacy requests</div><div class="kpi-v num">3</div></div>
+    <div class="card kpi"><div class="kpi-l">Last clean-up</div><div class="kpi-v num" style="font-size:22px">1 Oct ✓</div></div>
+  </div>
+  <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Company</th><th>DPA</th><th>Privacy requests</th><th>Retention</th></tr></thead><tbody>
+    <tr><td><b>Nordvik Trä AB</b></td><td><span class="badge b-run">Signed v3</span></td><td>2 open · 1 due soon</td><td>Custom</td></tr>
+    <tr><td><b>Björkdal Möbler</b></td><td><span class="badge b-run">Signed v3</span></td><td>—</td><td>Default</td></tr>
+    <tr class="warn"><td><b>Solgran Kök</b></td><td><span class="badge b-warn">Signed v2 · needs v3</span></td><td>—</td><td>Default</td></tr>
+    <tr><td><b>Västkust Plast</b></td><td><span class="badge b-run">Signed v3</span></td><td>1 open</td><td>Default</td></tr>
+    <tr><td><b>Lindqvist Golv</b></td><td><span class="badge b-run">Signed v3</span></td><td>—</td><td>Custom</td></tr>
+  </tbody></table></div></div>
+</section>
+
+<section class="screen" id="p-security" data-ask='["Were there any failed admin logins this week?"]'>
+  <div class="ph"><div><h1>Platform security</h1><p>FP staff view. Who can reach customer data and how it is protected.</p></div></div>
+  <div class="g g-side">
+    <div class="card"><div class="card-h"><h3>Checks</h3></div><div class="card-b">
+      <div class="ctl"><span class="badge b-run">OK</span><b>All FP staff use 2-step login</b><span class="small muted">6 / 6</span></div>
+      <div class="ctl"><span class="badge b-run">OK</span><b>FP Box certificates valid</b><span class="small muted">next expiry 14 Mar</span></div>
+      <div class="ctl"><span class="badge b-run">OK</span><b>Backups tested</b><span class="small muted">restored 18 Oct</span></div>
+      <div class="ctl"><span class="badge b-warn">Check</span><b>Failed staff logins</b><span class="small muted">4 this week</span></div>
+      <div class="ctl"><span class="badge b-run">OK</span><b>Support sessions approved by customer</b><span class="small muted">12 / 12</span></div>
+    </div></div>
+    <div class="card"><div class="card-h"><h3>Who can see customer data</h3></div><div class="card-b list">
+      <div class="li"><span class="av sm c3">MS</span><div><b>Mira Sandell</b><small>Support · only with customer approval</small></div><span></span></div>
+      <div class="li"><span class="av sm c4">PN</span><div><b>Pekka Niemi</b><small>Platform admin · 2-step login</small></div><span></span></div>
+    </div></div>
+  </div>
+</section>
+
+</main>
+<script src="../assets/fp.js"></script>
+</body>
+</html>

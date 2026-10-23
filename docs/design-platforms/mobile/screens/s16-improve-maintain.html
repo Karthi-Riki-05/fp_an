@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>S16 Improve Maintain</title>
+<meta name="description" content="FP Analyzer v3 prototype, module S16: maintenance board, request detail and form, PM plans and editor, maintenance KPIs, actions, action detail, root-cause analysis, projects, project page and suggestions inbox.">
+<!-- Written for: the FP owner, client reviewers and developers building S16. Prototype only; all names and numbers are fictional. -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Poppins:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="../assets/fp.css">
+<style>
+.kcard .meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--text-3)}
+.prio{font-size:10.5px;font-weight:800;border-radius:5px;padding:1px 6px;text-transform:uppercase}
+.prio.h{background:var(--stop-soft);color:var(--stop)}.prio.m{background:var(--reason-soft);color:var(--reason)}.prio.l{background:var(--surface-2);color:var(--text-3)}
+.pm-due{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border)}
+.pm-due:last-child{border-bottom:0}
+.pm-due small{display:block;color:var(--text-3);font-size:12px}
+@media (max-width:620px){.pm-due{grid-template-columns:auto minmax(0,1fr) auto}.pm-due .hide-s{display:none}}
+.why{display:flex;flex-direction:column;gap:8px}
+.why .w{display:grid;grid-template-columns:70px minmax(0,1fr);gap:10px;align-items:center}
+.why .w b{font-size:12px;color:var(--text-3);text-transform:uppercase}
+.fish{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:760px){.fish{grid-template-columns:minmax(0,1fr)}}
+.fish .card{padding:12px}
+.fish b{font-size:12px;text-transform:uppercase;color:var(--text-3)}
+.fish li{font-size:13px;margin:4px 0 0 16px}
+.sug-card{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:start;padding:14px 16px;border-bottom:1px solid var(--border)}
+.sug-card:last-child{border-bottom:0}
+.vote{display:grid;justify-items:center;font-weight:800;font-size:13px;background:var(--surface-2);border-radius:10px;padding:6px 10px}
+.ckl{display:flex;flex-direction:column;gap:6px}
+.ckl .li{grid-template-columns:auto minmax(0,1fr) auto}
+.mtile-sm{display:flex;gap:10px;align-items:center}
+</style>
+</head>
+<body data-module="S16">
+<main id="screens">
+
+
+
+<section class="screen" id="request-form" data-ask='["How do I report a problem from my phone?"]'>
+  <div class="devices"><div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span><div class="ph-sb num"><span>11:10</span><span>5G</span></div>
+    <div class="m-top"><span class="back"><svg class="i sm"><use href="#i-x"/></svg></span><h2>Report a problem</h2></div>
+    <div class="m-body">
+      <div class="field"><label>Machine</label><div class="input row" style="justify-content:space-between"><span>K-5 Edge bander</span><svg class="i sm"><use href="#i-qr"/></svg></div><span class="hint">Scan the machine's QR code to fill this in</span></div>
+      <div class="field"><label>What is wrong?</label><textarea class="input" rows="3">Glue dripping from nozzle again</textarea></div>
+      <div class="field"><label>Is the machine stopped?</label><div class="seg"><button class="on" type="button">Running</button><button type="button">Stopped</button></div></div>
+      <div class="field"><label>How urgent?</label><div class="seg"><button type="button">Low</button><button class="on" type="button">Medium</button><button type="button">High</button></div></div>
+      <button class="btn m-big" type="button"><svg class="i"><use href="#i-camera"/></svg>Add photo</button>
+      <div class="sp"></div>
+      <button class="btn primary m-big" type="button" data-to="@home" data-toast="Sent to maintenance">Send</button>
+    </div></div></div><p class="dev-cap"><b>Request form</b> · on phone or terminal, 30 seconds to report</p></div></div>
+  <div class="states"><span class="badge b-stop">"The machine is down" switch: request goes to the top and calls the on-duty technician</span><span class="badge b-off">Offline: saved and sent later</span></div>
+</section>
+
+
+
+
+
+
+
+
+
+
+</main>
+<script src="../assets/fp.js"></script>
+</body>
+</html>

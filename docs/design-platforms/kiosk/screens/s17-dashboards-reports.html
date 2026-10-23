@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>S17 Dashboards Reports</title>
+<meta name="description" content="FP Analyzer v3 prototype, module S17: home, dashboard view and editor, drill-down drawer, board admin, TV display, reports, report viewer, exports, saved views and dashboard templates.">
+<!-- Written for: the FP owner, client reviewers and developers building S17. Prototype only; all names and numbers are fictional. -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Poppins:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="../assets/fp.css">
+<style>
+.dgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.dgrid .w2{grid-column:span 2}.dgrid .w4{grid-column:1/-1}
+@media (max-width:1100px){.dgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:620px){.dgrid{grid-template-columns:minmax(0,1fr)}.dgrid .w2{grid-column:auto}}
+.edit .card{outline:2px dashed var(--border-strong);outline-offset:-2px;position:relative}
+.edit .card.sel{outline-color:var(--brand)}
+.edit .handle{position:absolute;top:8px;right:8px;display:flex;gap:4px}
+.wpal{display:flex;flex-direction:column;gap:6px}
+.wpal span{display:flex;gap:10px;align-items:center;padding:10px;border:1px solid var(--border);border-radius:10px;font-weight:700;font-size:13px;background:var(--surface);cursor:grab}
+.trend text{font-size:10.5px;fill:var(--text-3)}
+.drawer-demo{position:relative;border-radius:var(--radius);overflow:hidden;min-height:520px}
+.drw{position:absolute;top:0;right:0;bottom:0;width:min(440px,100%);background:var(--surface);border-left:1px solid var(--border);box-shadow:var(--shadow-3);padding:18px;display:flex;flex-direction:column;gap:12px;overflow:auto}
+.tv-top{display:flex;justify-content:space-between;align-items:center;gap:1em;padding:1.2em 1.8em;font-family:var(--font-head);font-weight:700;font-size:1.5em}
+.tvb{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:1em;padding:0 1.8em 1.6em;flex:1;min-height:0}
+.tvc{background:#0D2028;border-radius:.9em;padding:1em 1.2em;display:flex;flex-direction:column;gap:.4em}
+.tvc small{opacity:.7;font-size:.95em}
+.tvc .v{font-family:var(--font-head);font-size:3.6em;font-weight:700;line-height:1}
+.tvm{display:grid;grid-template-columns:repeat(3,1fr);gap:.6em;margin-top:auto}
+.tvm div{font-size:1.4em;padding:.7em}
+.tvm div{border-radius:.6em;padding:.6em;background:#102A33;border-left:.35em solid var(--c);font-weight:800}
+.tvm span{display:block;font-size:.8em;opacity:.75;font-weight:700}
+.rep{background:#fff;color:#26333A;border-radius:6px;box-shadow:var(--shadow-2);padding:28px 32px;max-width:820px;font-size:13px}
+.rep h2{font-size:20px;color:#003E4E}
+.rep .rk{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}
+.rep .rk div{border:1px solid #DAE3E8;border-radius:8px;padding:10px}
+.rep .rk b{display:block;font-size:20px}
+.rep table{width:100%;border-collapse:collapse;margin-top:8px}
+.rep td,.rep th{border-bottom:1px solid #E2EBEF;padding:6px 4px;text-align:left}
+@media (max-width:620px){.rep{padding:18px}.rep .rk{grid-template-columns:repeat(2,1fr)}}
+.tpl{display:flex;flex-direction:column;gap:10px;padding:14px}
+.tpl .pv{height:110px;border-radius:10px;background:var(--surface-2);display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px}
+.tpl .pv i{background:var(--surface);border-radius:6px}
+.tpl .pv i.w{grid-column:span 2}
+
+/* Overview (home), layout from the first web sample */
+#home .honest{display:flex;gap:8px;flex-wrap:wrap;margin:-6px 0 16px}
+#home .kpis{display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:16px;margin-bottom:16px}
+#home .kpi-ov{padding:16px 18px;display:flex;flex-direction:column;gap:10px;cursor:pointer}
+#home .kpi-ov .lbl{display:flex;gap:6px;align-items:center;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3)}
+#home .kpi-ov .val{font-family:var(--font-head);font-size:32px;font-weight:700;line-height:1}
+#home .kpi-ov .val small{font-size:14px;font-weight:600;color:var(--text-3);margin-left:4px}
+#home .kpi-ov .meta{font-size:13px;color:var(--text-2);line-height:1.5}
+#home .kpi-ov .pill{height:22px}
+#home .bar{height:6px;border-radius:3px;background:var(--surface-3);overflow:hidden}
+#home .bar i{display:block;height:100%;border-radius:3px;background:var(--brand)}
+#home .oee{display:flex;gap:18px;align-items:center}
+#home .ring{position:relative;width:120px;height:120px;flex:none}
+#home .ring .c{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+#home .ring b{font-family:var(--font-head);font-size:28px;font-weight:700;line-height:1}
+#home .ring small{font-size:11px;color:var(--text-3)}
+#home .apq{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+#home .apq .hb{grid-template-columns:90px minmax(0,1fr) 44px;font-size:12.5px}
+#home .apq .hb .t{height:8px}
+#home .dn{color:var(--stop);font-weight:800}#home .up{color:var(--run);font-weight:800}
+#home .g2x{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;margin-bottom:16px;align-items:start}
+#home .tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#home .tile{border:1px solid var(--border);border-left:4px solid var(--c);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;cursor:pointer;background:var(--surface)}
+#home .tile:hover{box-shadow:var(--shadow-2)}
+#home .tile-h{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+#home .tile-h b{font-size:15px;display:block}#home .tile-h small{font-size:12px;color:var(--text-3)}
+#home .tile .time{font-family:var(--font-head);font-size:22px;font-weight:700}
+#home .tile .time small{font-family:var(--font);font-size:12px;font-weight:600;color:var(--text-3);margin-left:6px}
+#home .tile .ord{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--text-2)}
+#home .tile .ord b{color:var(--text);white-space:nowrap}
+#home .tile.offline{background:repeating-linear-gradient(135deg,var(--surface-2) 0 8px,var(--surface) 8px 16px)}
+#home .rd{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--reason-strong);margin-right:6px}
+#home .s-off{color:var(--text-2);background:var(--surface-3)}
+#home .alerts{display:flex;flex-direction:column;gap:10px}
+#home .alrt{display:grid;grid-template-columns:38px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px;border:1px solid var(--border);border-radius:12px}
+#home .alrt .ic{width:38px;height:38px;border-radius:10px;display:grid;place-items:center}
+#home .alrt b{display:block;font-size:14px}#home .alrt small{font-size:12.5px;color:var(--text-3)}
+#home .tip{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--text-2);background:var(--surface-2);border-radius:10px;padding:10px 12px;margin:0}
+#home .chart .ls{fill:var(--text);font-weight:700}
+#home .chart .hit{fill:transparent;cursor:pointer}#home .chart .hit:hover{fill:var(--brand-soft);fill-opacity:.5}
+#home .ovtl{display:flex;flex-direction:column;gap:10px}
+#home .tlr{display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;align-items:center;font-size:13px}
+#home .tlr.ax .num{display:flex;justify-content:space-between;font-size:11px;color:var(--text-3)}
+#home .answer{background:linear-gradient(180deg,var(--brand-soft),transparent);border:1px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;font-size:14px;line-height:1.55}
+#home .acts{display:flex;flex-direction:column}
+#home .act{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);font-size:14px;cursor:pointer}
+#home .act:last-child{border-bottom:0}
+#home .act small{display:block;font-size:12px;color:var(--text-3)}
+#home .act:has(.av){grid-template-columns:32px minmax(0,1fr) auto}
+#home .act .av{width:32px;height:32px;font-size:11px}
+#home .act .box{width:18px;height:18px;border:2px solid var(--border-strong);border-radius:5px}
+#home .due{font-size:12.5px;font-weight:800;color:var(--text-2);white-space:nowrap}#home .due.late{color:var(--stop)}
+@media (max-width:1200px){#home .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}#home .g2x{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:620px){#home .kpis{grid-template-columns:minmax(0,1fr)}#home .tiles{grid-template-columns:minmax(0,1fr)}#home .oee{flex-direction:column;align-items:stretch}#home .ring{align-self:center}#home .alrt{grid-template-columns:38px minmax(0,1fr)}#home .alrt>.btn,#home .alrt>.pill{grid-column:2;justify-self:start}}
+.tv-pages{flex:1;min-height:0;display:flex;flex-direction:column;position:relative}
+.tv-pg{flex:1;min-height:0;display:grid;gap:1em;padding:0 1.8em 1em;animation:tvin .6s cubic-bezier(.2,.8,.2,1)}
+.tv-pg[hidden]{display:none}
+@keyframes tvin{from{opacity:0;transform:translateY(.8em)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.tv-pg{animation:none}}
+.tv-ft{display:flex;align-items:center;gap:1em;padding:.2em 1.8em 1em;font-size:.95em;opacity:.8}
+.tv-dots{display:flex;gap:.5em;margin:0 auto}
+.tv-dots i{width:.7em;height:.7em;border-radius:50%;background:#28434C;transition:background .3s,width .3s}
+.tv-dots i.on{background:#1FCBE0;width:2em;border-radius:.35em}
+.tv-cn{display:flex;align-items:center;gap:.4em;font-weight:700}.tv-cn:before{content:"";width:.6em;height:.6em;border-radius:50%;background:#22C55E}
+.tv-ttl{font-size:1em;font-weight:800;letter-spacing:.06em;text-transform:uppercase;opacity:.65}
+.p1{grid-template-columns:repeat(4,1fr);grid-template-rows:minmax(0,1fr) auto}
+.mt4{background:#0D2028;border-radius:.9em;padding:1.1em 1.2em;border-top:.5em solid var(--c);display:flex;flex-direction:column;gap:.35em}
+.mt4 b{font-family:var(--font-head);font-size:2.3em;line-height:1}
+.mt4 .st{font-size:1.35em;font-weight:800;color:var(--c)}
+.mt4 .tm{font-family:var(--font-head);font-size:3.3em;font-weight:700;line-height:1;margin-top:auto}
+.mt4 small{font-size:1em;opacity:.7}
+.mt4 .pb{height:.6em;border-radius:.3em;background:#173640;overflow:hidden}.mt4 .pb i{display:block;height:100%;background:#1FCBE0}
+.p1 .sum{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:1em}
+.kp{background:#0D2028;border-radius:.9em;padding:.8em 1.2em;display:flex;align-items:baseline;gap:.6em}
+.kp b{font-family:var(--font-head);font-size:2.4em}.kp small{opacity:.7;font-size:1em}
+.p2{grid-template-columns:1.6fr 1fr}
+.hrs{position:relative;display:flex;align-items:flex-end;gap:1.4em;height:100%;padding:1em 0 0}
+.hrs>div{flex:1;display:flex;flex-direction:column;align-items:center;gap:.4em;height:100%;justify-content:flex-end;position:relative}
+.hrs .bar{width:100%;border-radius:.5em .5em 0 0;background:#1FCBE0}.hrs .bar.lo{background:#FACC15}.hrs .bar.now{background:repeating-linear-gradient(135deg,#1FCBE0 0 .4em,#0f6f7d .4em .8em)}
+.hrs .pl{position:absolute;left:0;right:0;height:0;border-top:.18em dashed #A6C5CE;pointer-events:none;display:block}.p3 .tvc:last-child .row3{font-size:1.4em}.hrs .pl b{position:absolute;right:0;top:-1.5em;font-size:1em;opacity:.8}
+.hrs span{font-size:1.1em;font-weight:700;opacity:.8}.hrs em{font-style:normal;font-weight:800;font-size:1.2em}
+.p3{grid-template-columns:repeat(3,1fr)}
+.p3 ol{margin:.6em 0 0;padding-left:1.2em;font-size:1.9em;line-height:1.9;font-weight:700}
+.p3 .row3{display:flex;justify-content:space-between;font-size:1.75em;font-weight:700;padding:.55em 0;border-top:1px solid #173640}
+.p3 .row3:first-of-type{border-top:0}
+.tv.off .tv-scr{position:relative}
+.tv.off .tv-pages{opacity:.45;filter:grayscale(1)}
+.tv.off .tv-cn:before{background:#7D8C95}
+.tv-offbar{display:none;align-items:center;gap:.6em;background:#3A4549;color:#fff;font-weight:800;font-size:1.25em;padding:.6em 1.8em}
+.tv.off .tv-offbar{display:flex}
+.pair{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.2em;text-align:center}
+.pair .code{font-family:var(--font-head);font-size:7em;font-weight:700;letter-spacing:.12em;color:#5FE0F0;line-height:1}
+.pair p{font-size:1.6em;opacity:.85;max-width:30em;line-height:1.4}
+.pair .wait{display:flex;align-items:center;gap:.6em;font-size:1.2em;opacity:.7}
+.tv-ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;margin-top:10px}
+.tv-ctl .lbl{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3)}
+.tv-ctl button.on{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+</style>
+</head>
+<body data-module="S17">
+<main id="screens">
+
+
+
+
+
+
+<section class="screen" id="tv" data-ask='["What does the line board show?","Why is the board grey?"]'>
+  <div class="devices"><div><div class="tv" data-tv><div class="tv-scr">
+    <div class="tv-offbar"><svg class="i"><use href="#i-wifioff"/></svg>No connection since 10:42 · numbers are not live</div>
+    <div class="tv-top"><span>Line 2 · Edging</span><span style="opacity:.7;font-size:.8em">Morning shift · ends 14:00</span><span class="num">10:58</span></div>
+    <div class="tv-pages">
+      <div class="tv-pg p1"><div class="mt4" style="--c:#22C55E"><b>K-3</b><span class="st">Running</span><small>Panel saw · order 1042-117</small><div class="pb"><i style="width:64%"></i></div><span class="tm num">2:14</span></div><div class="mt4" style="--c:#EF4444"><b>K-5</b><span class="st">Stopped · needs reason</span><small>Edge bander · order 1042-118</small><div class="pb"><i style="width:72%"></i></div><span class="tm num">6:12</span></div><div class="mt4" style="--c:#F06BB4"><b>K-7</b><span class="st">Andon · Nils on the way</span><small>Drill line · order 1042-118</small><div class="pb"><i style="width:40%"></i></div><span class="tm num">3:10</span></div><div class="mt4" style="--c:#22C55E"><b>K-9</b><span class="st">Running</span><small>Packer · order 1042-116</small><div class="pb"><i style="width:91%"></i></div><span class="tm num">58:20</span></div>
+        <div class="sum"><div class="kp"><small>Made</small><b class="num">1 240</b><small>plan 1 400 by now</small></div><div class="kp"><small>Behind plan</small><b class="num" style="color:#FACC15">−160</b></div><div class="kp"><small>Availability this shift</small><b class="num">78 %</b></div></div></div>
+      <div class="tv-pg p2" hidden><div class="tvc"><span class="tv-ttl">This shift · good pieces per hour</span><div class="hrs"><div><em class="num">312</em><div class="bar " style="height:82%"></div><span>06</span></div><div><em class="num">298</em><div class="bar " style="height:78%"></div><span>07</span></div><div><em class="num">260</em><div class="bar lo" style="height:68%"></div><span>08</span></div><div><em class="num">330</em><div class="bar " style="height:87%"></div><span>09</span></div><div><em class="num">212</em><div class="bar now" style="height:56%"></div><span>10 now</span></div><div class="pl" style="bottom:calc((100% - 4.2em) * .82 + 2.2em)"><b>Plan 300</b></div></div></div>
+        <div class="tvc"><span class="tv-ttl">This hour</span><div class="v num">212<span style="font-size:.4em;opacity:.7"> of 300</span></div><small>on plan would be 290 by 10:58</small><div style="margin-top:auto" class="tv-ttl">Top stop today</div><div style="font-size:1.8em;font-weight:800">Jam in feeder</div><small>K-5 · 3 times · 18 min</small></div></div>
+      <div class="tv-pg p3" hidden><div class="tvc"><span class="tv-ttl">Yesterday by shift</span><div class="row3"><span>Morning</span><span class="num">71 %</span></div><div class="row3"><span>Evening</span><span class="num">64 %</span></div><div class="row3"><span>Night</span><span class="num">58 %</span></div><small style="margin-top:auto">OEE · target 75 %</small></div>
+        <div class="tvc"><span class="tv-ttl">Top 3 losses yesterday</span><ol><li>Material wait · 52 min</li><li>Jam in feeder · 38 min</li><li>Changeover over standard · 21 min</li></ol></div>
+        <div class="tvc"><span class="tv-ttl">Open actions · today's orders</span><div class="row3"><span>Feeder guide K-5</span><span>Nils · Fri</span></div><div class="row3"><span>Material buffer L2</span><span>Sami · Mon</span></div><div class="row3"><span>1042-118 · H-120</span><span class="num">720 / 1 000</span></div><div class="row3"><span>1042-119 · H-140</span><span>next</span></div></div></div>
+    </div>
+    <div class="tv-ft"><span class="tv-cn">Live</span><span class="tv-dots"><i class="on"></i><i></i><i></i></span><span>Board Line 2 · page changes every 20 s</span></div>
+  </div></div><p class="dev-cap"><b>Line board on a TV</b> · no sign-in and no buttons; it shows itself, readable from 5 metres</p>
+  <div class="tv-ctl"><span class="lbl">Prototype · show</span><button class="btn sm" type="button" data-tv-page="0">1 · Line status</button><button class="btn sm" type="button" data-tv-page="1">2 · This hour</button><button class="btn sm" type="button" data-tv-page="2">3 · Huddle</button><button class="btn sm" type="button" data-tv-off>No connection</button><a class="btn sm" href="#" data-to="s07-alerts-andon#banner">Andon banner</a><a class="btn sm" href="#" data-to="s17-dashboards-reports#tv-pair">First start</a></div></div></div>
+  <div class="states"><span class="badge b-off">No connection: grey bar "No connection since 10:42", numbers greyed, never shown as live</span><span class="badge b-warn">Pages and times are set by the admin in Boards (web)</span><span class="badge">Andon or a long stop shows as a banner over any page</span></div>
+</section>
+
+<section class="screen" id="tv-pair" data-ask='["How do I connect a TV to a board?"]'>
+  <div class="devices"><div><div class="tv"><div class="tv-scr">
+    <div class="tv-top"><span><svg style="width:1.4em;height:1.4em;vertical-align:-.25em"><use href="#mark"/></svg> fp analyzer</span><span class="num">06:41</span></div>
+    <div class="pair"><span class="tv-ttl">Connect this screen</span><div class="code">K7P-4QZ</div><p>Enter the code <b>K7P-4QZ</b> under Boards in FP Analyzer. The board shows up here within 5 seconds.</p><div class="wait"><span class="spin" style="border-color:rgba(255,255,255,.25);border-top-color:#fff;width:1.2em;height:1.2em;border-width:.2em;border-style:solid;border-radius:50%;display:inline-block"></span>Waiting for an admin · code changes in 9 min</div></div>
+  </div></div><p class="dev-cap"><b>First start of a TV</b> · open the board page or the FP app in kiosk mode, the code appears</p>
+  <div class="tv-ctl"><span class="lbl">Prototype</span><a class="btn sm" href="#" data-to="s17-dashboards-reports#boards" data-toast="Lena types K7P-4QZ under Boards">Admin enters the code</a><a class="btn sm primary" href="#" data-to="s17-dashboards-reports#tv" data-toast="Paired · Board Line 2">TV shows the board</a></div></div></div>
+  <div class="states"><span class="badge">The code is only shown on the TV and expires after 10 minutes</span><span class="badge">A TV session never logs out; the admin can disconnect it any time</span></div>
+</section>
+
+
+
+
+
+
+</main>
+<script src="../assets/fp.js"></script>
+</body>
+</html>

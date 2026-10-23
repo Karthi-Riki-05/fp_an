@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>S00 Platform Foundation</title>
+<meta name="description" content="FP Analyzer v3 prototype, module S00: system health, jobs, database migrations and runtime configuration for FP platform staff.">
+<!-- Written for: the FP owner, client reviewers and developers building S00. Prototype only; all names and numbers are fictional. -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Poppins:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="../assets/fp.css">
+<style>
+.chk{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+.chk .d{width:12px;height:12px;border-radius:50%}
+.chk.bad{border-color:var(--stop);box-shadow:0 0 0 3px var(--stop-soft)}
+.gauge-row{display:grid;grid-template-columns:110px minmax(0,1fr) 70px;gap:10px;align-items:center;font-size:13px;margin-top:8px}
+</style>
+</head>
+<body data-module="S00">
+<main id="screens">
+
+<section class="screen" id="health" data-ask='["Why is the ingest inbox growing?","Which job domain has dead jobs?","Is the platform healthy enough to deploy?"]'>
+  <div class="ph"><div><h1>System health</h1><p>Platform status right now. Refreshes every 10 seconds.</p></div><div class="ph-a"><span class="badge b-warn">Degraded · 1 check</span><button class="btn" type="button" data-toast="Refreshed"><svg class="i sm"><use href="#i-refresh"/></svg>Refresh</button></div></div>
+  <div class="banner warn mb"><svg class="i"><use href="#i-alert"/></svg><div><b>Ingest inbox is slow.</b> Oldest unprocessed message is 74 s old (alert at 60 s). 2 workers busy with a replay for Björkdal Möbler.</div><span class="sp"></span><a href="#" data-go="jobs" class="b">See jobs</a></div>
+  <div class="g g4 keep2 mb">
+    <div class="card kpi"><div class="kpi-l">API p95</div><div class="kpi-v num">182<small>ms</small></div><div class="kpi-f">Target under 400 ms</div></div>
+    <div class="card kpi"><div class="kpi-l">Inbox depth <span class="delta dn">74 s old</span></div><div class="kpi-v num">3,920</div><div class="kpi-f">Rate 410 msg/s</div></div>
+    <div class="card kpi"><div class="kpi-l">Job backlog</div><div class="kpi-v num">212</div><div class="kpi-f">Dead jobs: <b style="color:var(--stop)">3</b></div></div>
+    <div class="card kpi"><div class="kpi-l">Dead deliveries</div><div class="kpi-v num">7</div><div class="kpi-f">Webhooks and e-mail</div></div>
+  </div>
+  <div class="g g2">
+    <div class="card"><div class="card-h"><h3>Readiness checks</h3><span class="muted">9 of 10 green</span></div><div class="card-b stack tight">
+      <div class="chk"><span class="d" style="background:var(--run-fill)"></span><div><b>Master database</b><span class="t2 small muted"> · 4 ms</span></div><span class="small muted">OK</span></div>
+      <div class="chk"><span class="d" style="background:var(--run-fill)"></span><div><b>Company databases (43)</b><span class="small muted"> · all reachable</span></div><span class="small muted">OK</span></div>
+      <div class="chk"><span class="d" style="background:var(--run-fill)"></span><div><b>Redis</b><span class="small muted"> · 1 ms</span></div><span class="small muted">OK</span></div>
+      <div class="chk"><span class="d" style="background:var(--run-fill)"></span><div><b>MQTT broker (primary)</b><span class="small muted"> · 1,204 clients</span></div><span class="small muted">OK</span></div>
+      <div class="chk"><span class="d" style="background:var(--run-fill)"></span><div><b>MQTT broker (warm standby)</b><span class="small muted"> · in sync</span></div><span class="small muted">OK</span></div>
+      <div class="chk bad"><span class="d" style="background:var(--stop-fill)"></span><div><b>Ingest inbox age</b><span class="small muted"> · 74 s, limit 60 s</span></div><span class="badge b-stop">Failing</span></div>
+      <div class="chk"><span class="d" style="background:var(--run-fill)"></span><div><b>Object storage</b></div><span class="small muted">OK</span></div>
+      <div class="chk"><span class="d" style="background:var(--run-fill)"></span><div><b>E-mail and SMS provider</b></div><span class="small muted">OK</span></div>
+      <div class="chk"><span class="d" style="background:var(--run-fill)"></span><div><b>Push (FCM / APNs)</b></div><span class="small muted">OK</span></div>
+      <div class="chk"><span class="d" style="background:var(--run-fill)"></span><div><b>AI provider</b><span class="small muted"> · 1.2 s</span></div><span class="small muted">OK</span></div>
+    </div></div>
+    <div class="stack">
+      <div class="card"><div class="card-h"><h3>Job backlog by domain</h3></div><div class="card-b">
+        <div class="gauge-row"><span>ingest</span><span class="bar warn"><i style="width:78%"></i></span><b class="num right">164</b></div>
+        <div class="gauge-row"><span>oee</span><span class="bar"><i style="width:18%"></i></span><b class="num right">31</b></div>
+        <div class="gauge-row"><span>alerts</span><span class="bar"><i style="width:6%"></i></span><b class="num right">9</b></div>
+        <div class="gauge-row"><span>reports</span><span class="bar"><i style="width:4%"></i></span><b class="num right">6</b></div>
+        <div class="gauge-row"><span>ai</span><span class="bar"><i style="width:2%"></i></span><b class="num right">2</b></div>
+      </div></div>
+      <div class="card"><div class="card-h"><h3>Migrations</h3><a href="#" data-go="migrations" class="small b">Open</a></div><div class="card-b"><div class="row"><span class="badge b-run">42 current</span><span class="badge b-warn">1 pending · Solgran Kök</span><span class="badge">0 failed</span></div></div></div>
+    </div>
+  </div>
+  <div class="states"><h4>Other states</h4><div class="state-grid">
+    <figure class="state"><figcaption>Loading</figcaption><div class="stack tight"><div class="skel" style="width:60%"></div><div class="skel"></div><div class="skel" style="width:80%"></div></div></figure>
+    <figure class="state"><figcaption>All green</figcaption><div class="banner ok"><svg class="i"><use href="#i-check"/></svg><div><b>All 10 checks pass.</b> Last problem 6 days ago.</div></div></figure>
+  </div></div>
+</section>
+
+<section class="screen" id="jobs" data-ask='["Why did the oee.recompute jobs fail?","Which company has the most retries today?"]'>
+  <div class="ph"><div><h1>Jobs</h1><p>Background work across all companies.</p></div><div class="ph-a"><button class="btn" type="button" data-toast="3 dead jobs queued again">Retry all dead</button></div></div>
+  <div class="filters"><button class="fchip on" type="button">Status: <b>Dead</b> <span class="badge">3</span></button><button class="fchip" type="button">Retrying <span class="badge">12</span></button><button class="fchip" type="button">Running <span class="badge">8</span></button><button class="fchip" type="button">Name: <b>All</b></button><button class="fchip" type="button">Company: <b>All</b></button><button class="fchip" type="button">Last 24 h</button></div>
+  <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Job</th><th>Company</th><th>Status</th><th>Tries</th><th>Last error</th><th>Updated</th><th></th></tr></thead><tbody>
+    <tr class="bad"><td><b class="mono">oee.recompute_window</b><span class="t2">key nordvik-tra:K-5:2026-10-21:N</span></td><td>Nordvik Trä AB</td><td><span class="badge b-stop">Dead</span></td><td>8 / 8</td><td class="small">S06_RATE_MISSING: product H-80 has no ideal rate on K-5</td><td>09:41</td><td class="act"><button class="btn sm" type="button" data-toast="Queued again">Retry</button><button class="btn sm ghost" type="button" data-toast="Job cancelled">Cancel</button></td></tr>
+    <tr class="bad"><td><b class="mono">reports.render_pdf</b><span class="t2">weekly-oee · run 8812</span></td><td>Björkdal Möbler AB</td><td><span class="badge b-stop">Dead</span></td><td>5 / 5</td><td class="small">Timeout after 120 s</td><td>08:02</td><td class="act"><button class="btn sm" type="button">Retry</button><button class="btn sm ghost" type="button">Cancel</button></td></tr>
+    <tr><td><b class="mono">ingest.replay</b><span class="t2">device U-22 · 14,220 events</span></td><td>Björkdal Möbler AB</td><td><span class="badge b-setup">Running · 61 %</span></td><td>1</td><td class="small muted">—</td><td>10:47</td><td class="act"><button class="btn sm ghost" type="button">Cancel</button></td></tr>
+    <tr><td><b class="mono">alerts.escalate</b><span class="t2">alert 55120 step 2</span></td><td>Nordvik Trä AB</td><td><span class="badge b-warn">Retrying in 30 s</span></td><td>2 / 6</td><td class="small">SMS provider 503</td><td>10:46</td><td class="act"><button class="btn sm ghost" type="button">Cancel</button></td></tr>
+  </tbody></table></div></div>
+  <div class="states"><h4>Other states</h4><div class="state-grid">
+    <figure class="state"><figcaption>Empty</figcaption><div class="empty"><span class="ic"><svg class="i lg"><use href="#i-check"/></svg></span><h3>No dead jobs</h3><p>Everything that failed has been retried or cancelled.</p></div></figure>
+    <figure class="state"><figcaption>Error loading</figcaption><div class="banner err"><svg class="i"><use href="#i-alert"/></svg><div><b>Could not load jobs.</b> The jobs database did not answer within 5 s.</div></div><button class="btn" type="button">Try again</button></figure>
+  </div></div>
+</section>
+
+<section class="screen" id="migrations" data-ask='["Which companies failed migration 0143?","Is it safe to run 0144 now?"]'>
+  <div class="ph"><div><h1>Database migrations</h1><p>Schema changes applied company by company.</p></div><div class="ph-a"><button class="btn" type="button" data-toast="Dry run started on all companies">Dry run</button><button class="btn primary" type="button" data-toast="Run started; other runs are locked">Run pending</button></div></div>
+  <div class="card mb"><div class="tbl-wrap"><table class="table"><thead><tr><th>Migration</th><th>Applied</th><th>Pending</th><th>Failed</th><th>Released</th><th></th></tr></thead><tbody>
+    <tr><td><b class="mono">0144_s15_runs_changeover_class</b><span class="t2">adds runs.changeover_class</span></td><td>42</td><td><span class="badge b-warn">1</span></td><td>0</td><td>today 07:30</td><td class="act"><button class="btn sm ghost" type="button">Detail</button></td></tr>
+    <tr><td><b class="mono">0143_s08_reason_icon</b></td><td>43</td><td>0</td><td>0</td><td>14 Oct</td><td class="act"><button class="btn sm ghost" type="button">Detail</button></td></tr>
+    <tr><td><b class="mono">0142_s07_quiet_hours</b></td><td>43</td><td>0</td><td>0</td><td>2 Oct</td><td class="act"><button class="btn sm ghost" type="button">Detail</button></td></tr>
+  </tbody></table></div></div>
+  <div class="g g2">
+    <div class="card"><div class="card-h"><h3>0144 · per company</h3></div><div class="tbl-wrap"><table class="table compact"><thead><tr><th>Company</th><th>Status</th><th>Time</th></tr></thead><tbody>
+      <tr><td>Nordvik Trä AB</td><td><span class="badge b-run">Applied</span></td><td>3.1 s</td></tr><tr><td>Björkdal Möbler AB</td><td><span class="badge b-run">Applied</span></td><td>2.4 s</td></tr>
+      <tr><td>Solgran Kök AB</td><td><span class="badge b-warn">Pending</span></td><td>—</td></tr><tr><td>Lindqvist Golv AB</td><td><span class="badge b-run">Applied</span></td><td>0.9 s</td></tr></tbody></table></div></div>
+    <div class="card"><div class="card-h"><h3>Run log</h3><span class="badge b-setup">Running · locked</span></div><div class="card-b"><div class="code"><span class="c">10:42:01</span> run 311 started by Mira S.
+<span class="c">10:42:01</span> lock acquired <span class="k">migrations:global</span>
+<span class="c">10:42:04</span> nordvik-tra <span class="s">0144 ok</span> 3.1 s
+<span class="c">10:42:07</span> bjorkdal <span class="s">0144 ok</span> 2.4 s
+<span class="c">10:42:08</span> solgran <span class="n">waiting</span> (company in pilot freeze)</div></div></div>
+  </div>
+  <div class="states"><h4>Other states</h4><div class="state-grid">
+    <figure class="state"><figcaption>Failed</figcaption><div class="banner err"><svg class="i"><use href="#i-alert"/></svg><div><b>0144 failed on Solgran Kök AB.</b> duplicate column "changeover_class". The company stays on 0143; other companies continue.</div></div><button class="btn" type="button">Open error</button></figure>
+  </div></div>
+</section>
+
+<section class="screen" id="config" data-ask='["What changed in configuration this week?","Which companies override ai.budget_warn_pct?"]'>
+  <div class="ph"><div><h1>Configuration and flags</h1><p>Runtime values. Changes apply within 30 seconds and are written to the audit log.</p></div></div>
+  <div class="filters"><div class="ig" style="width:260px;height:34px"><svg class="i sm"><use href="#i-search"/></svg><input placeholder="Search key"></div><button class="fchip on" type="button">Scope: <b>Platform</b></button><button class="fchip" type="button">Company overrides <span class="badge">14</span></button></div>
+  <div class="g g-side">
+    <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Key</th><th>Type</th><th>Default</th><th>Current</th><th>Scope</th><th></th></tr></thead><tbody>
+      <tr><td><b class="mono">ingest.inbox_age_alert_s</b></td><td>int</td><td>60</td><td>60</td><td>platform</td><td class="act"><button class="btn sm ghost" type="button">Edit</button></td></tr>
+      <tr class="sel"><td><b class="mono">ai.budget_warn_pct</b></td><td>int 1–99</td><td>80</td><td><b>80</b></td><td>company</td><td class="act"><button class="btn sm" type="button">Editing</button></td></tr>
+      <tr><td><b class="mono">flag.kiosk_qr_signin</b></td><td>bool</td><td>false</td><td><span class="badge b-run">true</span></td><td>platform</td><td class="act"><button class="btn sm ghost" type="button">Edit</button></td></tr>
+      <tr><td><b class="mono">alerts.sms_max_per_hour</b></td><td>int</td><td>30</td><td>30</td><td>company</td><td class="act"><button class="btn sm ghost" type="button">Edit</button></td></tr>
+    </tbody></table></div></div>
+    <div class="card"><div class="card-h"><h3>Edit ai.budget_warn_pct</h3></div><div class="card-b stack">
+      <div class="field"><label>Value for Nordvik Trä AB</label><input class="input bad" value="120"><span class="err"><svg class="i xs"><use href="#i-alert"/></svg>Must be between 1 and 99.</span></div>
+      <div class="field"><label>Reason</label><input class="input" value="Customer asked for an earlier warning"></div>
+      <div class="sect" style="margin-top:6px">History</div>
+      <div class="small dim">2 Oct · Mira S. · 80 → 70 (Solgran Kök)<br>14 Sep · system · created with default 80</div>
+    </div><div class="card-f"><button class="btn" type="button">Cancel</button><button class="btn primary" type="button" disabled>Save</button></div></div>
+  </div>
+  <div class="card pad mt"><b>Change history</b><div class="list mt-s"><div class="li"><span class="ic"><svg class="i"><use href="#i-history"/></svg></span><div><b>ingest.max_batch 500 → 1000</b><small>Pekka Niemi · 20 Oct 14:02 · from the audit log (S19)</small></div><span></span></div></div></div>
+</section>
+
+</main>
+<script src="../assets/fp.js"></script>
+</body>
+</html>

@@ -113,6 +113,11 @@ services:
       HOSTNAME: '0.0.0.0'
     ports:
       - '3000:3000'
+    # Design prototype, served as static files at /design/ and /design-packs/ so a
+    # `git pull` is enough (no image rebuild). Restart the frontend if files were added.
+    volumes:
+      - ./docs/design:/app/public/design:ro
+      - ./docs/design-platforms:/app/public/design-packs:ro
     networks: [internal]
     depends_on:
       backend:

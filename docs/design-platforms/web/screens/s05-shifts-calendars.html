@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>S05 Shifts Calendars</title>
+<meta name="description" content="FP Analyzer v3 prototype, module S05: shifts, calendars, week templates, assignments, holidays, exceptions, planned stops, shift calendar and replanning the past.">
+<!-- Written for: the FP owner, client reviewers and developers building S05. Prototype only; all names and numbers are fictional. -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Poppins:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="../assets/fp.css">
+<style>
+.shc{display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--c);margin-right:6px;vertical-align:-1px}
+.week{display:grid;grid-template-columns:70px repeat(7,minmax(0,1fr));gap:4px;font-size:12px;min-width:640px}
+.week .hd{font-weight:800;color:var(--text-3);text-align:center;padding:4px 0}
+.week .lab{font-weight:750;color:var(--text-2);display:flex;align-items:center}
+.week .blk{height:34px;border-radius:7px;display:grid;place-items:center;font-weight:800;color:#fff;background:var(--c)}
+.week .blk.no{background:var(--surface-2);color:var(--text-3);font-weight:650}
+.day24{position:relative;height:30px;border-radius:8px;background:var(--surface-2);overflow:hidden}
+.day24 i{position:absolute;top:0;bottom:0;background:var(--c);display:grid;place-items:center;color:#fff;font-size:11px;font-style:normal;font-weight:800}
+.day24 i.brk{background:var(--planned);color:var(--text)}
+.ax24{display:flex;justify-content:space-between;font-size:10.5px;color:var(--text-3);margin-top:4px}
+.cal .ev{color:#fff}
+.cal .ev.n{background:#5B6BC9}.cal .ev.m{background:var(--brand);color:var(--on-brand)}.cal .ev.e{background:#8A6BD8}.cal .ev.h{background:var(--stop-fill)}.cal .ev.x{background:var(--reason-dot);color:#2A1A00}.cal .ev.p{background:var(--planned);color:var(--text)}
+</style>
+</head>
+<body data-module="S05">
+<main id="screens">
+
+<section class="screen" id="shifts" data-ask='["How many planned hours does Line 2 have next week?","Which shifts overlap?"]'>
+  <div class="ph"><div><h1>Shifts</h1><p>The working times your plant uses. FP only counts a stop as lost time when it happens inside a shift.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="New shift"><svg class="i sm"><use href="#i-plus"/></svg>New shift</button></div></div>
+  <div class="g g-side">
+    <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Shift</th><th>Time</th><th>Breaks</th><th>Planned time</th><th>Used in</th></tr></thead><tbody>
+      <tr><td><span class="shc" style="--c:#5B6BC9"></span><b>Night</b></td><td class="num">22:00 – 06:00</td><td>2 × 20 min</td><td class="num">7 h 20 m</td><td>2 calendars</td></tr>
+      <tr class="sel"><td><span class="shc" style="--c:var(--brand)"></span><b>Morning</b></td><td class="num">06:00 – 14:00</td><td>30 + 15 min</td><td class="num">7 h 15 m</td><td>3 calendars</td></tr>
+      <tr><td><span class="shc" style="--c:#8A6BD8"></span><b>Evening</b></td><td class="num">14:00 – 22:00</td><td>30 + 15 min</td><td class="num">7 h 15 m</td><td>3 calendars</td></tr>
+      <tr><td><span class="shc" style="--c:#C98A2B"></span><b>Day (office)</b></td><td class="num">07:00 – 16:00</td><td>60 min</td><td class="num">8 h 00 m</td><td>1 calendar</td></tr>
+    </tbody></table></div></div>
+    <div class="card"><div class="card-h"><h3>Morning</h3></div><div class="card-b stack">
+      <div class="g g2"><div class="field"><label>Starts</label><input class="input" value="06:00"></div><div class="field"><label>Ends</label><input class="input" value="14:00"></div></div>
+      <div><div class="day24"><i style="--c:var(--brand);left:25%;width:33.3%"></i><i class="brk" style="left:37.5%;width:2.1%"></i><i class="brk" style="left:47.9%;width:1%"></i></div><div class="ax24"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div></div>
+      <div class="sect" style="margin:6px 0 0">Breaks (not counted as lost time)</div>
+      <div class="li"><svg class="i sm"><use href="#i-clock"/></svg><span>Lunch 09:00 – 09:30</span><button class="btn sm ghost icon" type="button" aria-label="Remove"><svg class="i sm"><use href="#i-trash"/></svg></button></div>
+      <div class="li"><svg class="i sm"><use href="#i-clock"/></svg><span>Coffee 11:30 – 11:45</span><button class="btn sm ghost icon" type="button" aria-label="Remove"><svg class="i sm"><use href="#i-trash"/></svg></button></div>
+      <button class="btn sm" type="button"><svg class="i sm"><use href="#i-plus"/></svg>Add break</button>
+    </div><div class="card-f"><button class="btn primary" type="button" data-toast="Saved">Save</button></div></div>
+  </div>
+  <div class="states"><h4>Other states</h4><div class="state-grid">
+    <figure class="state"><figcaption>Overlapping shifts</figcaption><div class="banner err"><svg class="i"><use href="#i-alert"/></svg><div><b>Morning and Day overlap 07:00–14:00</b> on Line 2. A machine can only be in one shift at a time.</div></div></figure>
+    <figure class="state"><figcaption>Shift over midnight</figcaption><div class="banner info"><svg class="i"><use href="#i-info"/></svg><div>Night runs 22:00–06:00. It is counted on the day it <b>starts</b>.</div></div></figure>
+  </div></div>
+  <div class="card pad mt"><div class="row between"><b>Morning · 06:00–14:00</b><span class="small muted">8 h, net 7 h 15 min</span></div><div class="row mt-s" style="gap:10px;flex-wrap:wrap"><span class="badge b-off">Break 09:00–09:15</span><span class="badge b-off">Lunch 11:30–12:00</span></div><div class="row between mt"><div><b>Machine keeps running during lunch</b><p class="small muted">Then stops in that break count as normal stops.</p></div><span class="switch"></span></div></div>
+</section>
+
+<section class="screen" id="calendars" data-ask='["Which machines have no calendar?"]'>
+  <div class="ph"><div><h1>Calendars</h1><p>A calendar says which shifts run on which days. Lines and machines use a calendar.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="New calendar"><svg class="i sm"><use href="#i-plus"/></svg>New calendar</button></div></div>
+  <div class="g g3">
+    <div class="card pad"><div class="row between"><b>2-shift weekdays</b><span class="badge b-brand">Default</span></div><p class="small muted mt-s">Mon–Fri · Morning + Evening · 72 h 30 m a week</p><div class="row mt"><span class="badge">Line 2</span><span class="badge">Line 3</span><span class="badge">+ 6 machines</span></div><button class="btn sm mt" type="button" data-go="templates">Edit week</button></div>
+    <div class="card pad"><b>3-shift continuous</b><p class="small muted mt-s">Mon–Sun · Night + Morning + Evening · 152 h a week</p><div class="row mt"><span class="badge">Line 5 · Press</span></div><button class="btn sm mt" type="button" data-go="templates">Edit week</button></div>
+    <div class="card pad"><b>Office day</b><p class="small muted mt-s">Mon–Fri · Day · 40 h a week</p><div class="row mt"><span class="badge b-warn">Not used</span></div><button class="btn sm mt" type="button" data-go="templates">Edit week</button></div>
+  </div>
+  <div class="banner warn mt"><svg class="i"><use href="#i-alert"/></svg><div><b>2 machines have no calendar</b> (K-11, P-4). FP treats all their time as unplanned until you choose one. <a href="#assignments" data-go="assignments">Assign now</a></div></div>
+  <div class="card pad mt"><b>Preview · next 14 days</b><div class="tl lg mt-s"><i class="r" style="flex:5"></i><i class="o" style="flex:2"></i><i class="r" style="flex:5"></i><i class="o" style="flex:2"></i></div><div class="tl-axis"><span>Mon 26</span><span>Sat 31</span><span>Mon 2</span><span>Sun 8</span></div><p class="small muted mt-s">Green: shifts planned. Grey: weekend, no shift.</p></div>
+</section>
+
+<section class="screen" id="templates" data-ask='["What changes if we add a Saturday shift?"]'>
+  <div class="ph"><div><h1>Week template · 2-shift weekdays</h1><p>Click a cell to switch a shift on or off for that day.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="Saved; applies from Monday">Save</button></div></div>
+  <div class="card"><div class="card-b tbl-wrap" style="padding-top:18px"><div class="week">
+    <div></div><div class="hd">Mon</div><div class="hd">Tue</div><div class="hd">Wed</div><div class="hd">Thu</div><div class="hd">Fri</div><div class="hd">Sat</div><div class="hd">Sun</div>
+    <div class="lab">Night</div><div class="blk no">off</div><div class="blk no">off</div><div class="blk no">off</div><div class="blk no">off</div><div class="blk no">off</div><div class="blk no">off</div><div class="blk no">off</div>
+    <div class="lab">Morning</div><div class="blk" style="--c:var(--brand)">06–14</div><div class="blk" style="--c:var(--brand)">06–14</div><div class="blk" style="--c:var(--brand)">06–14</div><div class="blk" style="--c:var(--brand)">06–14</div><div class="blk" style="--c:var(--brand)">06–14</div><div class="blk no">+ add</div><div class="blk no">off</div>
+    <div class="lab">Evening</div><div class="blk" style="--c:#8A6BD8">14–22</div><div class="blk" style="--c:#8A6BD8">14–22</div><div class="blk" style="--c:#8A6BD8">14–22</div><div class="blk" style="--c:#8A6BD8">14–22</div><div class="blk" style="--c:#8A6BD8">14–20</div><div class="blk no">off</div><div class="blk no">off</div>
+  </div></div><div class="card-f" style="justify-content:space-between"><span class="small muted">Planned time: <b>70 h 30 m a week</b> (Friday evening ends 20:00)</span><div class="row"><span class="small muted">Week pattern</span><div class="seg"><button class="on" type="button">Same every week</button><button type="button">2-week rotation</button></div></div></div></div>
+</section>
+
+<section class="screen" id="assignments" data-ask='["Which machines use a different calendar than their line?"]'>
+  <div class="ph"><div><h1>Who uses which calendar</h1><p>Machines follow their line unless you choose something else.</p></div></div>
+  <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Line or machine</th><th>Calendar</th><th>From</th><th>Where it comes from</th></tr></thead><tbody>
+    <tr><td><b>Line 2 · Edging</b></td><td>2-shift weekdays</td><td>1 Jan 2026</td><td><span class="badge b-brand">Set here</span></td></tr>
+    <tr><td style="padding-left:34px">K-3 Panel saw</td><td>2-shift weekdays</td><td>—</td><td class="muted">from Line 2</td></tr>
+    <tr><td style="padding-left:34px">K-5 Edge bander</td><td>2-shift weekdays</td><td>—</td><td class="muted">from Line 2</td></tr>
+    <tr><td><b>Line 5 · Press</b></td><td>3-shift continuous</td><td>1 Mar 2026</td><td><span class="badge b-brand">Set here</span></td></tr>
+    <tr class="warn"><td style="padding-left:34px">K-11 Sander</td><td><select class="input" style="height:32px"><option>Choose…</option><option>2-shift weekdays</option></select></td><td>—</td><td><span class="badge b-warn">Missing</span></td></tr>
+  </tbody></table></div></div>
+  <div class="card mt"><div class="card-h"><h3>Effective calendar per node</h3><button class="btn sm" type="button" data-toast="Pick a date; the new calendar applies from then, history stays">Change from date</button></div><div class="card-b list">
+    <div class="li"><span class="ic"><svg class="i"><use href="#i-building"/></svg></span><div><b>Furniture (area)</b><small><b>own</b> · 2-shift week</small></div><span></span></div>
+    <div class="li"><span class="ic"><svg class="i"><use href="#i-layers"/></svg></span><div><b>Line 2</b><small class="muted">inherited from Furniture</small></div><span></span></div>
+    <div class="li"><span class="ic" style="color:var(--stop)"><svg class="i"><use href="#i-alert"/></svg></span><div><b>P-4 Wrapper</b><small style="color:var(--stop)">No plan, OEE not calculated</small></div><span></span></div></div></div>
+</section>
+
+<section class="screen" id="holidays" data-ask='["Which holidays fall on a weekday this year?"]'>
+  <div class="ph"><div><h1>Holidays</h1><p>Days when the plant is closed. No time is planned, so no stops are counted.</p></div><div class="ph-a"><button class="btn" type="button" data-toast="Swedish public holidays added">Add Swedish public holidays</button><button class="btn primary" type="button" data-toast="New holiday"><svg class="i sm"><use href="#i-plus"/></svg>Add day</button></div></div>
+  <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Date</th><th>Name</th><th>Applies to</th><th></th></tr></thead><tbody>
+    <tr><td class="num">Fri 6 Nov 2026</td><td>All Saints' Day (eve, half day)</td><td>Hultsfred</td><td class="act"><button class="btn sm ghost" type="button">Edit</button></td></tr>
+    <tr><td class="num">Thu 24 Dec 2026</td><td>Christmas Eve</td><td>Whole company</td><td class="act"><button class="btn sm ghost" type="button">Edit</button></td></tr>
+    <tr><td class="num">Fri 25 Dec 2026</td><td>Christmas Day</td><td>Whole company</td><td class="act"><button class="btn sm ghost" type="button">Edit</button></td></tr>
+    <tr><td class="num">Mon 28 Dec – Fri 1 Jan</td><td>Winter shutdown</td><td>Hultsfred · Line 5 keeps running</td><td class="act"><button class="btn sm ghost" type="button">Edit</button></td></tr>
+  </tbody></table></div></div>
+  <div class="row mt"><button class="btn" type="button" data-toast="13 Swedish holidays for 2027 added; you can change them">Import Swedish holidays for 2027</button><span class="small muted">Half days (e.g. Midsummer Eve) can be switched per day.</span></div>
+</section>
+
+<section class="screen" id="exceptions" data-ask='["What overtime is planned this month?"]'>
+  <div class="ph"><div><h1>Exceptions</h1><p>One-off changes to the normal week: overtime, a shorter day, an extra shift.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="New exception"><svg class="i sm"><use href="#i-plus"/></svg>Add exception</button></div></div>
+  <div class="g g-side">
+    <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Date</th><th>Where</th><th>Change</th><th>By</th></tr></thead><tbody>
+      <tr><td class="num">Sat 24 Oct</td><td>Line 2</td><td><span class="badge b-run">+ Morning 06–14</span> overtime</td><td>Lena H.</td></tr>
+      <tr><td class="num">Fri 30 Oct</td><td>Hultsfred</td><td><span class="badge b-warn">Evening ends 18:00</span></td><td>Lena H.</td></tr>
+      <tr><td class="num">Tue 3 Nov</td><td>K-9</td><td><span class="badge">Night off</span></td><td>Elin S.</td></tr>
+    </tbody></table></div></div>
+    <div class="card"><div class="card-h"><h3>Add exception</h3></div><div class="card-b stack">
+      <div class="field"><label>Date</label><input class="input" value="Sat 24 Oct 2026"></div>
+      <div class="field"><label>Where</label><select class="input"><option>Line 2 · Edging</option></select></div>
+      <div class="field"><label>What changes</label><div class="stack tight" data-pick><label class="radio-card on"><span class="rd"></span><span><b>Extra shift</b><small>Add time that is normally off</small></span></label><label class="radio-card"><span class="rd"></span><span><b>Shorter or longer shift</b></span></label><label class="radio-card"><span class="rd"></span><span><b>No production</b></span></label></div></div>
+    </div><div class="card-f"><button class="btn primary" type="button" data-toast="Exception saved">Save</button></div></div>
+  </div>
+</section>
+
+<section class="screen" id="planned-stops" data-ask='["How much planned maintenance time is booked next week?"]'>
+  <div class="ph"><div><h1>Planned stops</h1><p>Stops you know about in advance, like maintenance or cleaning. They are shown separately and do not lower availability.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="New planned stop"><svg class="i sm"><use href="#i-plus"/></svg>Plan a stop</button></div></div>
+  <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>When</th><th>Machine</th><th>Type</th><th>Repeats</th><th>Counts in OEE as</th></tr></thead><tbody>
+    <tr><td class="num">Every Fri 13:30–14:00</td><td>Line 2 (all)</td><td>Cleaning</td><td>Weekly</td><td><span class="badge">Not planned time</span></td></tr>
+    <tr><td class="num">Wed 28 Oct 06:00–10:00</td><td>K-9 CNC router</td><td>Preventive maintenance</td><td>Once</td><td><span class="badge">Not planned time</span></td></tr>
+    <tr><td class="num">Mon 2 Nov 06:00–07:00</td><td>K-5 Edge bander</td><td>Trial run (new band)</td><td>Once</td><td><span class="badge b-warn">Planned, counts as loss</span></td></tr>
+  </tbody></table></div></div>
+  <div class="states"><h4>Other states</h4><div class="state-grid"><figure class="state"><figcaption>Machine was running during a planned stop</figcaption><div class="banner warn"><svg class="i"><use href="#i-alert"/></svg><div><b>K-9 ran during its planned stop</b> (Wed 06:00–10:00). Keep the plan, or mark the time as normal production?</div></div><div class="row"><button class="btn sm" type="button">Keep plan</button><button class="btn sm primary" type="button">Count as production</button></div></figure></div></div>
+</section>
+
+<section class="screen" id="shift-calendar" data-ask='["How many planned hours does Line 2 have in November?"]'>
+  <div class="ph"><div><h1>Shift calendar · Line 2</h1><p>Everything together: shifts, holidays, exceptions and planned stops.</p></div><div class="ph-a"><button class="btn ghost icon" type="button" aria-label="Previous month"><svg class="i"><use href="#i-chevl"/></svg></button><button class="fchip" type="button">October 2026</button><button class="btn ghost icon" type="button" aria-label="Next month"><svg class="i"><use href="#i-chev"/></svg></button></div></div>
+  <div class="legend mb"><span style="--c:var(--brand)"><i></i>Morning</span><span style="--c:#8A6BD8"><i></i>Evening</span><span style="--c:var(--stop-fill)"><i></i>Holiday</span><span style="--c:var(--reason-dot)"><i></i>Exception</span><span style="--c:var(--planned)"><i></i>Planned stop</span></div>
+  <div class="tbl-wrap"><div class="cal" style="min-width:700px">
+    <div class="dh">Mon</div><div class="dh">Tue</div><div class="dh">Wed</div><div class="dh">Thu</div><div class="dh">Fri</div><div class="dh">Sat</div><div class="dh">Sun</div>
+    <div class="out">28</div><div class="out">29</div><div class="out">30</div><div>1<span class="ev m">Morning</span><span class="ev e">Evening</span></div><div>2<span class="ev m">Morning</span><span class="ev e">Evening</span><span class="ev p">Cleaning</span></div><div>3</div><div>4</div>
+    <div>5<span class="ev m">Morning</span><span class="ev e">Evening</span></div><div>6<span class="ev m">Morning</span><span class="ev e">Evening</span></div><div>7<span class="ev m">Morning</span><span class="ev e">Evening</span></div><div>8<span class="ev m">Morning</span><span class="ev e">Evening</span></div><div>9<span class="ev m">Morning</span><span class="ev e">Evening</span><span class="ev p">Cleaning</span></div><div>10</div><div>11</div>
+    <div>12<span class="ev m">Morning</span><span class="ev e">Evening</span></div><div>13<span class="ev m">Morning</span><span class="ev e">Evening</span></div><div>14<span class="ev m">Morning</span><span class="ev e">Evening</span></div><div>15<span class="ev m">Morning</span><span class="ev e">Evening</span></div><div>16<span class="ev m">Morning</span><span class="ev e">Evening</span><span class="ev p">Cleaning</span></div><div>17</div><div>18</div>
+    <div>19<span class="ev m">Morning</span><span class="ev e">Evening</span></div><div>20<span class="ev m">Morning</span><span class="ev e">Evening</span></div><div>21<span class="ev m">Morning</span><span class="ev e">Evening</span></div><div class="today">22<span class="ev m">Morning</span><span class="ev e">Evening</span></div><div>23<span class="ev m">Morning</span><span class="ev e">Evening</span><span class="ev p">Cleaning</span></div><div>24<span class="ev x">+ Morning (overtime)</span></div><div>25</div>
+    <div>26<span class="ev m">Morning</span><span class="ev e">Evening</span></div><div>27<span class="ev m">Morning</span><span class="ev e">Evening</span></div><div>28<span class="ev m">Morning</span><span class="ev e">Evening</span></div><div>29<span class="ev m">Morning</span><span class="ev e">Evening</span></div><div>30<span class="ev m">Morning</span><span class="ev x">Evening ends 18:00</span></div><div>31</div><div class="out">1</div>
+  </div></div>
+  <p class="small muted mt">Planned time for Line 2 in October: <b>314 h</b>. Click a day to change it.</p>
+</section>
+
+<section class="screen" id="replan" data-ask='["Which numbers change if I replan last week?"]'>
+  <div class="ph"><div><h1>Change a plan that is already in the past</h1></div></div>
+  <div class="stage-dim" style="min-height:560px"><div class="under"><div class="card pad"><b>Shift calendar · Line 2</b><p class="muted">October 2026</p></div></div>
+  <div class="over"><div class="dlg">
+    <div class="dlg-h"><div><h2>Recalculate last week?</h2><p>You changed Friday 16 October from 2 shifts to 1. That day is already in reports.</p></div></div>
+    <div class="dlg-b">
+      <div class="g g2"><div class="card flat pad"><div class="kpi-l">OEE Line 2, week 42</div><div class="kpi-v num" style="font-size:24px">68 % → 72 %</div></div><div class="card flat pad"><div class="kpi-l">Stops that become unplanned time</div><div class="kpi-v num" style="font-size:24px">4</div></div></div>
+      <div class="banner info"><svg class="i"><use href="#i-info"/></svg><div>Registrations are kept. Reports already sent are not changed; the next report shows the new numbers with a note.</div></div>
+      <div class="field"><label>Why are you changing it? (saved in the history)</label><input class="input" value="Evening shift was cancelled, staff on training"></div>
+    </div>
+    <div class="dlg-f"><button class="btn" type="button">Cancel</button><button class="btn primary" type="button" data-toast="Week 42 recalculated">Recalculate</button></div>
+  </div></div></div>
+  <div class="states"><h4>Other states</h4><div class="state-grid"><figure class="state"><figcaption>Period closed</figcaption><div class="banner warn"><svg class="i"><use href="#i-lock"/></svg><div><b>September is closed.</b> Ask an admin to reopen it before changing the plan.</div></div></figure></div></div>
+</section>
+
+</main>
+<script src="../assets/fp.js"></script>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>S08 Registration</title>
+<meta name="description" content="FP Analyzer v3 prototype, module S08: stop worklist, register a stop, one-tap stop, production and scrap registration, review list, registrations, reason trees, reason lists and registration settings.">
+<!-- Written for: the FP owner, client reviewers and developers building S08. Prototype only; all names and numbers are fictional. -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Poppins:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="../assets/fp.css">
+<style>
+.wl{display:grid;grid-template-columns:6px minmax(0,1fr) auto auto;gap:14px;align-items:center;padding:12px 16px 12px 0;border-bottom:1px solid var(--border)}
+.wl:last-child{border-bottom:0}
+.wl .st{height:40px;border-radius:0 4px 4px 0;background:var(--c)}
+.wl b{display:block}.wl small{color:var(--text-3);font-size:12.5px}
+@media (max-width:620px){.wl{grid-template-columns:6px minmax(0,1fr) auto}.wl .dur{display:none}}
+.crumbs{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px;font-weight:700;color:var(--text-3)}
+.crumbs b{color:var(--text)}
+.sug{display:flex;gap:8px;flex-wrap:wrap}
+.k-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.8em;flex:1}
+.k-tile{border-radius:1.2em;border:.12em solid var(--border);background:var(--surface);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:.4em;font-weight:800;font-size:1.2em;text-align:center;padding:.6em}
+.k-tile .ic{width:2.4em;height:2.4em;border-radius:.7em;display:grid;place-items:center;background:var(--c-soft,var(--surface-2));color:var(--c,var(--text-2))}
+.k-tile .ic .i{width:1.4em;height:1.4em}
+.k-tile.sug{border-color:var(--brand);box-shadow:0 0 0 .25em var(--brand-soft)}
+.k-tile small{font-size:.65em;color:var(--text-3);font-weight:700}
+.k-num{font-family:var(--font-head);font-size:4em;font-weight:700;text-align:center;line-height:1}
+.stepper{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:1em;align-items:center}
+.stepper .k-btn{width:4.6em;font-size:1.6em}
+.tr-node{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:10px;align-items:center}
+.lossb{font-size:11px;font-weight:800;border-radius:5px;padding:1px 6px;background:var(--surface-2);color:var(--text-3)}
+.preas{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.preas button{min-height:64px;border-radius:14px;border:1px solid var(--border);border-left:5px solid var(--c,var(--border-strong));background:var(--surface);font:inherit;font-weight:800;font-size:14px;text-align:left;padding:10px 12px;color:var(--text);cursor:pointer;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.preas button small{font-weight:700;font-size:11.5px;color:var(--brand-strong)}
+.preas button.on{background:var(--brand-soft);border-color:var(--brand)}
+.pstep{display:grid;grid-template-columns:56px 1fr 56px;gap:10px;align-items:center}
+.pstep button{height:56px;border-radius:14px;border:1px solid var(--border);background:var(--surface);font-size:26px;font-weight:700;cursor:pointer}
+.pstep .k-num{font-family:var(--font-head);font-size:44px;font-weight:700;text-align:center}
+.popen{border:1.5px solid var(--reason-strong);background:var(--reason-soft);border-radius:16px;padding:12px}
+.popen b{display:block;font-size:16px}.popen small{color:var(--text-2);font-size:12.5px}
+.wk-body{display:flex;flex-direction:column;gap:10px}
+.wk-row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.wk-row:last-child{border-bottom:0}
+.wk-row input{width:22px;height:22px;accent-color:var(--brand);flex:none;margin:0}
+.wk-row .d{width:10px;height:10px;border-radius:50%;background:var(--c);flex:none}
+.wk-row div{flex:1;min-width:0}.wk-row b{display:block;font-size:14px}.wk-row small{display:block;color:var(--text-3);font-size:12px;line-height:1.35}
+.wk-row .btn{flex:none}
+.wk-acts{display:flex;gap:6px;margin-top:6px}
+.wk-srch{display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:12px;padding:0 12px;height:44px;background:var(--surface);color:var(--text-3)}
+.wk-srch input{border:0;outline:0;flex:1;min-width:0;font:inherit;font-size:14px;background:transparent;color:var(--text)}
+.wk-grp{font-size:11.5px;font-weight:800;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;margin:2px 0 6px}
+.wk-done{text-align:center;padding:22px 14px}.wk-done .ic{width:44px;height:44px;border-radius:50%;display:inline-grid;place-items:center;background:var(--run-soft,var(--surface-2));color:var(--run)}
+</style>
+</head>
+<body data-module="S08">
+<main id="screens">
+
+
+
+<section class="screen" id="one-tap" data-ask='["How do operators register a stop on the terminal?"]'>
+  <div class="devices"><div><div class="tablet"><div class="tb-scr">
+    <div class="k-top"><div><b>K-5 · Edge bander</b><small>Line 2 · Terminal T-02 · Sami K.</small></div><span class="clk num">10:48</span><span class="k-conn"><svg class="i xs"><use href="#i-wifi"/></svg>Online</span></div>
+    <div class="k-body">
+      <div class="k-open"><span class="ic"><svg class="i"><use href="#i-stop"/></svg></span><div><b>Stopped 6:12 · why?</b><small>Tap the reason. You can change it later today.</small></div></div>
+      <div class="k-tiles" role="button" data-to="s18-operator#home" data-toast="Stop reason saved. Thanks!">
+        <div class="k-tile sug" role="button" data-to="s18-operator#home" data-toast="Stop reason saved. Thanks!" style="--c:var(--stop);--c-soft:var(--stop-soft)"><span class="ic"><svg class="i"><use href="#i-wrench"/></svg></span>Jam in feeder<small>✦ most likely</small></div>
+        <div class="k-tile" role="button" data-to="s18-operator#home" data-toast="Stop reason saved. Thanks!" style="--c:#7C5CE0;--c-soft:color-mix(in srgb,#7C5CE0 18%,transparent)"><span class="ic"><svg class="i"><use href="#i-box"/></svg></span>Material wait</div>
+        <div class="k-tile" role="button" data-to="s18-operator#home" data-toast="Stop reason saved. Thanks!" style="--c:var(--setup);--c-soft:var(--setup-soft)"><span class="ic"><svg class="i"><use href="#i-swap"/></svg></span>Band change</div>
+        <div class="k-tile" role="button" data-to="s18-operator#home" data-toast="Stop reason saved. Thanks!" style="--c:var(--stop);--c-soft:var(--stop-soft)"><span class="ic"><svg class="i"><use href="#i-bolt"/></svg></span>Glue unit</div>
+        <div class="k-tile" role="button" data-to="s18-operator#home" data-toast="Stop reason saved. Thanks!" style="--c:var(--reason);--c-soft:var(--reason-soft)"><span class="ic"><svg class="i"><use href="#i-user"/></svg></span>No operator</div>
+        <div class="k-tile" role="button" data-to="s18-operator#home" data-toast="Stop reason saved. Thanks!"><span class="ic"><svg class="i"><use href="#i-check"/></svg></span>Quality check</div>
+        <div class="k-tile" role="button" data-to="s18-operator#home" data-toast="Stop reason saved. Thanks!"><span class="ic"><svg class="i"><use href="#i-refresh"/></svg></span>Cleaning</div>
+        <div class="k-tile" role="button" data-to="s11-ai#chips"><span class="ic"><svg class="i"><use href="#i-more"/></svg></span>Other…<small>more reasons</small></div>
+      </div>
+    </div></div></div><p class="dev-cap"><b>One-tap stop</b> · the 8 most used reasons for this machine, biggest buttons</p></div></div>
+</section>
+
+<section class="screen" id="production" data-ask='["How many pieces has K-5 made this shift?"]'>
+  <div class="devices"><div><div class="tablet"><div class="tb-scr">
+    <div class="k-top"><div><b>Report production · K-5</b><small>Order H-120 · morning shift</small></div><span class="clk num">10:50</span></div>
+    <div class="k-body" style="justify-content:center;gap:1.6em">
+      <div class="center"><div class="dim" style="font-size:1.1em">Counted by the machine: <b>1 240</b> pieces</div><div class="dim" style="font-size:.95em;margin-top:.3em">Only change it if the count is wrong</div></div>
+      <div class="stepper" style="width:min(42em,100%);margin:0 auto"><button class="k-btn" type="button">−</button><div class="k-num num">1 236</div><button class="k-btn" type="button">+</button></div>
+      <div class="k-pad" style="width:min(30em,100%);margin:0 auto"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>⌫</span><span>0</span><span class="go" role="button" data-to="s18-operator#home" data-toast="Production saved">OK</span></div>
+    </div></div></div><p class="dev-cap"><b>Production</b> · confirm or correct the count; the machine counter is the starting point</p></div></div>
+  <div class="states"><span class="badge b-setup">When the machine counts by itself: "The counter is counting. Only add pieces it can't see."</span></div>
+</section>
+
+<section class="screen" id="scrap" data-ask='["How much scrap did K-5 make today?"]'>
+  <div class="devices"><div><div class="tablet"><div class="tb-scr">
+    <div class="k-top"><div><b>Report scrap · K-5</b><small>Order H-120 · morning shift</small></div><span class="clk num">10:51</span></div>
+    <div class="k-body">
+      <div class="k-card"><div class="row between"><div class="k-h">How many?</div><div class="stepper" style="width:24em"><button class="k-btn" type="button" style="font-size:1.2em">−</button><div class="k-num num" style="font-size:3em">4</div><button class="k-btn" type="button" style="font-size:1.2em">+</button></div></div></div>
+      <div class="k-h">Why?</div>
+      <div class="k-tiles" style="grid-template-columns:repeat(4,minmax(0,1fr))">
+        <div class="k-tile sug" style="--c:var(--andon);--c-soft:var(--andon-soft)"><span class="ic"><svg class="i"><use href="#i-alert"/></svg></span>Band loose</div>
+        <div class="k-tile" style="--c:var(--andon);--c-soft:var(--andon-soft)"><span class="ic"><svg class="i"><use href="#i-x"/></svg></span>Glue marks</div>
+        <div class="k-tile" style="--c:var(--andon);--c-soft:var(--andon-soft)"><span class="ic"><svg class="i"><use href="#i-target"/></svg></span>Wrong size</div>
+        <div class="k-tile"><span class="ic"><svg class="i"><use href="#i-more"/></svg></span>Other…</div>
+      </div>
+      <div class="k-dock" style="grid-template-columns:1fr 1fr 2fr"><button class="k-btn" type="button" data-toast="Marked as rework: the pieces can be fixed">Rework</button><button class="k-btn" type="button"><svg class="i"><use href="#i-camera"/></svg>Photo</button><button class="k-btn primary" type="button" data-to="s18-operator#home" data-toast="4 pieces saved as scrap">Save 4 scrapped</button></div>
+    </div></div></div><p class="dev-cap"><b>Scrap</b> · number first, then the reason; rework is counted separately</p></div></div>
+  <div class="states"><span class="badge b-off">"Made at" time: default now, change it if the parts were made earlier</span><span class="badge b-off">Found at station: K-9 Packer</span></div>
+</section>
+
+
+
+
+
+
+
+
+
+</main>
+<script src="../assets/fp.js"></script>
+</body>
+</html>

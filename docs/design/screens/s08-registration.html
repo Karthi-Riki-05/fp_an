@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>S08 Registration</title>
+<meta name="description" content="FP Analyzer v3 prototype, module S08: stop worklist, register a stop, one-tap stop, production and scrap registration, review list, registrations, reason trees, reason lists and registration settings.">
+<!-- Written for: the FP owner, client reviewers and developers building S08. Prototype only; all names and numbers are fictional. -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Poppins:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="../assets/fp.css">
+<style>
+.wl{display:grid;grid-template-columns:6px minmax(0,1fr) auto auto;gap:14px;align-items:center;padding:12px 16px 12px 0;border-bottom:1px solid var(--border)}
+.wl:last-child{border-bottom:0}
+.wl .st{height:40px;border-radius:0 4px 4px 0;background:var(--c)}
+.wl b{display:block}.wl small{color:var(--text-3);font-size:12.5px}
+@media (max-width:620px){.wl{grid-template-columns:6px minmax(0,1fr) auto}.wl .dur{display:none}}
+.crumbs{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px;font-weight:700;color:var(--text-3)}
+.crumbs b{color:var(--text)}
+.sug{display:flex;gap:8px;flex-wrap:wrap}
+.k-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.8em;flex:1}
+.k-tile{border-radius:1.2em;border:.12em solid var(--border);background:var(--surface);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:.4em;font-weight:800;font-size:1.2em;text-align:center;padding:.6em}
+.k-tile .ic{width:2.4em;height:2.4em;border-radius:.7em;display:grid;place-items:center;background:var(--c-soft,var(--surface-2));color:var(--c,var(--text-2))}
+.k-tile .ic .i{width:1.4em;height:1.4em}
+.k-tile.sug{border-color:var(--brand);box-shadow:0 0 0 .25em var(--brand-soft)}
+.k-tile small{font-size:.65em;color:var(--text-3);font-weight:700}
+.k-num{font-family:var(--font-head);font-size:4em;font-weight:700;text-align:center;line-height:1}
+.stepper{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:1em;align-items:center}
+.stepper .k-btn{width:4.6em;font-size:1.6em}
+.tr-node{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:10px;align-items:center}
+.lossb{font-size:11px;font-weight:800;border-radius:5px;padding:1px 6px;background:var(--surface-2);color:var(--text-3)}
+.preas{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.preas button{min-height:64px;border-radius:14px;border:1px solid var(--border);border-left:5px solid var(--c,var(--border-strong));background:var(--surface);font:inherit;font-weight:800;font-size:14px;text-align:left;padding:10px 12px;color:var(--text);cursor:pointer;display:flex;flex-direction:column;justify-content:center;gap:2px}
+.preas button small{font-weight:700;font-size:11.5px;color:var(--brand-strong)}
+.preas button.on{background:var(--brand-soft);border-color:var(--brand)}
+.pstep{display:grid;grid-template-columns:56px 1fr 56px;gap:10px;align-items:center}
+.pstep button{height:56px;border-radius:14px;border:1px solid var(--border);background:var(--surface);font-size:26px;font-weight:700;cursor:pointer}
+.pstep .k-num{font-family:var(--font-head);font-size:44px;font-weight:700;text-align:center}
+.popen{border:1.5px solid var(--reason-strong);background:var(--reason-soft);border-radius:16px;padding:12px}
+.popen b{display:block;font-size:16px}.popen small{color:var(--text-2);font-size:12.5px}
+.wk-body{display:flex;flex-direction:column;gap:10px}
+.wk-row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.wk-row:last-child{border-bottom:0}
+.wk-row input{width:22px;height:22px;accent-color:var(--brand);flex:none;margin:0}
+.wk-row .d{width:10px;height:10px;border-radius:50%;background:var(--c);flex:none}
+.wk-row div{flex:1;min-width:0}.wk-row b{display:block;font-size:14px}.wk-row small{display:block;color:var(--text-3);font-size:12px;line-height:1.35}
+.wk-row .btn{flex:none}
+.wk-acts{display:flex;gap:6px;margin-top:6px}
+.wk-srch{display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:12px;padding:0 12px;height:44px;background:var(--surface);color:var(--text-3)}
+.wk-srch input{border:0;outline:0;flex:1;min-width:0;font:inherit;font-size:14px;background:transparent;color:var(--text)}
+.wk-grp{font-size:11.5px;font-weight:800;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;margin:2px 0 6px}
+.wk-done{text-align:center;padding:22px 14px}.wk-done .ic{width:44px;height:44px;border-radius:50%;display:inline-grid;place-items:center;background:var(--run-soft,var(--surface-2));color:var(--run)}
+</style>
+</head>
+<body data-module="S08">
+<main id="screens">
+
+<section class="screen" id="worklist" data-ask='["Which stops still need a reason?","What are the top stop reasons this week?"]'>
+  <div class="ph"><div><h1>Stops to register</h1><p>Every stop longer than 2 minutes needs a reason. Oldest first. Operators usually do this on the terminal; you can fill gaps here.</p></div>
+    <div class="ph-a"><button class="btn" type="button" data-toast="Choose several, then pick one reason for all">Select several</button></div></div>
+  <div class="filters"><button class="fchip on" type="button">Needs reason <span class="badge">7</span></button><button class="fchip" type="button">Ongoing <span class="badge">1</span></button><button class="fchip" type="button">My lines</button><button class="fchip" type="button">This shift</button></div>
+  <div class="card">
+    <div class="wl" style="--c:var(--stop-fill)"><span class="st"></span><div><b>K-5 Edge bander · still stopped</b><small>since 10:42 · morning shift · Line 2</small></div><span class="dur num b" style="color:var(--stop)"><span data-run="372">6:12</span></span><a class="btn sm primary" href="#register" data-go="register">Register</a></div>
+    <div class="wl" style="--c:var(--reason-strong)"><span class="st"></span><div><b>K-5 Edge bander</b><small>09:58–10:04 · morning shift · <span class="badge b-ai">✦ suggested: Jam in feeder</span></small></div><span class="dur num">5:32</span><a class="btn sm" href="#register" data-go="register">Register</a></div>
+    <div class="wl" style="--c:var(--reason-strong)"><span class="st"></span><div><b>P-3 Packing</b><small>08:12–08:16 · morning shift · Line 3</small></div><span class="dur num">3:48</span><a class="btn sm" href="#register" data-go="register">Register</a></div>
+    <div class="wl" style="--c:var(--reason-strong)"><span class="st"></span><div><b>K-3 Panel saw</b><small>Wed 21 Oct 21:40–21:52 · evening shift · <b style="display:inline;color:var(--reason)">over 12 h old</b></small></div><span class="dur num">12:10</span><a class="btn sm" href="#register" data-go="register">Register</a></div>
+  </div>
+  <div class="states"><h4>Other states</h4><div class="state-grid"><figure class="state"><figcaption>All done</figcaption><div class="empty"><span class="ic"><svg class="i lg"><use href="#i-check"/></svg></span><h3>Every stop has a reason</h3><p>Nice work. New stops show up here.</p></div></figure></div></div>
+</section>
+
+<section class="screen" id="register" data-ask='["What reason do operators usually give for short stops on K-5?"]'>
+  <div class="ph"><div><span class="eyebrow">Register stop</span><h1>K-5 Edge bander · 09:58–10:04 · 5 min 32 s</h1><p>Pick the reason. Start broad, then go narrower. Or use a suggestion.</p></div></div>
+  <div class="g g-side">
+    <div class="stack">
+      <div class="card pad"><div class="row"><span class="small b">Suggested</span><div class="sug"><button class="chip on" type="button"><span class="badge b-ai" style="height:18px">✦</span>Jam in feeder</button><button class="chip" type="button">Band change</button><button class="chip" type="button">Material wait</button></div></div><p class="tiny muted mt-s">✦ Suggested by FP from the last 4 weeks on K-5. You decide.</p></div>
+      <div class="card"><div class="card-b" style="padding-top:16px">
+        <div class="crumbs mb"><span>Reasons</span><svg class="i xs"><use href="#i-chev"/></svg><b>Machine</b><svg class="i xs"><use href="#i-chev"/></svg><span>choose…</span></div>
+        <div class="reason-tiles">
+          <button class="rt on" type="button" style="--c:var(--stop);--c-soft:var(--stop-soft)"><span class="ic"><svg class="i"><use href="#i-wrench"/></svg></span>Jam in feeder<small>Machine › Feeder</small></button>
+          <button class="rt" type="button" style="--c:var(--stop);--c-soft:var(--stop-soft)"><span class="ic"><svg class="i"><use href="#i-bolt"/></svg></span>Glue unit<small>3 more inside</small></button>
+          <button class="rt" type="button" style="--c:var(--setup);--c-soft:var(--setup-soft)"><span class="ic"><svg class="i"><use href="#i-swap"/></svg></span>Band change<small>Setup</small></button>
+          <button class="rt" type="button" style="--c:var(--stop);--c-soft:var(--stop-soft)"><span class="ic"><svg class="i"><use href="#i-cpu"/></svg></span>Sensor or electric</button>
+          <button class="rt" type="button"><span class="ic"><svg class="i"><use href="#i-more"/></svg></span>Other machine fault<small>write a comment</small></button>
+        </div>
+      </div></div>
+      <div class="card pad"><div class="field"><label>Comment (optional)</label><textarea class="input" rows="2" placeholder="What happened? Others see this."></textarea></div><div class="row mt"><button class="btn sm" type="button"><svg class="i sm"><use href="#i-camera"/></svg>Add photo</button><button class="btn sm" type="button"><svg class="i sm"><use href="#i-split"/></svg>Split the stop</button></div></div>
+    </div>
+    <div class="stack">
+      <div class="card pad"><dl class="kv"><dt>Machine</dt><dd>K-5 Edge bander</dd><dt>Stop</dt><dd class="num">09:58:40 – 10:04:12</dd><dt>Counts as</dt><dd>Availability loss · breakdown</dd></dl></div>
+      <button class="btn primary lg" type="button" data-toast="Registered · next stop opened">Save and next</button>
+      <button class="btn" type="button" data-go="worklist">Back to list</button>
+    </div>
+  </div>
+  <div class="states"><h4>Other states</h4><div class="state-grid">
+    <figure class="state"><figcaption>Someone else registered it first</figcaption><div class="banner warn"><svg class="i"><use href="#i-users"/></svg><div><b>Sami K. registered this stop 20 s ago</b> as "Material wait". Keep theirs, or replace it?</div></div></figure>
+    <figure class="state"><figcaption>Split a stop</figcaption><div class="tl lg"><i class="s" style="flex:40"></i><i class="c" style="flex:60"></i></div><p class="small">09:58–10:00 <b>Jam in feeder</b> · 10:00–10:04 <b>Band change</b></p></figure>
+  </div></div>
+</section>
+
+<section class="screen" id="one-tap" data-ask='["How do operators register a stop on the terminal?"]'>
+  <div class="devices"><div><div class="tablet"><div class="tb-scr">
+    <div class="k-top"><div><b>K-5 · Edge bander</b><small>Line 2 · Terminal T-02 · Sami K.</small></div><span class="clk num">10:48</span><span class="k-conn"><svg class="i xs"><use href="#i-wifi"/></svg>Online</span></div>
+    <div class="k-body">
+      <div class="k-open"><span class="ic"><svg class="i"><use href="#i-stop"/></svg></span><div><b>Stopped 6:12 · why?</b><small>Tap the reason. You can change it later today.</small></div></div>
+      <div class="k-tiles" role="button" data-to="s18-operator#home" data-toast="Stop reason saved. Thanks!">
+        <div class="k-tile sug" role="button" data-to="s18-operator#home" data-toast="Stop reason saved. Thanks!" style="--c:var(--stop);--c-soft:var(--stop-soft)"><span class="ic"><svg class="i"><use href="#i-wrench"/></svg></span>Jam in feeder<small>✦ most likely</small></div>
+        <div class="k-tile" role="button" data-to="s18-operator#home" data-toast="Stop reason saved. Thanks!" style="--c:#7C5CE0;--c-soft:color-mix(in srgb,#7C5CE0 18%,transparent)"><span class="ic"><svg class="i"><use href="#i-box"/></svg></span>Material wait</div>
+        <div class="k-tile" role="button" data-to="s18-operator#home" data-toast="Stop reason saved. Thanks!" style="--c:var(--setup);--c-soft:var(--setup-soft)"><span class="ic"><svg class="i"><use href="#i-swap"/></svg></span>Band change</div>
+        <div class="k-tile" role="button" data-to="s18-operator#home" data-toast="Stop reason saved. Thanks!" style="--c:var(--stop);--c-soft:var(--stop-soft)"><span class="ic"><svg class="i"><use href="#i-bolt"/></svg></span>Glue unit</div>
+        <div class="k-tile" role="button" data-to="s18-operator#home" data-toast="Stop reason saved. Thanks!" style="--c:var(--reason);--c-soft:var(--reason-soft)"><span class="ic"><svg class="i"><use href="#i-user"/></svg></span>No operator</div>
+        <div class="k-tile" role="button" data-to="s18-operator#home" data-toast="Stop reason saved. Thanks!"><span class="ic"><svg class="i"><use href="#i-check"/></svg></span>Quality check</div>
+        <div class="k-tile" role="button" data-to="s18-operator#home" data-toast="Stop reason saved. Thanks!"><span class="ic"><svg class="i"><use href="#i-refresh"/></svg></span>Cleaning</div>
+        <div class="k-tile" role="button" data-to="s11-ai#chips"><span class="ic"><svg class="i"><use href="#i-more"/></svg></span>Other…<small>more reasons</small></div>
+      </div>
+    </div></div></div><p class="dev-cap"><b>One-tap stop</b> · the 8 most used reasons for this machine, biggest buttons</p></div>
+<div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span><div class="ph-sb num"><span>10:58</span><span>4G</span></div>
+<div class="m-top"><button class="back" type="button" aria-label="Back" data-back><svg class="i sm"><use href="#i-chevl"/></svg></button><div><small class="muted">K-5 Edge bander · Line 2</small><h2>Why did it stop?</h2></div></div>
+<div class="m-body"><div class="popen"><b>Stopped 6:12</b><small>since 10:52 · you can change it later today</small></div>
+<a class="small b" href="#" data-to="s08-registration#m-worklist" data-stops-left="k5-0958">Earlier today: <span data-left>1 stop needs a reason</span> ›</a>
+<div class="preas"><button type="button" style="--c:var(--stop)" data-to="s18-operator#machine" data-reg="k5-1052|K-5|Jam in feeder|10:52 · 6 min" data-toast="Saved: Jam in feeder · you find it under Mine">Jam in feeder<small>✦ most likely</small></button><button type="button" style="--c:#7C5CE0" data-to="s18-operator#machine" data-reg="k5-1052|K-5|Material wait|10:52 · 6 min" data-toast="Saved: Material wait · you find it under Mine">Material wait</button><button type="button" style="--c:var(--setup)" data-to="s18-operator#machine" data-reg="k5-1052|K-5|Band change|10:52 · 6 min" data-toast="Saved: Band change · you find it under Mine">Band change</button><button type="button" style="--c:var(--stop)" data-to="s18-operator#machine" data-reg="k5-1052|K-5|Glue unit|10:52 · 6 min" data-toast="Saved: Glue unit · you find it under Mine">Glue unit</button><button type="button" style="--c:var(--reason)" data-to="s18-operator#machine" data-reg="k5-1052|K-5|No operator|10:52 · 6 min" data-toast="Saved: No operator · you find it under Mine">No operator</button><button type="button" style="--c:var(--border-strong)" data-to="s18-operator#machine" data-reg="k5-1052|K-5|Quality check|10:52 · 6 min" data-toast="Saved: Quality check · you find it under Mine">Quality check</button></div>
+<div class="row" style="gap:8px"><button class="btn" type="button" style="flex:1" data-to="s08-registration#m-reasons" data-sel="k5-1052|K-5||10:52 · 6 min" data-ret="s18-operator#machine">Other…</button><button class="btn" type="button" style="flex:1" data-toast="Hold to speak · the note is added to the stop"><svg class="i sm"><use href="#i-mic"/></svg>Say it</button></div></div>
+</div></div><p class="dev-cap"><b>Stop reason on the phone</b> · same reasons as the terminal, two taps</p></div></div>
+</section>
+
+<section class="screen" id="production" data-ask='["How many pieces has K-5 made this shift?"]'>
+  <div class="devices"><div><div class="tablet"><div class="tb-scr">
+    <div class="k-top"><div><b>Report production · K-5</b><small>Order H-120 · morning shift</small></div><span class="clk num">10:50</span></div>
+    <div class="k-body" style="justify-content:center;gap:1.6em">
+      <div class="center"><div class="dim" style="font-size:1.1em">Counted by the machine: <b>1 240</b> pieces</div><div class="dim" style="font-size:.95em;margin-top:.3em">Only change it if the count is wrong</div></div>
+      <div class="stepper" style="width:min(42em,100%);margin:0 auto"><button class="k-btn" type="button">−</button><div class="k-num num">1 236</div><button class="k-btn" type="button">+</button></div>
+      <div class="k-pad" style="width:min(30em,100%);margin:0 auto"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>⌫</span><span>0</span><span class="go" role="button" data-to="s18-operator#home" data-toast="Production saved">OK</span></div>
+    </div></div></div><p class="dev-cap"><b>Production</b> · confirm or correct the count; the machine counter is the starting point</p></div>
+<div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span><div class="ph-sb num"><span>10:58</span><span>4G</span></div>
+<div class="m-top"><button class="back" type="button" aria-label="Back" data-back><svg class="i sm"><use href="#i-chevl"/></svg></button><div><small class="muted">K-5 · order H-120</small><h2>Report production</h2></div></div>
+<div class="m-body"><p class="small muted center">Counted by the machine: <b>1 240</b> pieces. Only change it if the count is wrong.</p>
+<div class="pstep"><button type="button" aria-label="Less">−</button><div class="k-num num">1 236</div><button type="button" aria-label="More">+</button></div>
+<div class="field"><label>Made at</label><input class="input" value="Today 10:50" aria-label="Made at"></div><div class="sp"></div>
+<button class="btn primary m-big" type="button" data-to="s18-operator#machine" data-reg="prod-1050|Production|1 236 pcs|10:50 · order H-120" data-toast="Production saved: 1 236 pieces · you find it under Mine">Save 1 236 pieces</button></div>
+</div></div><p class="dev-cap"><b>Production on the phone</b> · confirm or correct the count</p></div></div>
+  <div class="states"><span class="badge b-setup">When the machine counts by itself: "The counter is counting. Only add pieces it can't see."</span></div>
+</section>
+
+<section class="screen" id="scrap" data-ask='["How much scrap did K-5 make today?"]'>
+  <div class="devices"><div><div class="tablet"><div class="tb-scr">
+    <div class="k-top"><div><b>Report scrap · K-5</b><small>Order H-120 · morning shift</small></div><span class="clk num">10:51</span></div>
+    <div class="k-body">
+      <div class="k-card"><div class="row between"><div class="k-h">How many?</div><div class="stepper" style="width:24em"><button class="k-btn" type="button" style="font-size:1.2em">−</button><div class="k-num num" style="font-size:3em">4</div><button class="k-btn" type="button" style="font-size:1.2em">+</button></div></div></div>
+      <div class="k-h">Why?</div>
+      <div class="k-tiles" style="grid-template-columns:repeat(4,minmax(0,1fr))">
+        <div class="k-tile sug" style="--c:var(--andon);--c-soft:var(--andon-soft)"><span class="ic"><svg class="i"><use href="#i-alert"/></svg></span>Band loose</div>
+        <div class="k-tile" style="--c:var(--andon);--c-soft:var(--andon-soft)"><span class="ic"><svg class="i"><use href="#i-x"/></svg></span>Glue marks</div>
+        <div class="k-tile" style="--c:var(--andon);--c-soft:var(--andon-soft)"><span class="ic"><svg class="i"><use href="#i-target"/></svg></span>Wrong size</div>
+        <div class="k-tile"><span class="ic"><svg class="i"><use href="#i-more"/></svg></span>Other…</div>
+      </div>
+      <div class="k-dock" style="grid-template-columns:1fr 1fr 2fr"><button class="k-btn" type="button" data-toast="Marked as rework: the pieces can be fixed">Rework</button><button class="k-btn" type="button"><svg class="i"><use href="#i-camera"/></svg>Photo</button><button class="k-btn primary" type="button" data-to="s18-operator#home" data-toast="4 pieces saved as scrap">Save 4 scrapped</button></div>
+    </div></div></div><p class="dev-cap"><b>Scrap</b> · number first, then the reason; rework is counted separately</p></div>
+<div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span><div class="ph-sb num"><span>10:58</span><span>4G</span></div>
+<div class="m-top"><button class="back" type="button" aria-label="Back" data-back><svg class="i sm"><use href="#i-chevl"/></svg></button><div><small class="muted">K-5 · order H-120</small><h2>Report scrap</h2></div></div>
+<div class="m-body"><div class="pstep"><button type="button" aria-label="Less">−</button><div class="k-num num">4</div><button type="button" aria-label="More">+</button></div>
+<div class="flabel">Why?</div><div class="preas" data-chips-btn><button type="button" style="--c:var(--andon)" >Band loose<small>✦ most likely</small></button><button type="button" style="--c:var(--andon)" >Glue marks</button><button type="button" style="--c:var(--andon)" >Wrong size</button><button type="button" style="--c:var(--border-strong)" >Other…</button></div>
+<div class="row" style="gap:8px"><button class="btn" type="button" style="flex:1"><svg class="i sm"><use href="#i-camera"/></svg>Photo</button><button class="btn" type="button" style="flex:1" data-toast="Marked as rework: the pieces can be fixed">Rework</button></div><div class="sp"></div>
+<button class="btn primary m-big" type="button" data-to="s18-operator#machine" data-reg="scrap-1051|Scrap|4 × band loose|10:51 · order H-120" data-toast="4 pieces saved as scrap · you find it under Mine">Save 4 scrapped</button></div>
+</div></div><p class="dev-cap"><b>Scrap on the phone</b> · number, reason, photo</p></div></div>
+  <div class="states"><span class="badge b-off">"Made at" time: default now, change it if the parts were made earlier</span><span class="badge b-off">Found at station: K-9 Packer</span></div>
+</section>
+
+<section class="screen" id="m-worklist" data-ask='["Which stops still need a reason?","Why did K-5 stop at 09:58?"]'>
+<div class="devices" data-for="m-op"><div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span><div class="ph-sb num"><span>10:58</span><span>4G</span></div>
+<div class="m-top"><button class="back" type="button" aria-label="Back" data-back><svg class="i sm"><use href="#i-chevl"/></svg></button><div><small class="muted">K-3, K-5 · this shift</small><h2>Stops to register <span class="badge b-warn" data-stop-count>2</span></h2></div></div>
+<div class="m-body wk-body">
+<p class="small muted">Every stop over 2 minutes needs a reason. Oldest last. Tick several to give them one reason.</p>
+<div data-stops-left="k5-1052 k5-0958"><div class="m-card" style="padding:2px 14px">
+<label class="wk-row" style="--c:var(--stop-fill)" data-stop="k5-1052|K-5||10:52 · 6 min"><input type="checkbox" aria-label="Select K-5 10:52 · 6 min"><span class="d"></span><div><b>K-5 Edge bander · still stopped</b><small>10:52 · 6 min</small></div><a class="btn sm" href="#" data-to="s08-registration#m-reasons" data-sel="k5-1052|K-5||10:52 · 6 min" data-ret="s08-registration#m-worklist">Register</a></label>
+<label class="wk-row" style="--c:var(--reason-strong)" data-stop="k5-0958|K-5||09:58–10:04 · 5 min 32 s"><input type="checkbox" aria-label="Select K-5 09:58–10:04 · 5 min 32 s"><span class="d"></span><div><b>K-5 Edge bander</b><small>09:58–10:04 · 5 min 32 s · <span class="badge b-ai">✦ Jam in feeder?</span></small></div><a class="btn sm" href="#" data-to="s08-registration#m-reasons" data-sel="k5-0958|K-5||09:58–10:04 · 5 min 32 s" data-ret="s08-registration#m-worklist">Register</a></label>
+</div>
+<button class="btn primary block m-big" type="button" style="margin-top:10px" data-reg-sel data-to="s08-registration#m-reasons" data-ret="s08-registration#m-worklist">Register selected</button></div>
+<div class="m-card wk-done" data-stops-done hidden><span class="ic"><svg class="i"><use href="#i-check"/></svg></span><h3 style="margin:8px 0 4px">Every stop has a reason</h3><p class="small muted">Nice work. New stops show up here.</p><a class="btn block" href="#" data-to="s18-operator#myreg">See what I saved</a></div>
+<p class="tiny muted">Only the machines you are checked in on. You can change a reason until the shift ends.</p></div>
+<div class="m-tabs" data-tabs="home"></div>
+</div></div><p class="dev-cap"><b>Stops to register · operator</b> · the list behind "2 stops need a reason", one or many at a time</p></div></div>
+<div class="devices" data-for="m-lead"><div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span><div class="ph-sb num"><span>10:58</span><span>4G</span></div>
+<div class="m-top"><button class="back" type="button" aria-label="Back" data-back><svg class="i sm"><use href="#i-chevl"/></svg></button><div><small class="muted">Line 1 and Line 2 · this shift</small><h2>Stops to register <span class="badge b-warn" data-stop-count>3</span></h2></div></div>
+<div class="m-body wk-body">
+<p class="small muted">Every stop over 2 minutes needs a reason. Oldest last. Tick several to give them one reason.</p>
+<div data-stops-left="k5-1052 k5-0958 p3-0812"><div class="m-card" style="padding:2px 14px">
+<label class="wk-row" style="--c:var(--stop-fill)" data-stop="k5-1052|K-5||10:52 · 6 min"><input type="checkbox" aria-label="Select K-5 10:52 · 6 min"><span class="d"></span><div><b>K-5 Edge bander · still stopped</b><small>10:52 · 6 min</small></div><a class="btn sm" href="#" data-to="s08-registration#m-reasons" data-sel="k5-1052|K-5||10:52 · 6 min" data-ret="s08-registration#m-worklist">Register</a></label>
+<label class="wk-row" style="--c:var(--reason-strong)" data-stop="k5-0958|K-5||09:58–10:04 · 5 min 32 s"><input type="checkbox" aria-label="Select K-5 09:58–10:04 · 5 min 32 s"><span class="d"></span><div><b>K-5 Edge bander</b><small>09:58–10:04 · 5 min 32 s · <span class="badge b-ai">✦ Jam in feeder?</span></small></div><a class="btn sm" href="#" data-to="s08-registration#m-reasons" data-sel="k5-0958|K-5||09:58–10:04 · 5 min 32 s" data-ret="s08-registration#m-worklist">Register</a></label>
+<label class="wk-row" style="--c:var(--reason-strong)" data-stop="p3-0812|P-3||08:12–08:16 · 3 min 48 s"><input type="checkbox" aria-label="Select P-3 08:12–08:16 · 3 min 48 s"><span class="d"></span><div><b>P-3 Press · Line 1</b><small>08:12–08:16 · 3 min 48 s · operator Jonas L.</small></div><a class="btn sm" href="#" data-to="s08-registration#m-reasons" data-sel="p3-0812|P-3||08:12–08:16 · 3 min 48 s" data-ret="s08-registration#m-worklist">Register</a></label>
+</div>
+<button class="btn primary block m-big" type="button" style="margin-top:10px" data-reg-sel data-to="s08-registration#m-reasons" data-ret="s08-registration#m-worklist">Register selected</button></div>
+<div class="m-card wk-done" data-stops-done hidden><span class="ic"><svg class="i"><use href="#i-check"/></svg></span><h3 style="margin:8px 0 4px">Every stop has a reason</h3><p class="small muted">Nice work. New stops show up here.</p><a class="btn block" href="#" data-to="s18-operator#myreg">See what I saved</a></div>
+<p class="tiny muted">You see every stop on your lines and can register for the team. The operator sees your reason under Mine.</p></div>
+<div class="m-tabs" data-tabs="home"></div>
+</div></div><p class="dev-cap"><b>Stops to register · supervisor</b> · the list behind "2 stops need a reason", one or many at a time</p></div></div>
+<div class="states"><span class="badge b-warn">Ongoing stop stays on top until the machine runs again</span><span class="badge b-off">Offline: saved on the phone, sent later (Waiting to send)</span><span class="badge">Someone else registered it first: "Sami K. registered it 20 s ago. Keep theirs?"</span></div>
+</section>
+
+<section class="screen" id="m-reasons" data-ask='["Which reason fits a jam in the glue unit?","Why does K-5 jam so often?"]'>
+<div class="devices"><div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span><div class="ph-sb num"><span>10:59</span><span>4G</span></div>
+<div class="m-top"><button class="back" type="button" aria-label="Back" data-back><svg class="i sm"><use href="#i-chevl"/></svg></button><div><small class="muted" data-sel-info>K-5 · 10:52 · 6 min</small><h2>Pick the reason</h2></div></div>
+<div class="m-body wk-body">
+<p class="tiny muted" data-sel-now></p>
+<label class="wk-srch"><svg class="i sm"><use href="#i-search"/></svg><input type="search" data-reason-search placeholder="Search all 24 reasons" aria-label="Search reasons"></label>
+<div data-rgrp><div class="wk-grp">✦ Suggested for K-5</div><div class="preas"><button type="button" style="--c:var(--stop)" data-reason="Jam in feeder">Jam in feeder<small>3× today</small></button></div></div>
+<div data-rgrp><div class="wk-grp">Machine</div><div class="preas"><button type="button" style="--c:var(--stop)" data-reason="Glue unit">Glue unit<small>temp / leak</small></button><button type="button" style="--c:var(--stop)" data-reason="Sensor or electric">Sensor or electric</button><button type="button" style="--c:var(--stop)" data-reason="Band torn">Band torn</button><button type="button" style="--c:var(--stop)" data-reason="Feeder belt">Feeder belt</button></div></div>
+<div data-rgrp><div class="wk-grp">Material</div><div class="preas"><button type="button" style="--c:#7C5CE0" data-reason="Material wait">Material wait<small>no panels</small></button><button type="button" style="--c:#7C5CE0" data-reason="Wrong material">Wrong material</button></div></div>
+<div data-rgrp><div class="wk-grp">Setup</div><div class="preas"><button type="button" style="--c:var(--setup)" data-reason="Band change">Band change<small>planned</small></button><button type="button" style="--c:var(--setup)" data-reason="Tool change">Tool change</button></div></div>
+<div data-rgrp><div class="wk-grp">People</div><div class="preas"><button type="button" style="--c:var(--reason)" data-reason="No operator">No operator</button><button type="button" style="--c:var(--reason)" data-reason="Break">Break</button><button type="button" style="--c:var(--reason)" data-reason="Meeting">Meeting</button></div></div>
+<div data-rgrp><div class="wk-grp">Quality and cleaning</div><div class="preas"><button type="button" style="--c:var(--border-strong)" data-reason="Quality check">Quality check</button><button type="button" style="--c:var(--border-strong)" data-reason="Cleaning">Cleaning</button></div></div>
+<div data-rgrp><div class="wk-grp">Not on the list</div><div class="preas"><button type="button" style="--c:var(--border-strong)" data-reason="Other">Other<small>write it in the comment</small></button></div></div>
+<p class="small muted" data-reason-none hidden>No reason matches. Pick "Other" and write it in the comment.</p>
+<div class="field"><label class="flabel">Comment (optional)</label><textarea class="input" rows="2" data-reg-note placeholder="What happened? Your shift lead sees this."></textarea></div>
+<div class="row" style="gap:8px"><button class="btn" type="button" style="flex:1" data-toast="Photo added to the stop"><svg class="i sm"><use href="#i-camera"/></svg>Photo</button><button class="btn" type="button" style="flex:1" data-toast="Hold to speak · FP writes the note for you"><svg class="i sm"><use href="#i-mic"/></svg>Say it</button><button class="btn" type="button" style="flex:1" data-toast="Split: give two reasons with times"><svg class="i sm"><use href="#i-split"/></svg>Split</button></div>
+<button class="btn primary block m-big" type="button" data-reg-save="k5-1052|K-5||10:52 · 6 min" data-to="s08-registration#m-worklist">Save reason</button>
+</div>
+</div></div><p class="dev-cap"><b>All reasons on the phone</b> · search, grouped like the reason tree, comment, photo or voice; one reason for one or many stops</p></div></div>
+<div class="states"><span class="badge b-warn">Nothing picked: "Pick a reason first"</span><span class="badge b-ai">✦ The suggestion is a guess from the last 4 weeks. You decide.</span><span class="badge b-off">Only the reasons set for this machine (Reason lists per node)</span></div>
+</section>
+
+<section class="screen" id="m-review" data-ask='["Why are these registrations in review?","Who changed reasons after the shift?"]'>
+<div class="devices"><div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span><div class="ph-sb num"><span>11:02</span><span>4G</span></div>
+<div class="m-top"><button class="back" type="button" aria-label="Back" data-back><svg class="i sm"><use href="#i-chevl"/></svg></button><div><small class="muted">Line 1 and Line 2 · needs your OK</small><h2>To review <span class="badge b-warn" data-stop-count>3</span></h2></div></div>
+<div class="m-body wk-body"><div class="m-card" style="padding:2px 14px">
+<div class="wk-row" style="--c:var(--setup);cursor:default" data-stop="rv-k5-0930|K-5"><span class="d"></span><div><b>K-5 · Band change → Material wait</b><small>09:30 · 14 min · changed by Elin S. after the shift</small><div class="wk-acts"><button class="btn sm primary" type="button" data-reg="rv-k5-0930|K-5|Material wait · approved|09:30 · 14 min" data-toast="Approved · Elin sees it under Mine">Approve</button><button class="btn sm" type="button" data-reg="rv-k5-0930|K-5|Band change · kept|09:30 · 14 min" data-toast="Kept: Band change · Elin gets a note">Keep the old one</button></div></div></div>
+<div class="wk-row" style="--c:var(--reason-strong);cursor:default" data-stop="rv-p3-auto|P-3"><span class="d"></span><div><b>P-3 · 6 short stops by auto rule</b><small>08:00–09:00 · "Short stop under 2 min"</small><div class="wk-acts"><button class="btn sm primary" type="button" data-reg="rv-p3-auto|P-3|6 short stops · approved|08:00–09:00" data-toast="Approved · 6 short stops">Approve all 6</button></div></div></div>
+<div class="wk-row" style="--c:var(--stop-fill);cursor:default" data-stop="rv-k9-0931|K-9"><span class="d"></span><div><b>K-9 · two people gave a reason</b><small>09:31 · 4 min · Elin S.: Jam in feeder · Jonas L.: Material wait</small><div class="wk-acts"><button class="btn sm primary" type="button" data-reg="rv-k9-0931|K-9|Jam in feeder|09:31 · 4 min" data-toast="Saved: Jam in feeder">Use Elin's</button><button class="btn sm" type="button" data-reg="rv-k9-0931|K-9|Material wait|09:31 · 4 min" data-toast="Saved: Material wait">Use Jonas's</button></div></div></div>
+</div>
+<div class="m-card wk-done" data-stops-done hidden><span class="ic"><svg class="i"><use href="#i-check"/></svg></span><h3 style="margin:8px 0 4px">Nothing to review</h3><p class="small muted">Changed or doubtful registrations show up here.</p></div>
+<a class="small b" href="#" data-to="s08-registration#m-worklist">Stops with no reason yet ›</a></div>
+<div class="m-tabs" data-tabs="home"></div>
+</div></div><p class="dev-cap"><b>Review on the phone · supervisor</b> · approve changes after the shift, auto rules and double registrations</p></div></div>
+<div class="states"><span class="badge">The full list with filters and history is on the web (Review list)</span></div>
+</section>
+
+<section class="screen" id="review" data-ask='["Why are these registrations in review?"]'>
+  <div class="ph"><div><h1>Review list</h1><p>Registrations that need a second look, usually because the stop changed after someone registered it.</p></div></div>
+  <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Machine</th><th>Registration</th><th>Why in review</th><th></th></tr></thead><tbody>
+    <tr><td><b>K-5</b></td><td>Jam · Sami K. · 09:00</td><td>The stop was removed by a state correction (sensor loose)</td><td class="act"><button class="btn sm" type="button" data-toast="Registration removed">Remove</button> <button class="btn sm primary" type="button" data-toast="Moved to the new stop">Move to new stop</button></td></tr>
+    <tr><td><b>K-3</b></td><td>Material wait · Elin S.</td><td>Late signals split the stop in two</td><td class="act"><button class="btn sm primary" type="button" data-toast="Applied to both parts">Use for both parts</button></td></tr>
+  </tbody></table></div></div>
+</section>
+
+<section class="screen" id="registrations" data-ask='["Who registered most stops on Line 2 this week?","Which reasons were changed afterwards?"]'>
+  <div class="ph"><div><h1>All registrations</h1><p>Stops, production and scrap, as registered. Filter, check or correct.</p></div><div class="ph-a"><button class="btn" type="button"><svg class="i sm"><use href="#i-download"/></svg>Export</button></div></div>
+  <div class="filters"><button class="fchip on" type="button">Stops</button><button class="fchip" type="button">Production</button><button class="fchip" type="button">Scrap</button><button class="fchip" type="button">Line 2</button><button class="fchip" type="button">This week</button></div>
+  <div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>When</th><th>Machine</th><th>Length</th><th>Reason</th><th>By</th><th>Source</th></tr></thead><tbody>
+    <tr><td class="num">Thu 06:12</td><td>K-5</td><td class="num">41:40</td><td>Material wait › No edge band</td><td>Sami K.</td><td>Terminal</td></tr>
+    <tr><td class="num">Thu 03:44</td><td>K-3</td><td class="num">8:10</td><td>Blade change</td><td>Maja E.</td><td><span class="badge b-ai">✦ accepted</span></td></tr>
+    <tr><td class="num">Wed 21:10</td><td>K-7</td><td class="num">22:05</td><td>Glue unit <span class="badge">changed</span></td><td>Elin S.</td><td>Web</td></tr>
+    <tr><td class="num">Wed 14:02</td><td>K-5</td><td class="num">3:12</td><td>Auto: Planned cleaning</td><td class="muted">rule</td><td>Auto rule</td></tr>
+  </tbody></table></div></div>
+</section>
+
+<section class="screen" id="reason-trees" data-ask='["Which reasons are never used?"]'>
+  <div class="ph"><div><h1>Stop reasons</h1><p>Your reasons as a tree, from broad to narrow. Each reason says which loss it counts as in OEE.</p></div><div class="ph-a"><button class="btn" type="button"><svg class="i sm"><use href="#i-upload"/></svg>Import</button><button class="btn primary" type="button" data-toast="New reason"><svg class="i sm"><use href="#i-plus"/></svg>Add reason</button></div></div>
+  <div class="g g-side">
+    <div class="card"><div class="card-b" style="padding-top:12px"><ul class="tree">
+      <li><div class="tn tr-node"><span class="tw"><svg class="i xs"><use href="#i-chev"/></svg></span><b>Machine</b><span class="lossb">Breakdown</span><span class="cnt">142 uses</span></div>
+        <ul><li><div class="tn on tr-node"><span class="tw"></span>Jam in feeder<span class="lossb">Breakdown</span><span class="cnt">61</span></div></li><li><div class="tn tr-node"><span class="tw"><svg class="i xs"><use href="#i-chev"/></svg></span>Glue unit<span class="lossb">Breakdown</span><span class="cnt">38</span></div></li><li><div class="tn tr-node"><span class="tw"></span>Sensor or electric<span class="lossb">Breakdown</span><span class="cnt">12</span></div></li></ul></li>
+      <li><div class="tn tr-node"><span class="tw"><svg class="i xs"><use href="#i-chev"/></svg></span><b>Setup</b><span class="lossb">Changeover</span><span class="cnt">88</span></div></li>
+      <li><div class="tn tr-node"><span class="tw"><svg class="i xs"><use href="#i-chev"/></svg></span><b>Organisation</b><span class="lossb">Breakdown</span><span class="cnt">74</span></div></li>
+      <li><div class="tn tr-node"><span class="tw"></span><b>Planned cleaning</b><span class="lossb">Not planned time</span><span class="cnt">20</span></div></li>
+    </ul></div></div>
+    <div class="card"><div class="card-h"><h3>Jam in feeder</h3></div><div class="card-b stack">
+      <div class="field"><label>Name</label><input class="input" value="Jam in feeder"></div>
+      <div class="field"><label>Name in other languages</label><div class="stack tight"><div class="ig"><span class="unit">sv</span><input value="Stopp i matning"></div><div class="ig"><span class="unit">fi</span><input value="Tukos syötössä"></div></div></div>
+      <div class="field"><label>Counts in OEE as</label><select class="input"><option>Availability · breakdown</option></select></div>
+      <div class="field"><label>Icon and colour</label><div class="row"><span class="andon-c" style="width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:var(--stop-soft);color:var(--stop)"><svg class="i"><use href="#i-wrench"/></svg></span><button class="btn sm" type="button">Change</button></div></div>
+    </div><div class="card-f"><button class="btn ghost danger" type="button" data-toast="Hidden; old registrations keep it">Hide</button><button class="btn primary" type="button" data-toast="Saved">Save</button></div></div>
+  </div>
+  <div class="card mt"><div class="card-h"><h3>Your loss categories</h3><button class="btn sm" type="button" data-toast="New category: name it and choose what it counts as in OEE"><svg class="i sm"><use href="#i-plus"/></svg>Add category</button></div>
+    <div class="tbl-wrap"><table class="table"><thead><tr><th>Category (your words)</th><th>Counts as in OEE</th><th>Reasons</th><th>Stop time this month</th></tr></thead><tbody>
+      <tr><td><b>Breakdown</b></td><td><span class="badge b-stop">Availability</span></td><td class="num">14</td><td class="num">31 h</td></tr>
+      <tr><td><b>Waiting for material</b></td><td><span class="badge b-stop">Availability</span></td><td class="num">6</td><td class="num">18 h</td></tr>
+      <tr><td><b>Changeover</b></td><td><span class="badge b-setup">Availability · changeover</span></td><td class="num">4</td><td class="num">22 h</td></tr>
+      <tr><td><b>Slow running</b></td><td><span class="badge b-warn">Performance</span></td><td class="num">3</td><td class="num">9 h</td></tr>
+      <tr><td><b>Rework</b></td><td><span class="badge b-brand">Quality</span></td><td class="num">5</td><td class="num">—</td></tr>
+      <tr><td><b>Planned cleaning</b></td><td><span class="badge b-off">Not counted (planned)</span></td><td class="num">2</td><td class="num">8 h</td></tr>
+    </tbody></table></div><div class="card-f small muted">You name the categories. Each one says whether it lowers Availability, Performance or Quality, or is planned time.</div></div>
+</section>
+
+<section class="screen" id="reason-lists" data-ask='["Which reasons does K-5 show on the terminal?"]'>
+  <div class="ph"><div><h1>Reasons per machine</h1><p>Which reasons each terminal shows, and in which order. Fewer reasons means faster, better registrations.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="Saved">Save</button></div></div>
+  <div class="g g-side-l">
+    <div class="card"><div class="card-b" style="padding-top:12px"><ul class="tree"><li><div class="tn">Line 2 · Edging<span class="cnt">12</span></div><ul><li><div class="tn">K-3 Panel saw<span class="cnt">from line</span></div></li><li><div class="tn on">K-5 Edge bander<span class="cnt">own · 9</span></div></li><li><div class="tn">K-7 Drill line<span class="cnt">from line</span></div></li></ul></li></ul></div></div>
+    <div class="card"><div class="card-h"><h3>K-5 terminal shows</h3><span class="muted">Drag to change order · the first 8 are big buttons</span></div><div class="card-b"><div class="stack tight">
+      <div class="li"><svg class="i drag"><use href="#i-drag"/></svg><b>1 · Jam in feeder</b><span class="small muted">61 uses</span></div>
+      <div class="li"><svg class="i drag"><use href="#i-drag"/></svg><b>2 · Material wait</b><span class="small muted">44</span></div>
+      <div class="li"><svg class="i drag"><use href="#i-drag"/></svg><b>3 · Band change</b><span class="small muted">39</span></div>
+      <div class="li"><svg class="i drag"><use href="#i-drag"/></svg><b>4 · Glue unit</b><span class="small muted">38</span></div>
+      <div class="li"><svg class="i drag"><use href="#i-drag"/></svg><b>9 · Sensor or electric</b><span class="small muted">12 · under "Other…"</span></div></div>
+      <button class="btn sm mt" type="button"><svg class="i sm"><use href="#i-plus"/></svg>Add reason</button></div></div>
+  </div>
+</section>
+
+<section class="screen" id="reg-settings" data-ask='["Which auto rules registered stops this week?"]'>
+  <div class="ph"><div><h1>Registration settings and auto rules</h1><p>When to ask for a reason, and stops FP can register on its own.</p></div><div class="ph-a"><button class="btn primary" type="button" data-toast="Saved">Save</button></div></div>
+  <div class="g g2">
+    <div class="card"><div class="card-h"><h3>Asking for reasons</h3></div><div class="card-b stack">
+      <div class="field"><label>Ask for a reason when a stop is longer than</label><div class="ig"><input value="2"><span class="unit">min</span></div></div>
+      <div class="field"><label>Operators can change a reason for</label><div class="ig"><input value="12"><span class="unit">hours</span></div></div>
+      <label class="row"><span class="switch on"></span>Show suggestions ✦ on the terminal</label>
+      <label class="row"><span class="switch on"></span>Ask for production count at shift end</label>
+      <label class="row"><span class="switch"></span>Comment required for "Other…"</label>
+    </div></div>
+    <div class="card"><div class="card-h"><h3>Auto rules</h3><button class="btn sm" type="button"><svg class="i sm"><use href="#i-plus"/></svg>Add</button></div><div class="tbl-wrap"><table class="table compact"><thead><tr><th>If</th><th>Then reason</th><th>This week</th></tr></thead><tbody>
+      <tr><td>Stop inside planned cleaning</td><td>Planned cleaning</td><td>5</td></tr>
+      <tr><td>Stop starts within 5 min of shift start</td><td>Start-up</td><td>14</td></tr>
+      <tr><td>Changeover signal on K-9</td><td>Setup › Tool change</td><td>8</td></tr></tbody></table></div></div>
+  </div>
+  <div class="banner info mt"><svg class="i"><use href="#i-eye"/></svg><div>Rule "stops under 5 min at break start = Break": <b>would have matched 42 stops</b> last week.</div></div>
+</section>
+
+</main>
+<script src="../assets/fp.js"></script>
+</body>
+</html>

@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>S10 Phone Kiosk</title>
+<meta name="description" content="FP Analyzer v3 prototype, module S10: phone app splash, unlock, permissions, update required, phone home, Ask on the phone, kiosk pairing and status, outbox, phone notification settings and offline banner.">
+<!-- Written for: the FP owner, client reviewers and developers building S10. Prototype only; all names and numbers are fictional. -->
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&family=Poppins:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="../assets/fp.css">
+<style>
+.splash{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;background:var(--hero);color:var(--hero-text);text-align:center;padding:30px}
+.splash .wm{font-size:30px;font-weight:700;letter-spacing:-.02em}
+.splash .wm span{color:#5FE0F0}
+.splash p{color:var(--hero-text-2);font-size:14px}
+.spin{width:28px;height:28px;border-radius:50%;border:3px solid rgba(255,255,255,.25);border-top-color:#fff}
+.pin-dots{display:flex;gap:14px;justify-content:center}
+.pin-dots i{width:14px;height:14px;border-radius:50%;border:2px solid var(--border-strong)}
+.pin-dots i.f{background:var(--brand);border-color:var(--brand)}
+.m-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.m-pad span{height:58px;border-radius:50%;width:58px;justify-self:center;display:grid;place-items:center;font-size:24px;font-weight:700;background:var(--surface);border:1px solid var(--border)}
+.perm-ic{width:64px;height:64px;border-radius:20px;background:var(--brand-soft);color:var(--brand-strong);display:grid;place-items:center;margin:20px auto 6px}
+.perm-ic .i{width:30px;height:30px}
+.m-h{font-family:var(--font-head);font-size:22px;font-weight:700;text-align:center}
+.m-p{color:var(--text-2);text-align:center;font-size:14px;line-height:1.5}
+.m-shift{border-radius:18px;background:var(--hero);color:var(--hero-text);padding:16px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center}
+.m-shift .big{font-family:var(--font-head);font-size:38px;font-weight:700;line-height:1}
+.m-shift small{display:block;font-size:12px;color:var(--hero-text-2)}
+.m-need{border:1.5px solid var(--reason-dot);background:var(--reason-soft);border-radius:16px;padding:12px;display:flex;gap:10px;align-items:center}
+.m-need .ic{width:36px;height:36px;border-radius:10px;background:var(--reason-dot);color:#2A1A00;display:grid;place-items:center;flex:none}
+.m-need b{font-size:14.5px;display:block}.m-need small{font-size:12px;color:var(--text-2)}
+.m-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--border);font-size:14px}
+.m-row:first-child{border-top:0}
+.m-row .d{width:10px;height:10px;border-radius:50%;background:var(--c);flex:none}
+.m-row b{flex:1}
+.bub{border-radius:16px;padding:10px 12px;font-size:13.5px;line-height:1.45;max-width:88%}
+.bub.me{align-self:flex-end;background:var(--brand);color:var(--on-brand);border-bottom-right-radius:4px}
+.bub.ai{align-self:flex-start;background:var(--surface);border:1px solid var(--border);border-bottom-left-radius:4px}
+.m-in{display:flex;gap:8px;align-items:center;border:1px solid var(--border);background:var(--surface);border-radius:24px;padding:6px 6px 6px 14px;color:var(--text-3);font-size:14px}
+.m-in .send{margin-left:auto;width:34px;height:34px;border-radius:50%;background:var(--brand);color:var(--on-brand);display:grid;place-items:center}
+.off-bar{background:var(--reason-soft);color:var(--reason);font-weight:800;font-size:12.5px;padding:8px 14px;display:flex;gap:8px;align-items:center;flex:none}
+.ob{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--border);font-size:13.5px}
+.ob:first-child{border-top:0}
+.ob small{display:block;color:var(--text-3);font-size:12px}
+.qr{width:9em;height:9em;border-radius:1em;background:repeating-conic-gradient(var(--text) 0 25%,transparent 0 50%) 0 0/1.4em 1.4em;border:.6em solid var(--surface);outline:1px solid var(--border)}
+.ks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1em}
+.ks .k-card b{font-size:1.5em;display:block;margin-top:.2em}
+.ks .k-card small{color:var(--text-3)}
+.m-body.scroll{overflow-y:auto;scrollbar-width:thin}.m-body.scroll>*{flex:none}
+.m-seg{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex:none}
+.m-seg button{flex:none;height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:13px;font-weight:700;color:var(--text-2);cursor:pointer}
+.m-seg button.on{background:var(--brand);border-color:var(--brand);color:var(--on-brand)}
+.m-seg button i{font-style:normal;font-size:11px;min-width:18px;height:18px;border-radius:9px;display:inline-grid;place-items:center;background:var(--surface-3);color:var(--text-2)}
+.m-seg button.on i{background:rgba(255,255,255,.25);color:inherit}
+.al{border-left:4px solid var(--c);display:flex;flex-direction:column;gap:8px}
+.al .ah{display:flex;gap:8px;align-items:flex-start}
+.al .ah b{display:block;font-size:14.5px}.al .ah small{display:block;font-size:12px;color:var(--text-3)}
+.al .ah .t{margin-left:auto;font-weight:800;font-size:13px;color:var(--c);white-space:nowrap}
+.al .acts{display:flex;gap:8px}.al .acts .btn{flex:1}
+.al.done{opacity:.72;border-left-color:var(--border-strong)}
+.m-grp{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);margin:4px 0 -4px}
+.m-row .rs{font-size:12.5px;text-align:right;line-height:1.3}.m-row .rs small{display:block;color:var(--text-3);font-size:11.5px}
+.m-row .d.hat{background:repeating-linear-gradient(135deg,var(--offline) 0 2px,transparent 2px 4px);border:1px solid var(--offline)}
+.mi{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--border);font-size:14.5px;font-weight:700;color:var(--text);cursor:pointer}
+.mi:first-child{border-top:0}.mi .ic{width:34px;height:34px;border-radius:10px;background:var(--brand-soft);color:var(--brand-strong);display:grid;place-items:center;flex:none}
+.mi .x{margin-left:auto;display:flex;gap:6px;align-items:center;color:var(--text-3);font-weight:600;font-size:12.5px}
+.m-me{display:flex;gap:12px;align-items:center}.m-me b{display:block;font-size:16px}.m-me small{color:var(--text-3);font-size:12.5px}
+.scan-v{position:relative;flex:1;min-height:250px;border-radius:20px;background:radial-gradient(circle at 50% 45%,#2b3b42,#0b1418);display:grid;place-items:center;overflow:hidden}
+.scan-v .fr{width:58%;aspect-ratio:1;border-radius:18px;position:relative;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
+.scan-v .fr:before,.scan-v .fr:after{content:"";position:absolute;inset:0;border-radius:18px;border:3px solid #5FE0F0;clip-path:polygon(0 0,30% 0,30% 6%,6% 6%,6% 30%,0 30%,0 70%,6% 70%,6% 94%,30% 94%,30% 100%,70% 100%,70% 94%,94% 94%,94% 70%,100% 70%,100% 30%,94% 30%,94% 6%,70% 6%,70% 0,100% 0,100% 100%,0 100%)}
+.scan-v .ln{position:absolute;left:8%;right:8%;top:50%;height:2px;background:#5FE0F0;box-shadow:0 0 12px #5FE0F0;animation:scanln 2.2s ease-in-out infinite alternate}
+@keyframes scanln{from{top:12%}to{top:88%}}
+@media (prefers-reduced-motion:reduce){.scan-v .ln{animation:none}}
+.scan-v p{position:absolute;bottom:14px;left:0;right:0;text-align:center;color:#fff;font-size:13px;font-weight:700}
+.cf{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cf>div{border:1px solid var(--border);border-radius:12px;padding:10px;font-size:12.5px;background:var(--surface-2)}
+.cf>div b{display:block;font-size:13.5px;margin:2px 0}.cf>div small{color:var(--text-3)}
+.cf .mine{border-color:var(--brand);background:var(--brand-soft)}
+.tlog{display:flex;flex-direction:column;gap:0}
+.tlog div{display:grid;grid-template-columns:44px 14px minmax(0,1fr);gap:8px;font-size:13px;padding:6px 0;position:relative}
+.tlog span{color:var(--text-3);font-weight:700}
+.tlog i{width:10px;height:10px;border-radius:50%;background:var(--c,var(--brand));margin-top:4px}
+.wg-h{display:flex;align-items:center;gap:6px}.wg-h b{flex:1}.wg-h small{color:var(--text-3);font-size:11.5px}
+.mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.mgrid div{border-radius:10px;padding:8px 6px;background:var(--surface-2);border-top:4px solid var(--c);font-size:12px;cursor:pointer}
+.mgrid b{display:block;font-size:13px}.mgrid small{color:var(--text-3)}
+</style>
+</head>
+<body data-module="S10">
+<main id="screens">
+
+<section class="screen" id="splash" data-ask='["Why does the app say connecting?"]'>
+  <div class="devices">
+    <div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span>
+      <div class="splash"><svg width="64" height="64"><use href="#mark"/></svg><div class="wm"><b>fp</b><span>analyzer</span></div><div class="spin"></div><p>Connecting to Nordvik Trä AB…</p><button class="btn" type="button" style="background:#fff;color:#003341;border:0" data-go="login">First time: sign in</button><button class="btn ghost" type="button" style="color:#fff" data-go="unlock">Signed in before: unlock</button></div></div></div><p class="dev-cap"><b>Starting</b> · shows for up to 2 seconds</p></div>
+    <div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span>
+      <div class="splash"><svg width="64" height="64"><use href="#mark"/></svg><div class="wm"><b>fp</b><span>analyzer</span></div><p>Can't reach FP right now.<br>You can still register; we send it when you are back online.</p><button class="btn" type="button" style="background:#fff;color:#003341;border:0" data-go="offline">Open offline</button><button class="btn ghost" type="button" style="color:#fff" data-go="unlock">Try again</button></div></div></div><p class="dev-cap"><b>No connection</b> · the app still opens</p></div>
+  </div>
+</section>
+
+<section class="screen" id="unlock" data-ask='["What if I forget my app PIN?"]'>
+  <div class="devices">
+    <div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span><div class="ph-sb num"><span>06:02</span><span>5G</span></div>
+      <div class="m-body" style="justify-content:center;gap:22px">
+        <div class="center"><span class="av xl" style="margin:0 auto">ES</span><div class="m-h" style="margin-top:12px">Hi Elin</div><p class="m-p">Use Face ID or your 4-digit PIN</p></div>
+        <div class="pin-dots"><i class="f"></i><i class="f"></i><i></i><i></i></div>
+        <div class="m-pad" data-pin-to="s10-mobile-kiosk#permissions"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span style="border:0;background:none;font-size:13px;color:var(--brand-strong)">Face ID</span><span>0</span><span style="border:0;background:none"><svg class="i"><use href="#i-x"/></svg></span></div>
+        <div class="row" style="justify-content:space-between"><a class="small" href="#" data-to="s10-mobile-kiosk#login" data-toast="Sign in again to set a new PIN">Forgot PIN?</a><a class="small" href="#" data-go="splash" data-toast="Logged out of this phone">Log out</a></div>
+      </div></div></div><p class="dev-cap"><b>Unlock</b> · after 10 minutes away, or when opening the app</p></div>
+  </div>
+</section>
+
+<section class="screen" id="permissions" data-ask='["Why does FP need notifications on my phone?"]'>
+  <div class="devices">
+    <div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span><div class="ph-sb num"><span>06:03</span><span>5G</span></div>
+      <div class="m-body"><div class="perm-ic"><svg class="i"><use href="#i-bell"/></svg></div><div class="m-h">Get alerts when it matters</div><p class="m-p">FP will tell you when a machine on your lines stops for long, or someone calls for help. You choose which alerts in Settings.</p>
+        <div class="m-card"><div class="m-row"><svg class="i sm"><use href="#i-hand"/></svg><span>Andon calls to your group</span></div><div class="m-row"><svg class="i sm"><use href="#i-stop"/></svg><span>Long stops on your lines</span></div><div class="m-row"><svg class="i sm"><use href="#i-moon"/></svg><span>Never in your quiet hours</span></div></div>
+        <div class="sp"></div><button class="btn primary m-big" type="button">Allow notifications</button><button class="btn ghost m-big" type="button">Not now</button></div></div></div><p class="dev-cap"><b>Before the phone asks</b> · explains why, then the system dialog appears</p></div>
+    <div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span><div class="ph-sb num"><span>06:03</span><span>5G</span></div>
+      <div class="m-body"><div class="perm-ic"><svg class="i"><use href="#i-camera"/></svg></div><div class="m-h">Camera for photos and QR</div><p class="m-p">Used only when you add a photo to a stop, or scan a machine QR code. FP never films in the background.</p><div class="sp"></div><button class="btn primary m-big" type="button" data-to="@home" data-toast="Camera allowed. You are all set">Allow camera</button><button class="btn ghost m-big" type="button" data-to="@home">Not now</button></div></div></div><p class="dev-cap"><b>Camera</b> · asked the first time you need it</p></div>
+  </div>
+</section>
+
+<section class="screen" id="update" data-ask='["Why must I update the app?"]'>
+  <div class="devices"><div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span><div class="ph-sb num"><span>06:04</span><span>5G</span></div>
+    <div class="m-body" style="justify-content:center"><div class="perm-ic" style="background:var(--reason-soft);color:var(--reason)"><svg class="i"><use href="#i-download"/></svg></div><div class="m-h">Please update FP Analyzer</div><p class="m-p">This version (3.1) is too old to talk to FP safely. The update takes about a minute. Registrations waiting on this phone are kept.</p>
+      <div class="m-card"><div class="row between small"><span>Waiting to send</span><b>2 registrations</b></div></div>
+      <button class="btn primary m-big" type="button" data-toast="Opens FP Analyzer in the App Store. After the update the app starts again.">Open App Store</button></div></div></div><p class="dev-cap"><b>Update required</b> · cannot be skipped</p></div></div>
+</section>
+
+<section class="screen" id="home" data-ask='["How is my line doing this shift?","Which stops still need a reason?"]'>
+  <div class="devices" data-for="m-lead"><div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span><div class="ph-sb num"><span>10:48</span><span>5G</span></div>
+    <div class="m-top"><div><small class="muted">Thursday · morning shift · Line 2</small><h2>Hi Sami</h2></div><span class="sp"></span><span class="back" data-to="s10-mobile-kiosk#alerts" aria-label="Alerts"><svg class="i sm"><use href="#i-bell"/></svg></span></div>
+    <div class="m-body">
+      <div class="m-shift"><div><div class="big num">66%</div><small>OEE Line 2</small></div><div><b>Below target (75 %)</b><small>Biggest loss: K-5 stops · 44 min</small><small style="margin-top:6px">Shift ends 14:00</small></div></div>
+      <div class="m-need" data-to="s08-registration#m-worklist" data-stops-left="k5-1052 k5-0958 p3-0812" role="button" tabindex="0"><span class="ic"><svg class="i"><use href="#i-alert"/></svg></span><div style="flex:1"><b data-left>3 stops need a reason</b><small>K-5 (2) · P-3 (1)</small></div><svg class="i sm"><use href="#i-chev"/></svg></div>
+      <div class="m-need" data-to="s08-registration#m-review" role="button" tabindex="0" style="--c:var(--setup)"><span class="ic"><svg class="i"><use href="#i-checks"/></svg></span><div style="flex:1"><b>3 registrations to review</b><small>changed after the shift · auto rule · double</small></div><svg class="i sm"><use href="#i-chev"/></svg></div>
+      <div class="md-kpis"><div class="md-kpi"><small>Good output</small><b class="num">1 412<em>of 1 600</em></b><div class="md-bar"><i style="width:88%"></i></div><span class="md-sub">88 % of plan so far</span></div><div class="md-kpi"><small>Stop time</small><b class="num">1 h 06 m</b><span class="md-sub dn">18 min more than yesterday</span></div><div class="md-kpi"><small>Stops with a reason</small><b class="num">86<em>%</em></b><span class="md-sub dn">3 still open</span></div><div class="md-kpi"><small>Scrap</small><b class="num">1.9<em>%</em></b><span class="md-sub">Goal 2 %</span></div></div>
+      <div class="m-card"><div class="md-h"><b>Output per hour</b><small>pcs · Line 2</small></div>
+        <svg class="md-chart" viewBox="0 0 280 130" role="img" aria-label="06 312 pcs, 07 298 pcs, 08 260 pcs, 09 330 pcs, 10 now 212 pcs" style="font-size:11px"><line class="md-base" x1="4" x2="276" y1="112" y2="112"/><g><title>06: 312 pcs</title><rect class="md-hit" x="4.0" y="4" width="54.4" height="108"/><path class="md-b" d="M20.2,112 V42.7 Q20.2,38.7 24.2,38.7 H38.2 Q42.2,38.7 42.2,42.7 V112 Z"/><text x="31.2" y="126" text-anchor="middle">06</text></g><g><title>07: 298 pcs</title><rect class="md-hit" x="58.4" y="4" width="54.4" height="108"/><path class="md-b" d="M74.6,112 V46.0 Q74.6,42.0 78.6,42.0 H92.6 Q96.6,42.0 96.6,46.0 V112 Z"/><text x="85.6" y="126" text-anchor="middle">07</text></g><g><title>08: 260 pcs</title><rect class="md-hit" x="112.8" y="4" width="54.4" height="108"/><path class="md-b" d="M129.0,112 V54.9 Q129.0,50.9 133.0,50.9 H147.0 Q151.0,50.9 151.0,54.9 V112 Z"/><text x="140.0" y="126" text-anchor="middle">08</text></g><g><title>09: 330 pcs</title><rect class="md-hit" x="167.2" y="4" width="54.4" height="108"/><path class="md-b" d="M183.4,112 V38.5 Q183.4,34.5 187.4,34.5 H201.4 Q205.4,34.5 205.4,38.5 V112 Z"/><text x="194.4" y="126" text-anchor="middle">09</text></g><g><title>10 now: 212 pcs so far</title><rect class="md-hit" x="221.6" y="4" width="54.4" height="108"/><path class="md-b prov" d="M237.8,112 V66.2 Q237.8,62.2 241.8,62.2 H255.8 Q259.8,62.2 259.8,66.2 V112 Z"/><text class="md-lbl" x="248.8" y="57.2" text-anchor="middle">212 so far</text><text x="248.8" y="126" text-anchor="middle">10 now</text></g><line class="md-plan" x1="4" x2="276" y1="36.8" y2="36.8"/><text x="276" y="31.8" text-anchor="end">Plan 320</text></svg>
+        <div class="md-leg"><span><i></i>Good pcs</span><span><i class="pl"></i>Plan</span><span><i class="pv"></i>This hour so far</span></div></div>
+      <div class="m-card"><div class="md-h"><b>Top stop reasons</b><small>this shift</small></div><div class="md-hb"><span>Jam in feeder</span><div class="t"><i style="width:100%"></i></div><b>44 min</b></div><div class="md-hb"><span>Material wait</span><div class="t"><i style="width:70%"></i></div><b>31 min</b></div><div class="md-hb"><span>Tool change</span><div class="t"><i style="width:41%"></i></div><b>18 min</b></div></div>
+      <div class="m-card"><div class="row between"><b>My machines</b><small class="muted">live</small></div>
+        <div class="m-row" style="--c:var(--run-fill)"><span class="d"></span><b>K-3 Panel saw</b><span class="small">2 h 14 m</span></div>
+        <div class="m-row" style="--c:var(--stop-fill)"><span class="d"></span><b>K-5 Edge bander</b><span class="small" style="color:var(--stop)">stopped 6:12</span></div>
+        <div class="m-row" style="--c:var(--andon)"><span class="d"></span><b>K-7 Drill line</b><span class="small" style="color:var(--andon)">andon 3:10</span></div>
+        <div class="m-row" style="--c:var(--run-fill)"><span class="d"></span><b>P-3 Press</b><span class="small">58 m</span></div></div>
+    </div>
+    <div class="m-tabs" data-tabs="home"></div>
+  </div></div><p class="dev-cap"><b>Phone home · Supervisor</b> · my line this shift: OEE, output against plan, top stop reasons</p></div></div>
+  <div class="devices" data-for="m-maint"><div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span><div class="ph-sb num"><span>10:52</span><span>5G</span></div>
+    <div class="m-top"><div><small class="muted">Thursday · on call until 14:00</small><h2>Hi Nils</h2></div><span class="sp"></span><span class="back" data-to="s10-mobile-kiosk#alerts" aria-label="Alerts"><svg class="i sm"><use href="#i-bell"/></svg></span></div>
+    <div class="m-body">
+      <div class="m-card" style="border:2px solid var(--andon);background:var(--andon-soft)"><span class="badge" style="background:var(--andon);color:#fff">Maintenance needed</span><b style="display:block;margin-top:8px">K-7 Drill line · waiting 3:10</b><p class="small muted">Called by Sami K. · "Drill head makes a grinding noise"</p><button class="btn primary block m-big" type="button" data-to="s07-alerts-andon#phone">Open the call</button></div>
+      <div class="md-kpis"><div class="md-kpi"><small>Open requests</small><b class="num">5</b><span class="md-sub dn">2 urgent</span></div><div class="md-kpi"><small>Repair time (MTTR)</small><b class="num">38<em>min</em></b><span class="md-sub">Goal 40 min</span></div><div class="md-kpi"><small>Planned this week</small><b class="num">7<em>jobs</em></b><span class="md-sub dn">2 overdue</span></div><div class="md-kpi"><small>Calls today</small><b class="num">4</b><span class="md-sub">Answered in 2 m 40 s</span></div></div>
+      <div class="m-card"><div class="md-h"><b>Repair time per day</b><small>average, min</small></div>
+        <svg class="md-chart" viewBox="0 0 280 130" role="img" aria-label="Fri 42 min, Mon 35 min, Tue 51 min, Wed 30 min, Today 38 min" style="font-size:11px"><line class="md-base" x1="4" x2="276" y1="112" y2="112"/><g><title>Fri: 42 min</title><rect class="md-hit" x="4.0" y="4" width="54.4" height="108"/><path class="md-b" d="M20.2,112 V50.2 Q20.2,46.2 24.2,46.2 H38.2 Q42.2,46.2 42.2,50.2 V112 Z"/><text x="31.2" y="126" text-anchor="middle">Fri</text></g><g><title>Mon: 35 min</title><rect class="md-hit" x="58.4" y="4" width="54.4" height="108"/><path class="md-b" d="M74.6,112 V61.2 Q74.6,57.2 78.6,57.2 H92.6 Q96.6,57.2 96.6,61.2 V112 Z"/><text x="85.6" y="126" text-anchor="middle">Mon</text></g><g><title>Tue: 51 min</title><rect class="md-hit" x="112.8" y="4" width="54.4" height="108"/><path class="md-b" d="M129.0,112 V36.1 Q129.0,32.1 133.0,32.1 H147.0 Q151.0,32.1 151.0,36.1 V112 Z"/><text class="md-lbl" x="140.0" y="27.1" text-anchor="middle">51</text><text x="140.0" y="126" text-anchor="middle">Tue</text></g><g><title>Wed: 30 min</title><rect class="md-hit" x="167.2" y="4" width="54.4" height="108"/><path class="md-b" d="M183.4,112 V69.0 Q183.4,65.0 187.4,65.0 H201.4 Q205.4,65.0 205.4,69.0 V112 Z"/><text x="194.4" y="126" text-anchor="middle">Wed</text></g><g><title>Today: 38 min so far</title><rect class="md-hit" x="221.6" y="4" width="54.4" height="108"/><path class="md-b prov" d="M237.8,112 V56.5 Q237.8,52.5 241.8,52.5 H255.8 Q259.8,52.5 259.8,56.5 V112 Z"/><text x="248.8" y="126" text-anchor="middle">Today</text></g><line class="md-plan" x1="4" x2="276" y1="49.3" y2="49.3"/><text x="276" y="44.3" text-anchor="end">Goal 40</text></svg>
+        <div class="md-leg"><span><i></i>Average repair time</span><span><i class="pl"></i>Goal</span><span><i class="pv"></i>Today so far</span></div></div>
+      <div class="m-card"><div class="row between"><b>My jobs</b><small class="muted">5 open</small></div>
+        <div class="m-row" style="--c:var(--stop-fill)" data-to="s10-mobile-kiosk#job"><span class="d"></span><b>K-7 spindle noise</b><span class="small" style="color:var(--stop)">urgent</span></div>
+        <div class="m-row" style="--c:var(--reason-dot)" data-to="s10-mobile-kiosk#job"><span class="d"></span><b>Clean K-5 glue unit</b><span class="small">today 13:00</span></div>
+        <div class="m-row" style="--c:var(--reason-dot)" data-to="s10-mobile-kiosk#job"><span class="d"></span><b>Check K-7 spindle, 500 h</b><span class="small">overdue</span></div>
+        <div class="m-row" style="--c:var(--planned)" data-to="s10-mobile-kiosk#job"><span class="d"></span><b>Change compressor filter</b><span class="small">Fri</span></div></div>
+      <button class="btn block m-big" type="button" data-to="s16-improve-maintain#request-form"><svg class="i sm"><use href="#i-plus"/></svg>New maintenance request</button>
+    </div>
+    <div class="m-tabs" data-tabs="home"></div>
+  </div></div><p class="dev-cap"><b>Phone home · Maintenance</b> · the waiting call first, then my jobs and repair time</p></div></div>
+</section>
+
+<section class="screen" id="ask" data-ask='["What did the night shift write about K-5?"]'>
+  <div class="devices"><div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span><div class="ph-sb num"><span>10:53</span><span>5G</span></div>
+    <div class="m-top"><div><small class="muted">Line 2 · this shift</small><h2>Ask FP</h2></div></div>
+    <div class="m-body">
+      <div class="bub me">Why is Line 2 below target?</div>
+      <div class="bub ai">Mostly <b>K-5 stops: 44 min</b> this shift. 2 of them are "Jam in feeder" (18 min). Changeovers are on plan.<div class="row mt-s"><span class="badge b-run" style="height:20px"><svg class="i xs"><use href="#i-check"/></svg>Numbers checked</span></div><div class="small muted mt-s">Line 2 · this shift until 10:53</div></div>
+      <div class="bub me">Who stopped it?</div>
+      <div class="bub ai">I don't answer questions about individual people. I can show you stops by machine or by reason.</div>
+      <div class="sp"></div>
+      <div class="row" style="gap:6px"><span class="chip">Top reasons today</span><span class="chip">Compare with last week</span></div>
+      <div class="m-in">Ask about machines, stops…<span class="send"><svg class="i sm"><use href="#i-send"/></svg></span></div>
+    </div>
+    <div class="m-tabs" data-tabs="ask"></div>
+  </div></div><p class="dev-cap"><b>Ask on the phone</b> · same assistant, short answers, refuses questions about people</p></div></div>
+</section>
+
+<section class="screen" id="k-pair" data-ask='["How do I pair a new line terminal?"]'>
+  <div class="devices"><div><div class="tablet"><div class="tb-scr">
+    <div class="k-top"><svg style="width:2.6em;height:2.6em"><use href="#mark"/></svg><div><b>Set up this terminal</b><small>FP Analyzer · kiosk mode</small></div><span class="k-conn" style="margin-left:auto"><svg class="i xs"><use href="#i-wifi"/></svg>Wi-Fi: Nordvik-Prod</span></div>
+    <div class="k-body" style="flex-direction:row;align-items:center;justify-content:center;gap:3em">
+      <div class="qr" role="button" title="Scanned" data-go="k-status" data-toast="Paired with Line 2"></div>
+      <div style="max-width:28em"><div class="k-h" style="font-size:1.8em">Scan with your phone</div><p class="dim" style="font-size:1.05em;margin-top:.5em;line-height:1.5">Open FP Analyzer on your phone → More → <b>Pair a terminal</b>, and scan this code. Then choose the line.</p><p class="dim" style="font-size:.95em;margin-top:1em">No phone? <b role="button" data-to="s01-identity-access#t-pair">Type a code instead</b></p></div>
+    </div></div></div><p class="dev-cap"><b>Kiosk pairing</b> · scan from an admin's phone, or type the code (S01)</p></div></div>
+</section>
+
+<section class="screen" id="k-status" data-ask='["Which terminals are offline?"]'>
+  <div class="devices"><div><div class="tablet"><div class="tb-scr">
+    <div class="k-top"><div><b>Terminal status · T-02</b><small>Line 2 · Hultsfred · for maintenance staff</small></div><span class="clk num">10:55</span></div>
+    <div class="k-body">
+      <div class="ks"><div class="k-card"><small>Connection</small><b style="color:var(--run)">Online</b><small>Wi-Fi strong · 18 ms</small></div><div class="k-card"><small>Waiting to send</small><b>0</b><small>last sent 10:52</small></div><div class="k-card"><small>App version</small><b>3.4.2</b><small>up to date</small></div></div>
+      <div class="ks"><div class="k-card"><small>Battery</small><b>100 %</b><small>on power</small></div><div class="k-card"><small>Paired</small><b>12 Sep</b><small>by Lena H.</small></div><div class="k-card"><small>Machines</small><b>K-3, K-5, K-7</b><small>Line 2</small></div></div>
+      <div class="k-dock" style="grid-template-columns:repeat(3,1fr)"><button class="k-btn" type="button">Test sound</button><button class="k-btn" type="button">Restart app</button><button class="k-btn dark" type="button">Close</button></div>
+    </div></div></div><p class="dev-cap"><b>Kiosk status</b> · open with a long press on the clock</p></div></div>
+</section>
+
+<section class="screen" id="outbox" data-ask='["How many registrations are waiting to send?"]'>
+  <div class="devices"><div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span><div class="ph-sb num"><span>11:02</span><span>No service</span></div>
+    <div class="off-bar"><svg class="i sm"><use href="#i-wifioff"/></svg>No connection since 11:30 · 3 waiting to send</div>
+    <div class="m-top"><span class="back"><svg class="i sm"><use href="#i-chevl"/></svg></span><h2>Waiting to send</h2></div>
+    <div class="m-body"><p class="small muted">Saved on this phone. They go to FP by themselves when you are online, with the time you registered them.</p>
+      <div class="m-card"><div class="ob"><svg class="i"><use href="#i-stopc"/></svg><div><b>K-5 · Jam in feeder</b><small>stop 10:42 · saved 10:58</small></div><span class="badge">waiting</span></div><div class="ob"><svg class="i"><use href="#i-trash"/></svg><div><b>K-5 · 4 scrapped</b><small>saved 11:00</small></div><span class="badge">waiting</span></div><div class="ob"><svg class="i"><use href="#i-camera"/></svg><div><b>Photo for K-5 stop</b><small>1.8 MB · saved 10:58</small></div><span class="badge">waiting</span></div></div>
+      <div class="m-card" style="border-color:var(--stop)"><div class="ob"><svg class="i" style="color:var(--stop)"><use href="#i-alert"/></svg><div><b>K-3 stop at 10:40</b><small>Sami K. already registered this at 10:41</small></div></div>
+      <div class="cf" style="margin-top:8px"><div class="mine"><small>Yours · 10:43</small><b>Blade change</b><small>photo · comment "blade dull"</small></div><div><small>In FP · 10:41</small><b>Tool change</b><small>by Sami K.</small></div></div>
+      <div class="row" style="gap:8px;margin-top:8px"><button class="btn sm" style="flex:1" type="button" data-toast="Kept FP's reason · your photo and comment were added to it">Keep FP's, add my photo</button><button class="btn sm ghost" type="button" data-toast="Removed from this phone">Dismiss</button></div></div>
+      <button class="btn primary m-big" type="button" data-toast="Trying to send now · still no connection">Send now</button>
+    </div></div></div><p class="dev-cap"><b>Outbox</b> · nothing is lost while offline</p></div></div>
+</section>
+
+<section class="screen" id="notif-settings" data-ask='["Which alerts do I get on my phone?"]'>
+  <div class="devices"><div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span><div class="ph-sb num"><span>11:05</span><span>5G</span></div>
+    <div class="m-top"><span class="back"><svg class="i sm"><use href="#i-chevl"/></svg></span><h2>Notifications</h2></div>
+    <div class="m-body">
+      <div class="m-card"><div class="m-row"><b>Andon calls to my group</b><span class="switch on"></span></div><div class="m-row"><b>Long stops on my lines</b><span class="switch on"></span></div><div class="m-row"><b>Below target</b><span class="switch"></span></div><div class="m-row"><b>Maintenance updates</b><span class="switch"></span></div></div>
+      <div class="m-card"><div class="m-row"><b>Quiet hours</b><span class="small muted">22:00–06:00</span></div><div class="m-row"><b>Sound for andon</b><span class="small muted">Siren</span></div><div class="m-row"><b>Read the machine name aloud</b><span class="switch on"></span></div><div class="m-row"><b>Mute all</b><span class="small muted">until 13:00 · off</span></div></div>
+      <button class="btn m-big" type="button" data-toast="Test alert sent">Send me a test alert</button>
+      <p class="tiny muted center">Phone setting: notifications allowed ✓</p>
+      <div class="m-card m-more"><div class="m-row"><b>Outbox</b><a class="btn sm" href="s10-mobile-kiosk.html#outbox">2 waiting</a></div><div class="m-row"><b>Offline mode</b><a class="btn sm" href="s10-mobile-kiosk.html#offline">How it works</a></div><div class="m-row"><b>Report a machine problem</b><a class="btn sm" href="s16-improve-maintain.html#request-form">New</a></div><div class="m-row"><b>App version 3.4.0</b><a class="btn sm" href="s10-mobile-kiosk.html#update">Check</a></div><div class="m-row"><b>Sign out</b><a class="btn sm" href="s10-mobile-kiosk.html#splash">Sign out</a></div></div>
+    </div></div></div><p class="dev-cap"><b>Notification settings</b> · the same choices as on the web (S07)</p></div></div>
+</section>
+
+<section class="screen" id="offline" data-ask='["What works when the terminal is offline?"]'>
+  <div class="devices">
+    <div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span><div class="ph-sb num"><span>11:02</span><span>No service</span></div>
+      <div class="off-bar"><svg class="i sm"><use href="#i-wifioff"/></svg>No connection since 10:58 · 3 waiting to send</div>
+      <div class="m-top"><div><small class="muted">Thursday · morning shift</small><h2 data-hi-first>Hi Elin</h2></div></div>
+      <div class="m-body"><div class="m-shift" style="background:var(--surface-3);color:var(--text)"><div><div class="big num" style="color:var(--text-3)">–</div><small style="color:var(--text-3)">OEE Line 2</small></div><div><b>No connection since 10:58</b><small style="color:var(--text-2)">Live numbers come back when you are online. You can still register stops and scrap.</small></div></div>
+        <div class="m-card"><div class="m-row" style="--c:var(--offline)"><span class="d"></span><b>K-5 Edge bander</b><span class="small muted">status unknown</span></div><div class="m-row" style="--c:var(--offline)"><span class="d"></span><b>K-3 Panel saw</b><span class="small muted">status unknown</span></div></div><a class="m-card" href="#" data-to="s10-mobile-kiosk#outbox" style="display:flex;align-items:center;gap:10px;color:inherit;text-decoration:none"><svg class="i"><use href="#i-inbox"/></svg><b style="flex:1">3 waiting to send</b><svg class="i sm"><use href="#i-chev"/></svg></a></div>
+      </div></div><p class="dev-cap"><b>Phone offline</b> · no old numbers, only "No connection since"; registrations are queued</p></div>
+    <div><div class="tablet"><div class="tb-scr">
+      <div class="off-bar" style="font-size:1em;padding:.7em 1.4em"><svg class="i sm"><use href="#i-wifioff"/></svg>Offline · registrations are saved on this terminal (2 waiting)</div>
+      <div class="k-top"><div><b>K-5 · Edge bander</b><small>Line 2 · T-02</small></div><span class="clk num">11:02</span><span class="k-conn off"><svg class="i xs"><use href="#i-wifioff"/></svg>Offline</span></div>
+      <div class="k-body"><div class="k-open"><span class="ic"><svg class="i"><use href="#i-stop"/></svg></span><div><b>Stopped · why?</b><small>The FP Box keeps the machine signal; this terminal keeps your answer</small></div></div><div class="k-card" style="flex:1"><div class="k-h">This shift <small class="muted" style="font-size:.7em">· until 10:58</small></div><div class="tl lg" style="margin-top:1em"><i class="r" style="flex:50"></i><i class="s" style="flex:6"></i><i class="r" style="flex:30"></i><i class="o" style="flex:14"></i></div><p class="dim" style="margin-top:1em">Striped part: no live data yet. It fills in when the terminal is back online.</p></div><div class="k-dock"><button class="k-btn" type="button" data-to="s08-registration#one-tap">Reason</button><button class="k-btn" type="button" data-to="s08-registration#scrap">Scrap</button><button class="k-btn" type="button" data-to="s18-operator#order">Order</button><button class="k-btn" type="button" data-ask-open>Help</button><button class="k-btn andon" type="button" style="opacity:.55" data-toast="Not sent. No connection. Call Maintenance by phone: 0495-123 40">Andon</button></div><div class="banner err" style="font-size:.95em;margin-top:.2em"><svg class="i"><use href="#i-phone"/></svg><div><b>Andon needs a connection.</b> Call Maintenance by phone: <b>0495-123 40</b></div></div></div>
+    </div></div><p class="dev-cap"><b>Terminal offline</b> · stops, scrap and checklists are queued; andon is not</p></div>
+  </div>
+</section>
+
+<section class="screen" id="login" data-ask='["How do I sign in on the phone app?"]'>
+  <div class="devices"><div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span><div class="ph-sb num"><span>06:01</span><span>5G</span></div>
+<div class="m-body scroll" style="gap:14px">
+      <div class="center" style="padding-top:18px"><svg width="56" height="56"><use href="#mark"/></svg><div class="m-h" style="margin-top:8px">Sign in</div><p class="m-p">Nordvik Trä AB · app.fp-analyzer.example</p></div>
+      <div class="field"><label>Work email or mobile number</label><input class="input" value="elin.sand@nordvik.example" aria-label="Work email or mobile number"></div>
+      <div class="field"><label>Password</label><input class="input" type="password" value="••••••••••" aria-label="Password"><a class="small" href="#" data-toast="We send a reset link to your work email">Forgot password?</a></div>
+      <button class="btn primary m-big" type="button" data-to="s10-mobile-kiosk#permissions">Sign in</button>
+      <button class="btn m-big" type="button" data-to="s10-mobile-kiosk#permissions" data-toast="Signed in with your company account">Sign in with company account</button>
+      <p class="tiny muted center">After this you open the app with Face ID or a 4-digit PIN. Your password is never stored on the phone.</p>
+      <div class="row" style="justify-content:space-between"><a class="small" href="#" data-toast="Languages: Svenska, English, Suomi, Polski">🌐 English</a><a class="small" href="#" data-to="s10-mobile-kiosk#scan">Scan a machine QR</a></div>
+    </div>
+</div></div><p class="dev-cap"><b>Phone sign-in</b> · first time only (Flow A), then Face ID or PIN</p></div></div>
+  <div class="states"><span class="badge b-stop">Wrong password 5 times: locked for 15 minutes (S01)</span><span class="badge">Company account opens in a secure browser tab</span><span class="badge b-off">No network: "Sign-in needs a connection"</span></div>
+</section>
+
+<section class="screen" id="alerts" data-ask='["Which alerts are still open?","Who took the K-7 andon?"]'>
+  <div class="devices"><div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span><div class="ph-sb num"><span>10:52</span><span>5G</span></div>
+<div class="m-top"><div><small class="muted">Line 2 · today</small><h2>Alerts</h2></div><span class="sp"></span></div>
+<div class="m-body scroll">
+      <div class="m-seg" data-filter-group><button class="on" type="button" data-filter="open">Open <i>2</i></button><button type="button" data-filter="mine">For me <i>1</i></button><button type="button" data-filter="all">All today <i>5</i></button></div>
+      <div class="m-card al" style="--c:var(--andon)" data-tags="open mine all"><div class="ah"><svg class="i" style="color:var(--andon)"><use href="#i-hand"/></svg><div><b>Andon on K-7 · Maintenance needed</b><small>Line 2 · called by Sami K. at 10:49</small></div><span class="t num">3:10</span></div>
+        <div class="acts"><button class="btn sm primary" type="button" data-ack>Acknowledge</button><a class="btn sm" href="#" data-to="s10-mobile-kiosk#job">Open job</a><a class="btn sm" href="#" data-to="s18-operator#machine">Open machine</a></div></div>
+      <div class="m-card al" style="--c:var(--stop-fill)" data-tags="open all"><div class="ah"><svg class="i" style="color:var(--stop)"><use href="#i-stop"/></svg><div><b>K-5 Edge bander stopped</b><small>Line 2 · long stop, no reason yet</small></div><span class="t num">6:12</span></div>
+        <div class="acts"><button class="btn sm primary" type="button" data-ack>Acknowledge</button><a class="btn sm" href="#" data-to="s18-operator#machine">Open machine</a></div></div>
+      <div class="m-grp">Earlier today</div>
+      <div class="m-card al done" style="--c:var(--stop-fill)" data-tags="all"><div class="ah"><svg class="i"><use href="#i-check"/></svg><div><b>K-3 Panel saw stopped</b><small>09:14 · acknowledged by Sami K. 09:15 · running again 09:31</small></div></div></div>
+      <div class="m-card al done" style="--c:var(--reason-dot)" data-tags="all"><div class="ah"><svg class="i"><use href="#i-check"/></svg><div><b>Line 2 below target</b><small>08:00 · 61 % against 75 % · closed at 09:00</small></div></div></div>
+      <div class="m-card al done" style="--c:var(--setup)" data-tags="all"><div class="ah"><svg class="i"><use href="#i-check"/></svg><div><b>P-3 changeover longer than standard</b><small>07:20 · 28 min against 20 min</small></div></div></div>
+      <div class="row" style="justify-content:space-between"><a class="small" href="#" data-to="s07-alerts-andon#phone">How it looks on the lock screen</a><a class="small" href="#" data-to="s10-mobile-kiosk#notif-settings">Which alerts do I get?</a></div>
+    </div>
+    <div class="m-tabs" data-tabs="alerts"></div>
+</div></div><p class="dev-cap"><b>Alerts</b> · the same alerts as the push messages, acknowledge here or on the lock screen</p></div></div>
+  <div class="states"><span class="badge">Acknowledge on one phone updates all phones and the board</span><span class="badge b-off">Offline: list is hidden, "No connection since 10:58"</span><span class="badge">Nothing open: "All quiet on your lines"</span></div>
+</section>
+
+<section class="screen" id="machines" data-ask='["Which machines are stopped right now?","Why has S-4 no data?"]'>
+  <div class="devices"><div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span><div class="ph-sb num"><span>10:58</span><span>5G</span></div>
+<div class="m-top"><div><small class="muted">My lines · live</small><h2>Machines</h2></div><span class="sp"></span><span class="back" data-to="s10-mobile-kiosk#scan" aria-label="Scan a machine"><svg class="i sm"><use href="#i-qr"/></svg></span></div>
+<div class="m-body scroll">
+      <div class="m-seg" data-filter-group><button class="on" type="button" data-filter="all">All <i>8</i></button><button type="button" data-filter="stop">Stopped <i>2</i></button><button type="button" data-filter="need">Needs reason <i>3</i></button><button type="button" data-filter="nodata">No data <i>1</i></button></div>
+      <div class="m-grp">Line 2 · Edging · OEE 66 %</div>
+      <div class="m-card"><div class="m-row" style="--c:var(--run-fill)" data-tags="all"><span class="d"></span><b>K-3 Panel saw</b><span class="rs">Running<small>2 h 14 m</small></span></div><div class="m-row" style="--c:var(--stop-fill)" data-tags="all stop need"><span class="d"></span><b>K-5 Edge bander</b><span class="rs"><span style="color:var(--stop);font-weight:800">Stopped 6:12</span><small>needs reason · 2</small></span></div><div class="m-row" style="--c:var(--andon)" data-tags="all stop"><span class="d"></span><b>K-7 Drill line</b><span class="rs"><span style="color:var(--andon);font-weight:800">Andon 3:10</span><small>Nils on the way</small></span></div><div class="m-row" style="--c:var(--run-fill)" data-tags="all need"><span class="d"></span><b>K-9 Packer</b><span class="rs">Running<small>58 m · 1 needs reason</small></span></div></div>
+      <div class="m-grp">Line 1 · Pressing · OEE 78 %</div>
+      <div class="m-card"><div class="m-row" style="--c:var(--run-fill)" data-tags="all"><span class="d"></span><b>P-3 Press</b><span class="rs">Running<small>1 h 02 m</small></span></div><div class="m-row" style="--c:var(--setup)" data-tags="all"><span class="d"></span><b>P-1 Press</b><span class="rs"><span style="color:var(--setup);font-weight:800">Changeover</span><small>12 m of 20 m</small></span></div><div class="m-row" style="--c:var(--reason-dot)" data-tags="all"><span class="d"></span><b>S-2 Sander</b><span class="rs">Running slow<small>62 % of rate</small></span></div><div class="m-row" style="--c:var(--offline)" data-tags="all nodata"><span class="d hat"></span><b>S-4 Sander</b><span class="rs">No data<small>since 10:21 · check FP Box</small></span></div></div>
+      <p class="tiny muted center">Live · updated 10:58 · tap a machine to open it</p>
+    </div>
+    <div class="m-tabs" data-tabs="machines"></div>
+</div></div><p class="dev-cap"><b>Machines</b> · every machine on my lines, worst first, same colours as the floor view</p></div></div>
+  <div class="states"><span class="badge b-off">Offline: names only, status "unknown", never the last "Running"</span><span class="badge">Hatched dot: no data from the FP Box</span></div>
+</section>
+
+<section class="screen" id="dash" data-ask='["Why is Line 2 below target?","Which machine breaks down most?"]'>
+  <div class="devices" data-for="m-lead"><div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span><div class="ph-sb num"><span>10:58</span><span>5G</span></div>
+<div class="m-top"><div><small class="muted">Line 2 · Supervisor</small><h2>Dashboard</h2></div><span class="sp"></span><span class="back" data-to="s10-mobile-kiosk#alerts" aria-label="Alerts"><svg class="i sm"><use href="#i-bell"/></svg></span></div>
+<div class="m-body scroll">
+      <div class="row between"><button class="btn sm" type="button" data-toast="Dashboards: Supervisor (line) · Huddle · Plant manager">Supervisor (line) <svg class="i xs"><use href="#i-chevd"/></svg></button><a class="small" href="#" data-toast="Opens the same dashboard on a big screen">Open on web</a></div>
+      <div class="m-seg"><button class="on" type="button">This shift</button><button type="button">Yesterday</button><button type="button">This week</button></div>
+      <div class="m-card"><div class="wg-h"><b>OEE this shift</b><small>Updated 10:58</small><a href="#" aria-label="How this number was calculated" data-ask-q="How was the Line 2 OEE calculated?"><svg class="i xs"><use href="#i-info"/></svg></a></div>
+        <div class="md-kpis" style="margin-top:8px"><div class="md-kpi"><small>OEE</small><b class="num">66<em>%</em></b><span class="md-sub dn">target 75 %</span></div><div class="md-kpi"><small>Availability</small><b class="num">78<em>%</em></b></div><div class="md-kpi"><small>Performance</small><b class="num">88<em>%</em></b></div><div class="md-kpi"><small>Quality</small><b class="num">97<em>%</em></b></div></div></div>
+      <div class="m-card"><div class="wg-h"><b>This hour against plan</b><small>10:00–11:00</small></div>
+        <div class="md-kpi" style="margin-top:8px;border:0;padding:0"><b class="num">212<em>of 300 so far</em></b><div class="md-bar"><i style="width:71%"></i></div><span class="md-sub">on plan would be 290 by 10:58</span></div></div>
+      <div class="m-card"><div class="wg-h"><b>Machines</b><small>live</small></div><div class="mgrid" style="margin-top:8px"><div style="--c:var(--run-fill)" data-to="s18-operator#machine" role="button" tabindex="0"><b>K-3</b><small>2:14</small></div><div style="--c:var(--stop-fill)" data-to="s18-operator#machine" role="button" tabindex="0"><b>K-5</b><small>6:12</small></div><div style="--c:var(--andon)" data-to="s18-operator#machine" role="button" tabindex="0"><b>K-7</b><small>3:10</small></div><div style="--c:var(--run-fill)" data-to="s18-operator#machine" role="button" tabindex="0"><b>K-9</b><small>58 m</small></div><div style="--c:var(--setup)" data-to="s18-operator#machine" role="button" tabindex="0"><b>P-1</b><small>12 m</small></div><div style="--c:var(--run-fill)" data-to="s18-operator#machine" role="button" tabindex="0"><b>P-3</b><small>1:02</small></div></div></div>
+      <div class="m-card"><div class="wg-h"><b>Stops today</b><small>minutes</small></div><div style="margin-top:6px"><div class="md-hb"><span>Jam in feeder</span><div class="t"><i style="width:100%"></i></div><b>44</b></div><div class="md-hb"><span>Material wait</span><div class="t"><i style="width:70%"></i></div><b>31</b></div><div class="md-hb"><span>Tool change</span><div class="t"><i style="width:41%"></i></div><b>18</b></div><div class="md-hb"><span>No reason yet</span><div class="t"><i style="width:27%"></i></div><b>12</b></div></div></div>
+      <a class="m-need" href="#" data-to="s18-operator#machine" style="color:inherit;text-decoration:none"><span class="ic"><svg class="i"><use href="#i-alert"/></svg></span><div style="flex:1"><b>3 stops need a reason</b><small>K-5 (2) · K-9 (1)</small></div><svg class="i sm"><use href="#i-chev"/></svg></a>
+    </div>
+    <div class="m-tabs" data-tabs="more"></div>
+</div></div><p class="dev-cap"><b>Dashboard on the phone · Supervisor</b> · the web dashboard, one widget under the other</p></div></div>
+  <div class="devices" data-for="m-maint"><div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span><div class="ph-sb num"><span>10:58</span><span>5G</span></div>
+<div class="m-top"><div><small class="muted">Plant · Maintenance</small><h2>Dashboard</h2></div><span class="sp"></span><span class="back" data-to="s10-mobile-kiosk#alerts" aria-label="Alerts"><svg class="i sm"><use href="#i-bell"/></svg></span></div>
+<div class="m-body scroll">
+      <div class="row between"><button class="btn sm" type="button" data-toast="Dashboards: Maintenance · Huddle">Maintenance <svg class="i xs"><use href="#i-chevd"/></svg></button><a class="small" href="#" data-toast="Opens the same dashboard on a big screen">Open on web</a></div>
+      <div class="m-seg"><button class="on" type="button">Last 7 days</button><button type="button">Last 30 days</button><button type="button">This year</button></div>
+      <div class="m-card"><div class="wg-h"><b>Breakdowns</b><small>Updated 10:58</small></div>
+        <div class="md-kpis" style="margin-top:8px"><div class="md-kpi"><small>MTBF</small><b class="num">31<em>h</em></b><span class="md-sub">time between breakdowns</span></div><div class="md-kpi"><small>MTTR</small><b class="num">24<em>min</em></b><span class="md-sub dn">5 min more than last week</span></div><div class="md-kpi"><small>Andon answered</small><b class="num">3.4<em>min</em></b><span class="md-sub">goal 5 min</span></div><div class="md-kpi"><small>Open jobs</small><b class="num">4</b><span class="md-sub dn">1 high</span></div></div></div>
+      <div class="m-card"><div class="wg-h"><b>Breakdown time per machine</b><small>min · 7 days</small></div><div style="margin-top:6px"><div class="md-hb"><span>K-5 Edge bander</span><div class="t"><i style="width:100%"></i></div><b>96</b></div><div class="md-hb"><span>K-7 Drill line</span><div class="t"><i style="width:58%"></i></div><b>56</b></div><div class="md-hb"><span>P-1 Press</span><div class="t"><i style="width:31%"></i></div><b>30</b></div><div class="md-hb"><span>S-2 Sander</span><div class="t"><i style="width:15%"></i></div><b>14</b></div></div></div>
+      <div class="m-card"><div class="wg-h"><b>Top breakdown reasons</b><small>7 days</small></div><div style="margin-top:6px"><div class="md-hb"><span>Glue unit</span><div class="t"><i style="width:100%"></i></div><b>61</b></div><div class="md-hb"><span>Feeder jam</span><div class="t"><i style="width:64%"></i></div><b>39</b></div><div class="md-hb"><span>Drill spindle</span><div class="t"><i style="width:46%"></i></div><b>28</b></div></div></div>
+      <a class="btn m-big" href="#" data-to="s10-mobile-kiosk#jobs">See my jobs</a>
+    </div>
+    <div class="m-tabs" data-tabs="more"></div>
+</div></div><p class="dev-cap"><b>Dashboard on the phone · Maintenance</b> · breakdowns, MTBF, MTTR and andon answer time</p></div></div>
+  <div class="states"><span class="badge">Same numbers as the web (S06), each widget shows when it was updated</span><span class="badge b-off">Offline: widgets show "No connection since 10:58"</span><span class="badge">ⓘ explains how a number was calculated</span></div>
+</section>
+
+<section class="screen" id="jobs" data-ask='["Which jobs are waiting for me?","What is due today?"]'>
+  <div class="devices"><div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span><div class="ph-sb num"><span>10:53</span><span>5G</span></div>
+<div class="m-top"><div><small class="muted">Maintenance · on call until 14:00</small><h2>Jobs</h2></div><span class="sp"></span><span class="back" data-to="s10-mobile-kiosk#scan" aria-label="Scan a machine"><svg class="i sm"><use href="#i-qr"/></svg></span></div>
+<div class="m-body scroll">
+      <div class="m-seg" data-filter-group><button class="on" type="button" data-filter="open">Open <i>4</i></button><button type="button" data-filter="mine">Mine <i>2</i></button><button type="button" data-filter="done">Done today <i>2</i></button></div>
+      <a class="m-card al" href="#" data-to="s10-mobile-kiosk#job" style="--c:var(--andon);color:inherit;text-decoration:none" data-tags="open mine"><div class="ah"><div><b>K-7 Drill line · andon</b><small>Maintenance needed · called 10:49 by Sami K. · you took it</small></div><span class="t">Now</span></div></a>
+      <a class="m-card al" href="#" data-to="s10-mobile-kiosk#job" style="--c:var(--stop-fill);color:inherit;text-decoration:none" data-tags="open mine"><div class="ah"><div><b>K-5 Edge bander · glue unit leaking</b><small>Request from Elin S. · 09:40 · machine running</small></div><span class="t">High</span></div></a>
+      <a class="m-card al" href="#" data-to="s10-mobile-kiosk#job" style="--c:var(--setup);color:inherit;text-decoration:none" data-tags="open"><div class="ah"><div><b>P-3 Press · planned service</b><small>Every 500 h · due today · 2 h</small></div><span class="t">Today</span></div></a>
+      <a class="m-card al" href="#" data-to="s10-mobile-kiosk#job" style="--c:var(--reason-dot);color:inherit;text-decoration:none" data-tags="open"><div class="ah"><div><b>S-4 Sander · no data since 10:21</b><small>Check the FP Box cable · from FP</small></div><span class="t">Medium</span></div></a>
+      <a class="m-card al" href="#" data-to="s10-mobile-kiosk#job" style="--c:var(--border-strong);color:inherit;text-decoration:none" data-tags="done"><div class="ah"><div><b>K-3 Panel saw · blade change</b><small>Done 09:31 by Nils D. · 17 min</small></div><span class="t">Done</span></div></a>
+      <a class="m-card al" href="#" data-to="s10-mobile-kiosk#job" style="--c:var(--border-strong);color:inherit;text-decoration:none" data-tags="done"><div class="ah"><div><b>P-1 Press · hydraulic hose</b><small>Done 07:55 by Nils D. · 42 min</small></div><span class="t">Done</span></div></a>
+      <a class="btn m-big" href="#" data-to="s16-improve-maintain#request-form"><svg class="i"><use href="#i-plus"/></svg>Report a problem</a>
+    </div>
+    <div class="m-tabs" data-tabs="jobs"></div>
+</div></div><p class="dev-cap"><b>Jobs</b> · andon calls, requests and planned service in one list (S16)</p></div></div>
+  <div class="states"><span class="badge">Andon calls come first, then by priority</span><span class="badge b-off">Offline: list "as of 10:58", work logs are saved and sent later</span></div>
+</section>
+
+<section class="screen" id="job" data-ask='["What do I do first on K-7?","How long did the last K-7 repair take?"]'>
+  <div class="devices"><div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span><div class="ph-sb num"><span>10:53</span><span>5G</span></div>
+<div class="m-top"><button class="back" type="button" aria-label="Back" data-to="s10-mobile-kiosk#jobs"><svg class="i sm"><use href="#i-chevl"/></svg></button><div><small class="muted">Job 2418 · K-7 Drill line</small><h2>Andon · spindle</h2></div></div>
+<div class="m-body scroll">
+      <div class="m-card al" style="--c:var(--andon)"><div class="ah"><svg class="i" style="color:var(--andon)"><use href="#i-hand"/></svg><div><b>Maintenance needed</b><small>Andon from the line terminal · Sami K. · 10:49</small></div><span class="t num">3:10</span></div>
+        <p class="small" style="margin:0">"Spindle makes a grinding noise, stopped it to be safe."</p></div>
+      <div class="m-seg" data-filter-group><button class="on" type="button" data-filter="t1">1 · On my way</button><button type="button" data-filter="t2">2 · Working</button><button type="button" data-filter="t3">3 · Done</button></div>
+      <div class="m-card"><b>What happened</b><div class="tlog" style="margin-top:8px"><div style="--c:var(--andon)"><span>10:49</span><i></i>Andon called on K-7</div><div><span>10:50</span><i></i>You acknowledged · line board shows "Nils is coming"</div><div style="--c:var(--stop-fill)"><span>10:47</span><i></i>K-7 stopped</div></div></div>
+      <div class="m-card"><b>Machine</b><div class="m-row" style="--c:var(--andon)"><span class="d"></span><b>K-7 Drill line</b><span class="rs">Andon 3:10<small>3 breakdowns in 7 days</small></span></div>
+        <div class="row" style="gap:8px;margin-top:6px"><a class="btn sm" href="#" data-to="s18-operator#instructions"><svg class="i xs"><use href="#i-book"/></svg>Instructions</a><button class="btn sm" type="button" data-ask-q="What were the last K-7 breakdowns?"><svg class="i xs"><use href="#i-spark"/></svg>Last breakdowns</button></div></div>
+      <div class="field"><label>Work note</label><textarea class="input" rows="2" aria-label="Work note">Spindle bearing worn. Replaced, tested 5 min.</textarea></div>
+      <div class="row" style="gap:8px"><button class="btn sm" type="button"><svg class="i xs"><use href="#i-camera"/></svg>Photo</button><button class="btn sm" type="button" data-toast="Part added: bearing 6204-2RS × 1">Part used</button></div>
+      <button class="btn primary m-big" type="button" data-to="s10-mobile-kiosk#jobs" data-toast="Job done · K-7 is back in the line board">Done · machine can run</button>
+    </div>
+</div></div><p class="dev-cap"><b>Job</b> · on my way → working → done; the operator sees each step on the terminal</p></div></div>
+  <div class="states"><span class="badge">Times are logged by the app, not typed</span><span class="badge b-off">Offline: note and photo are saved and sent later</span></div>
+</section>
+
+<section class="screen" id="scan" data-ask='["Where is the QR code on a machine?"]'>
+  <div class="devices"><div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span><div class="ph-sb num"><span>10:58</span><span>5G</span></div>
+<div class="m-top"><button class="back" type="button" aria-label="Close" data-back><svg class="i sm"><use href="#i-x"/></svg></button><h2>Scan a machine</h2></div>
+<div class="m-body" style="gap:12px">
+      <div class="scan-v"><div class="fr"></div><span class="ln"></span><p>Point at the QR sticker on the machine</p></div>
+      <button class="btn primary m-big" type="button" data-to="s18-operator#machine" data-toast="Found: K-9 Packer">Try it: scan K-9 Packer</button>
+      <div class="field"><label>Or type the machine code</label><input class="input" placeholder="For example K-9" aria-label="Machine code"></div>
+    </div>
+</div></div><p class="dev-cap"><b>Scan</b> · the QR sticker opens that machine straight away (Flow G)</p></div></div>
+  <div class="states"><span class="badge b-stop">"This code is not an FP Analyzer code"</span><span class="badge">Machine you have no access to: "Not on your lines"</span><span class="badge">Without the app the phone camera opens the same page in the browser</span></div>
+</section>
+
+<section class="screen" id="more" data-ask='["Where do I change my alert sound?"]'>
+  <div class="devices"><div><div class="phone"><div class="ph-scr"><span class="ph-isl"></span><div class="ph-sb num"><span>11:00</span><span>5G</span></div>
+<div class="m-top"><div><h2>More</h2></div><span class="sp"></span></div>
+<div class="m-body scroll">
+      <div class="m-card m-me"><span class="av lg" data-me-av>ES</span><div><b data-me-name>Elin Sand</b><small data-me-title>Operator</small></div></div>
+      <div class="m-card"><a class="mi" href="#" data-to="s18-operator#machines"><span class="ic"><svg class="i sm"><use href="#i-live"/></svg></span>My machines<span class="x"><svg class="i xs"><use href="#i-chev"/></svg></span></a><a class="mi" href="#" data-to="s08-registration#m-worklist"><span class="ic"><svg class="i sm"><use href="#i-alert"/></svg></span>Stops to register<span class="x">2<svg class="i xs"><use href="#i-chev"/></svg></span></a><a class="mi" href="#" data-to="s08-registration#m-review"><span class="ic"><svg class="i sm"><use href="#i-checks"/></svg></span>To review<span class="x">3<svg class="i xs"><use href="#i-chev"/></svg></span></a><a class="mi" href="#" data-to="s10-mobile-kiosk#dash"><span class="ic"><svg class="i sm"><use href="#i-chart"/></svg></span>Dashboard<span class="x"><svg class="i xs"><use href="#i-chev"/></svg></span></a><a class="mi" href="#" data-to="s10-mobile-kiosk#machines"><span class="ic"><svg class="i sm"><use href="#i-live"/></svg></span>Machines<span class="x"><svg class="i xs"><use href="#i-chev"/></svg></span></a><a class="mi" href="#" data-to="s10-mobile-kiosk#jobs"><span class="ic"><svg class="i sm"><use href="#i-wrench"/></svg></span>Jobs<span class="x">4<svg class="i xs"><use href="#i-chev"/></svg></span></a><a class="mi" href="#" data-to="s10-mobile-kiosk#scan"><span class="ic"><svg class="i sm"><use href="#i-qr"/></svg></span>Scan a machine<span class="x"><svg class="i xs"><use href="#i-chev"/></svg></span></a><a class="mi" href="#" data-to="s16-improve-maintain#request-form"><span class="ic"><svg class="i sm"><use href="#i-alert"/></svg></span>Report a problem<span class="x"><svg class="i xs"><use href="#i-chev"/></svg></span></a></div>
+      <div class="m-card"><a class="mi" href="#" data-to="s18-operator#checklist"><span class="ic"><svg class="i sm"><use href="#i-checks"/></svg></span>Checklists<span class="x">1<svg class="i xs"><use href="#i-chev"/></svg></span></a><a class="mi" href="#" data-to="s18-operator#handover"><span class="ic"><svg class="i sm"><use href="#i-msg"/></svg></span>Handover notes<span class="x">1<svg class="i xs"><use href="#i-chev"/></svg></span></a><a class="mi" href="#" data-to="s18-operator#order"><span class="ic"><svg class="i sm"><use href="#i-list"/></svg></span>Order on K-5<span class="x"><svg class="i xs"><use href="#i-chev"/></svg></span></a><a class="mi" href="#" data-to="s18-operator#instructions"><span class="ic"><svg class="i sm"><use href="#i-book"/></svg></span>Instructions<span class="x"><svg class="i xs"><use href="#i-chev"/></svg></span></a><a class="mi" href="#" data-to="s18-operator#andon"><span class="ic"><svg class="i sm"><use href="#i-hand"/></svg></span>Call for help (andon)<span class="x"><svg class="i xs"><use href="#i-chev"/></svg></span></a><a class="mi" href="#" data-to="s18-operator#checkin"><span class="ic"><svg class="i sm"><use href="#i-users"/></svg></span>Check in or change machines<span class="x"><svg class="i xs"><use href="#i-chev"/></svg></span></a><a class="mi" href="#" data-to="s18-operator#myshift"><span class="ic"><svg class="i sm"><use href="#i-clock"/></svg></span>My shift<span class="x"><svg class="i xs"><use href="#i-chev"/></svg></span></a><a class="mi" href="#" data-to="s18-operator#myreg"><span class="ic"><svg class="i sm"><use href="#i-list"/></svg></span>My registrations<span class="x"><svg class="i xs"><use href="#i-chev"/></svg></span></a><a class="mi" href="#" data-to="s10-mobile-kiosk#ask"><span class="ic"><svg class="i sm"><use href="#i-spark"/></svg></span>Ask FP<span class="x"><svg class="i xs"><use href="#i-chev"/></svg></span></a></div>
+      <div class="m-card"><a class="mi" href="#" data-to="s10-mobile-kiosk#outbox"><span class="ic"><svg class="i sm"><use href="#i-inbox"/></svg></span>Waiting to send<span class="x"><span class="badge" style="height:20px">3</span><svg class="i xs"><use href="#i-chev"/></svg></span></a><a class="mi" href="#" data-to="s10-mobile-kiosk#notif-settings"><span class="ic"><svg class="i sm"><use href="#i-bell"/></svg></span>Notifications and sound<span class="x"><svg class="i xs"><use href="#i-chev"/></svg></span></a><a class="mi" href="#" data-to="s10-mobile-kiosk#offline"><span class="ic"><svg class="i sm"><use href="#i-wifioff"/></svg></span>Offline mode<span class="x"><svg class="i xs"><use href="#i-chev"/></svg></span></a><a class="mi" href="#" data-to="s10-mobile-kiosk#update"><span class="ic"><svg class="i sm"><use href="#i-download"/></svg></span>App version 3.4.0<span class="x">up to date<svg class="i xs"><use href="#i-chev"/></svg></span></a></div>
+      <div class="m-card"><a class="mi" href="#" data-to="s10-mobile-kiosk#splash" data-toast="Signed out · this phone forgets your data"><span class="ic"><svg class="i sm"><use href="#i-logout"/></svg></span>Sign out<span class="x"><svg class="i xs"><use href="#i-chev"/></svg></span></a></div>
+    </div>
+    <div class="m-tabs" data-tabs="more"></div>
+</div></div><p class="dev-cap"><b>More</b> · everything else in the app for this person</p></div></div>
+  <div class="states"><span class="badge">Each person sees only the items of their role</span></div>
+</section>
+
+</main>
+<script src="../assets/fp.js"></script>
+</body>
+</html>
